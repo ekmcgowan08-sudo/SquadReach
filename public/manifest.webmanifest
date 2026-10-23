@@ -1,0 +1,24 @@
+{
+  "name": "SquadRise",
+  "short_name": "SquadRise",
+  "description": "Run your student ministry’s season like a league — squads, live points, check-in, huddle and follow-up, from one phone.",
+  "id": "/dashboard",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161826",
+  "theme_color": "#161826",
+  "categories": ["productivity", "social"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Submit points", "url": "/dashboard/submit-points" },
+    { "name": "Attendance", "url": "/dashboard/attendance" },
+    { "name": "Chat", "url": "/dashboard/chat" }
+  ]
+}

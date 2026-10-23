@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   applicationName: 'SquadRise',
   appleWebApp: { capable: true, title: 'SquadRise', statusBarStyle: 'black-translucent' },
-  icons: { icon: '/icon.svg', apple: '/icon-192.png' }
+  icons: { icon: '/icon.svg', apple: '/apple-touch-icon.png' }
 };
 
 export const viewport: Viewport = {

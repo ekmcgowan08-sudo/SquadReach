@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161826">
+<title>Offline · SquadRise</title>
+<link rel="icon" href="/icon.svg">
+<script>try{var p=JSON.parse(localStorage.getItem('squadrise_prefs_v1')||'{}');if(p.theme==='light')document.documentElement.dataset.theme='light'}catch(_){}</script>
+<style>
+  :root { --bg:#161826; --card:#1e2030; --line:#3f424d; --fg:#eef0f6; --mute:#9a9eae; --accent:#b5abfc; --on-accent:#161826; color-scheme:dark; }
+  :root[data-theme='light'] { --bg:#f2f3f7; --card:#ffffff; --line:#d7dae3; --fg:#161826; --mute:#5c6070; --accent:#5d51a8; --on-accent:#ffffff; color-scheme:light; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100dvh; display:flex; justify-content:center; background:var(--bg); color:var(--fg);
+         font:15px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing:antialiased; padding:0 16px; }
+  main { width:100%; max-width:420px; padding:56px 0; display:flex; flex-direction:column; gap:20px; }
+  .mark { font-weight:700; font-size:15px; letter-spacing:-.01em; color:var(--mute); }
+  .mark span { color:var(--accent); }
+  h1 { margin:0; font-size:26px; font-weight:500; line-height:1.15; }
+  p { margin:0; color:var(--mute); font-size:13.5px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .row { display:flex; gap:10px; font-size:13px; color:var(--fg); }
+  .dot { flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:8px; }
+  button { appearance:none; border:0; border-radius:999px; min-height:44px; padding:0 20px; font:inherit; font-weight:600;
+           background:var(--accent); color:var(--on-accent); cursor:pointer; align-self:flex-start; }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark">SQUAD<span>RISE</span></div>
+  <div>
+    <h1>No signal right now</h1>
+    <p style="margin-top:8px">This page couldn’t load. Nothing you already entered is lost.</p>
+  </div>
+  <div class="card">
+    <div class="row"><i class="dot"></i><div>Points, chat messages and RSVPs you entered on this phone are held on it and send by themselves when you’re back online.</div></div>
+    <div class="row"><i class="dot"></i><div>Screens you already had open keep working with what they last loaded.</div></div>
+  </div>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+</body>
+</html>
