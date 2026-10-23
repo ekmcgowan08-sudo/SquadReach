@@ -154,17 +154,36 @@ export function supabaseBackend(membership: Membership): Backend {
 
       /* Tonight: attendance and the shared run sheet. */
       d.tonight.date = tonight;
-      const [att, night] = await Promise.all([
+      const [att, night, season] = await Promise.all([
         db.from('attendance').select('student_id, present').eq('org_id', org).eq('meeting_date', tonight),
-        db.from('nights').select('huddle').eq('org_id', org).eq('meeting_date', tonight).maybeSingle()
+        db.from('nights').select('huddle, game').eq('org_id', org).eq('meeting_date', tonight).maybeSingle(),
+        config.meetingDates.length
+          ? db.from('attendance').select('student_id, meeting_date').eq('org_id', org).eq('present', true).in('meeting_date', config.meetingDates).limit(50000)
+          : Promise.resolve({ data: [] as { student_id: string; meeting_date: string }[] })
       ]);
+      /* The attendance map: percent of each roster present, week by week. */
+      const teamOfStudent = new Map(studentRows.map((s) => [s.id, s.team_id]));
+      const rosterSize = new Map<string, number>();
+      for (const s of studentRows) if (s.team_id) rosterSize.set(s.team_id, (rosterSize.get(s.team_id) ?? 0) + 1);
+      const hits = new Map<string, number>();
+      for (const a of (season.data ?? []) as { student_id: string; meeting_date: string }[]) {
+        const team = teamOfStudent.get(a.student_id);
+        if (team) hits.set(team + '|' + a.meeting_date, (hits.get(team + '|' + a.meeting_date) ?? 0) + 1);
+      }
+      for (const t of d.teams) {
+        const n = rosterSize.get(t.id) ?? 0;
+        d.attendanceHistory[t.id] = config.meetingDates.map((iso) => (n ? Math.round(((hits.get(t.id + '|' + iso) ?? 0) / n) * 100) : 0));
+      }
       const byId = new Map(studentRows.map((s) => [s.id, s.name]));
       for (const a of (att.data ?? []) as { student_id: string; present: boolean }[]) {
         const name = byId.get(a.student_id);
         if (name && a.present) d.tonight.presence[name] = true;
       }
-      const h = (night.data as { huddle: Partial<MinistryData['huddle']> } | null)?.huddle;
+      const nightRow = night.data as { huddle: Partial<MinistryData['huddle']>; game: Partial<MinistryData['game']> } | null;
+      const h = nightRow?.huddle;
       if (h && Object.keys(h).length) d.huddle = { ...d.huddle, ...h };
+      const g = nightRow?.game;
+      if (g && Object.keys(g).length) d.game = { ...d.game, ...g };
       return d;
     },
 
@@ -234,6 +253,9 @@ export function supabaseBackend(membership: Membership): Backend {
         case 'huddle':
           await db.from('nights').upsert({ org_id: org, meeting_date: tonight, huddle: e.huddle, updated_at: new Date().toISOString() });
           return;
+        case 'game':
+          await db.from('nights').upsert({ org_id: org, meeting_date: tonight, game: e.game, updated_at: new Date().toISOString() });
+          return;
         case 'config':
           await db.from('organizations').update({ name: e.config.ministryName, config: e.config }).eq('id', org);
           return;
@@ -289,8 +311,10 @@ export function supabaseBackend(membership: Membership): Backend {
           if (row && row.id) onRemote({ kind: 'entries', entries: [toEntry(row)] });
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'nights', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
-          const row = payload.new as { meeting_date?: string; huddle?: MinistryData['huddle'] } | undefined;
-          if (row && row.meeting_date === tonight && row.huddle) onRemote({ kind: 'huddle', huddle: row.huddle });
+          const row = payload.new as { meeting_date?: string; huddle?: MinistryData['huddle']; game?: MinistryData['game'] } | undefined;
+          if (!row || row.meeting_date !== tonight) return;
+          if (row.huddle && Object.keys(row.huddle).length) onRemote({ kind: 'huddle', huddle: row.huddle });
+          if (row.game && Object.keys(row.game).length) onRemote({ kind: 'game', game: row.game });
         })
         .subscribe();
       return () => {

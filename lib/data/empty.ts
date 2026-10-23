@@ -1,6 +1,7 @@
 /* A ministry with nothing in it yet — the shape a Supabase load fills in.
    Every list starts empty; nothing here is demo data. */
 import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
+import { DEFAULT_PENALTIES, emptyGame } from '@/lib/game';
 import { DEFAULT_READY } from '@/lib/data/seed';
 import type { MinistryConfig, MinistryData } from '@/lib/types/model';
 
@@ -20,7 +21,10 @@ export const DEFAULT_CONFIG: MinistryConfig = {
   inviteCode: '',
   church: { address: '', phone: '', email: '', web: '', studentsPage: '', instagram: '', youtube: '', facebook: '', tiktok: '' },
   checkinAutoCats: { visitors: true },
-  memoryVerses: DEFAULT_MEMORY_VERSES
+  memoryVerses: DEFAULT_MEMORY_VERSES,
+  penalties: DEFAULT_PENALTIES,
+  gameSetup: { rulesText: '', rulesVideoUrl: '', fieldTypes: [], offsiteAddress: '', markupDataUrl: null, gameWeeks: null },
+  parentShare: { standings: true, mvp: false, verse: true, photos: false, calendar: true }
 };
 
 export function emptyMinistry(): MinistryData {
@@ -60,6 +64,7 @@ export function emptyMinistry(): MinistryData {
     attendanceHistory: {},
     practiceLog: [],
     tonight: { date: '', presence: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
+    game: emptyGame(),
     bracket: { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} },
     challengeCredit: {}
   };

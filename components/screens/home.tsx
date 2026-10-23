@@ -4,9 +4,10 @@
    The first card is shaped by role (buildRoleFocus in the design). */
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StandingsCard, useStandings } from '@/components/dashboard/standings-list';
 import { TonightCard } from '@/components/dashboard/tonight-card';
+import { Sheet } from '@/components/sheet';
 import { Avatar, Btn, Icon, Screen, Stat, initialsOf } from '@/components/ui';
 import { ago } from '@/lib/dates';
 import { churchRows, churchSocials } from '@/lib/feeds';
@@ -396,11 +397,12 @@ function FirstRunCard() {
 export function usePendingGroups() {
   const d = useAppData();
   return useMemo(() => {
-    const groups = new Map<string, { key: string; ids: string[]; team: string; cat: string; amount: number; by: string; why: string; count: number; at: number; cats: Set<string> }>();
+    const groups = new Map<string, { key: string; ids: string[]; team: string; cat: string; amount: number; by: string; why: string; count: number; at: number; cats: Set<string>; photo: string | null }>();
     for (const e of d.ledger) {
       if (e.status !== 'pending') continue;
       const key = e.batch ?? e.id;
-      const g = groups.get(key) ?? { key, ids: [], team: e.team, cat: e.cat, amount: 0, by: e.by, why: e.why, count: 0, at: e.at, cats: new Set<string>() };
+      const g = groups.get(key) ?? { key, ids: [], team: e.team, cat: e.cat, amount: 0, by: e.by, why: e.why, count: 0, at: e.at, cats: new Set<string>(), photo: null as string | null };
+      if (e.detail?.photo) g.photo = e.detail.photo;
       g.ids.push(e.id);
       g.amount += e.amount;
       g.count++;
@@ -415,6 +417,7 @@ export function WaitingOnYou() {
   const d = useAppData();
   const api = useAppApi();
   const groups = usePendingGroups();
+  const [proof, setProof] = useState<string | null>(null);
   if (!groups.length) return null;
   const all = groups.flatMap((g) => g.ids);
   const decide = (ids: string[], ok: boolean, team: string, amount: number, by: string) => {
@@ -457,6 +460,9 @@ export function WaitingOnYou() {
         return (
           <div key={g.key} className="flex items-center gap-[11px] border-t border-divider px-[15px] py-[11px] animate-sr-rise">
             <div className="h-[34px] w-[3px] flex-none rounded-sm" style={{ background: t.color }} />
+            {g.photo ? (
+              <button aria-label="See the photo proof" onClick={() => setProof(g.photo)} className="h-11 w-11 flex-none rounded-md bg-neutral-900 bg-cover bg-center" style={{ backgroundImage: 'url(' + g.photo + ')', boxShadow: 'inset 0 0 0 1px var(--color-neutral-700)' }} />
+            ) : null}
             <div className="min-w-0 flex-1">
               <div className="truncate text-[13.5px] font-medium leading-[1.3] text-neutral-200">
                 {g.by}: {g.amount > 0 ? '+' : ''}
@@ -483,6 +489,15 @@ export function WaitingOnYou() {
           </div>
         );
       })}
+      <Sheet open={!!proof} onClose={() => setProof(null)} label="Photo proof" z={92}>
+        <div className="text-[15px] font-medium leading-[1.2] text-neutral-100">Photo proof</div>
+        {/* A small data URL taken on the sender's phone. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {proof ? <img src={proof} alt="Photo proof sent with the request" className="w-full rounded-md" /> : null}
+        <Btn variant="ghost" className="justify-center" onClick={() => setProof(null)}>
+          Close
+        </Btn>
+      </Sheet>
     </div>
   );
 }

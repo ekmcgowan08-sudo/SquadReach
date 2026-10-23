@@ -202,6 +202,8 @@ create table public.nights (
   org_id uuid not null references public.organizations(id) on delete cascade,
   meeting_date date not null,
   huddle jsonb not null default '{}'::jsonb,
+  -- the game timer: banked time + start stamps, so the projector follows
+  game jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now(),
   primary key (org_id, meeting_date)
 );

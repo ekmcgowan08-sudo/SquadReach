@@ -41,6 +41,8 @@ export interface EntryDetail {
   proof?: boolean;
   place?: string;
   friends?: string[];
+  /** Photo proof, shrunk on the phone to a small JPEG data URL. */
+  photo?: string;
 }
 
 /** Every point change in the app is one of these. Nothing writes a total. */
@@ -182,6 +184,32 @@ export interface MinistryConfig {
   /** Categories that attendance posting also pays, beyond General. */
   checkinAutoCats: Record<string, boolean>;
   memoryVerses: MemoryVerse[];
+  penalties: Penalty[];
+  gameSetup: GameSetup;
+  /** What the public parent board (/b/[parentCode]) shows. */
+  parentShare: ParentShare;
+}
+
+export interface ParentShare {
+  standings: boolean;
+  mvp: boolean;
+  verse: boolean;
+  photos: boolean;
+  calendar: boolean;
+}
+
+/** What players see on Game rules — set in Console · Scoring. */
+export interface GameSetup {
+  rulesText: string;
+  /** YouTube link; shown embedded. */
+  rulesVideoUrl: string;
+  fieldTypes: string[];
+  /** Overrides the home venue when the game moves. */
+  offsiteAddress: string;
+  /** The field drawing, as a data URL. */
+  markupDataUrl: string | null;
+  /** Weeks a game runs; null means every week. */
+  gameWeeks: number[] | null;
 }
 
 /* ── The 6:15 huddle ─────────────────────────────────────────────────── */
@@ -417,6 +445,44 @@ export interface Rsvp {
 
 /** Tonight's floor: who is here and what has been posted. Presence is
  *  roster data (ROSTER_EDIT_ROLES), and posting it IS the scoring step. */
+/* ── Game timer ──────────────────────────────────────────────────────── */
+/** A penalty or bonus button on every lane. Set per season, not per night. */
+export interface Penalty {
+  id: string;
+  label: string;
+  sec: number;
+  kind: 'add' | 'subtract';
+  icon?: string;
+  color?: string;
+  /** How the projector shows it: blur | chaos | glow | scale | confetti | flash. */
+  style?: string;
+  rule?: string;
+}
+
+/** One squad's run. Time is banked plus a start stamp, never a ticking
+ *  counter, so a reload or a second screen reads the same clock. */
+export interface HeatLane {
+  elapsedMs: number;
+  startedAt: number | null;
+  counts: Record<string, number>;
+}
+
+export interface LiveEffect {
+  key: string;
+  teamId: string;
+  penaltyId: string;
+  startAt: number;
+  sec: number;
+}
+
+export interface GameState {
+  mode: 'single' | 'h2h' | 'all';
+  h2hPick: string[];
+  lanes: Record<string, HeatLane>;
+  solo: { mode: 'up' | 'down'; targetSec: number; elapsedMs: number; startedAt: number | null };
+  effects: LiveEffect[];
+}
+
 export interface TonightState {
   date: string;
   presence: Record<string, boolean>;
@@ -471,6 +537,7 @@ export interface MinistryData {
   attendanceHistory: Record<string, number[]>;
   practiceLog: PracticeRow[];
   tonight: TonightState;
+  game: GameState;
   bracket: BracketData;
   challengeCredit: Record<string, string[]>;
 }

@@ -67,6 +67,10 @@ export function AppProvider({ membership, roles, children }: { membership: Membe
         s.mutate((d) => {
           d.huddle = patch.huddle;
         });
+      } else if (patch.kind === 'game') {
+        s.mutate((d) => {
+          d.game = patch.game;
+        });
       } else {
         void s.backend.load().then((data) => store.getState().hydrate(data));
       }

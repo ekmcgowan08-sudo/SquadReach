@@ -5,6 +5,7 @@
    own setup; nothing here is read in Supabase mode.
    ───────────────────────────────────────────────────────────────────────── */
 import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
+import { DEFAULT_PENALTIES, emptyGame } from '@/lib/game';
 import { isoDay } from '@/lib/dates';
 import type {
   AudienceId, ChatMessage, ChatThread, HuddleState, LedgerEntry, MinistryData, PracticeRow, Rsvp, Student, StudentBadge
@@ -343,7 +344,18 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
         tiktok: ''
       },
       checkinAutoCats: { visitors: true, general: false, bible: false, spiritwear: false, verses: false, games: false, media: false },
-      memoryVerses: DEFAULT_MEMORY_VERSES
+      memoryVerses: DEFAULT_MEMORY_VERSES,
+      penalties: DEFAULT_PENALTIES,
+      gameSetup: {
+        rulesText:
+          'Each squad lines up behind its start cone. One player at a time carries water from the bucket to the far tube using only the pipe sections — no hands on the water.\n\nThe whole squad must touch the pipe before it moves. Spill and you start the carry over.\n\nFirst squad to fill its tube to the line stops the clock. Penalties and bonuses from the timekeeper add or take seconds, so the fastest raw run does not always win.',
+        rulesVideoUrl: '',
+        fieldTypes: ['Gym Court'],
+        offsiteAddress: '',
+        markupDataUrl: null,
+        gameWeeks: null
+      },
+      parentShare: { standings: true, mvp: true, verse: true, photos: false, calendar: true }
     },
     teams: [
       { id: 'yellow', name: 'Yellow', color: '#EAB308', sort: 0, mascotName: 'Blaze the Hornet', mascotStory: 'Blaze showed up in week one on a hand-painted sign and never left. Yellow claims him as proof that the loudest team wins.' },
@@ -462,6 +474,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     attendanceHistory: attendanceHistory(),
     practiceLog: seedPractice(now),
     tonight: { date: '2026-10-28', presence: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
+    game: emptyGame(),
     bracket: { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} },
     challengeCredit: {}
   };
