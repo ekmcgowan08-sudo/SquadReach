@@ -88,11 +88,23 @@ export async function getCurrentMembership(): Promise<{ membership: Membership; 
   };
 }
 
-/** For a page: who you are, or off to sign in / back Home. The client screen
- *  checks the same gate again — a deep link is never the hole in it. */
+/** The signed-in Supabase user, or null (always null in demo mode). */
+export async function getUser() {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await supabaseServer();
+  const { data } = await supabase.auth.getUser();
+  return data.user;
+}
+
+/** For a page: who you are, or off to sign in / onboarding / back Home. The
+ *  client screen checks the same gate again — a deep link is never the hole. */
 export async function requireGate(gate?: (p: Persona) => boolean): Promise<Membership> {
   const res = await getCurrentMembership();
-  if (!res) redirect(isSupabaseConfigured() ? '/login' : '/dashboard');
+  if (!res) {
+    if (!isSupabaseConfigured()) redirect('/dashboard');
+    /* Signed in but in no ministry yet: create one or ask to join. */
+    redirect((await getUser()) ? '/welcome' : '/login');
+  }
   if (gate && !gate(res.membership.persona)) redirect('/dashboard?denied=1');
   return res.membership;
 }

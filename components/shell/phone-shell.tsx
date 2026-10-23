@@ -131,7 +131,7 @@ function OfflineBanner() {
   );
 }
 
-function Toast() {
+export function Toast() {
   const toast = useApp((s) => s.toast);
   return (
     <div role="status" aria-live="polite" className="pointer-events-none absolute inset-x-[18px] bottom-[112px] z-[70]">
@@ -149,7 +149,7 @@ function Toast() {
   );
 }
 
-function PushBanner() {
+export function PushBanner() {
   const push = useApp((s) => s.push);
   const name = useApp((s) => s.data.config.ministryName);
   const router = useRouter();

@@ -14,7 +14,7 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { chatStamp } from '@/lib/selectors';
 import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
-  AccessRequest, Category, ChatMessage, ChatThread, LedgerEntry, Membership, MinistryConfig, MinistryData, MinistryEvent, Rsvp, RsvpCount,
+  AccessRequest, Category, ChatMessage, ChatThread, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData, MinistryEvent, Rsvp, RsvpCount,
   Student, Team
 } from '@/lib/types/model';
 
@@ -263,6 +263,14 @@ export function supabaseBackend(membership: Membership): Backend {
       }
       d.rsvpCounts = countsFrom(counts.data);
 
+      /* The people list, for leaders (members_read_leader). */
+      if (membership.role === 'leader' || membership.role === 'owner') {
+        const ppl = await db.from('memberships').select('id, role, display_name, team_id, student_name').eq('org_id', org).order('display_name');
+        d.people = ((ppl.data ?? []) as { id: string; role: PersonRow['role']; display_name: string; team_id: string | null; student_name: string | null }[]).map((r) => ({
+          id: r.id, name: r.display_name, role: r.role, teamId: r.team_id, studentName: r.student_name
+        }));
+      }
+
       /* The library: everything shared by any ministry, plus our own. */
       const lib = await db.from('library_units').select('*').order('created_at', { ascending: false }).limit(300);
       d.library = ((lib.data ?? []) as { id: string; org_id: string; kind: string; title: string; church_name: string; span: string; theme: string; summary: string; includes: string[]; pts: [string, number][]; created_at: string }[]).map((u) => ({
@@ -459,6 +467,20 @@ export function supabaseBackend(membership: Membership): Backend {
           if (r.error) throw r.error;
           return;
         }
+        case 'person': {
+          const r = await db.from('memberships').update({ role: e.person.role, team_id: e.person.teamId, student_name: e.person.studentName, display_name: e.person.name }).eq('id', e.person.id);
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'studentRemove':
+          await db.from('students').delete().eq('id', e.id);
+          return;
+        case 'personRemove':
+          await db.from('memberships').delete().eq('id', e.id);
+          return;
+        case 'rotateInvite':
+          await db.rpc('rotate_invite_code', { p_org: org });
+          return;
         case 'eventRemove':
           await db.from('events').delete().eq('id', e.id);
           return;

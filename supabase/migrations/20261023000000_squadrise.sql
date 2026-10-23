@@ -746,6 +746,77 @@ grant execute on function public.decide_access(uuid, boolean) to authenticated;
 grant execute on function public.set_praying(uuid, boolean) to authenticated;
 grant execute on function public.chat_can(uuid, text, boolean) to authenticated;
 
+-- The public parent board (/b/<parentCode>). No sign-in, so it returns only
+-- what the ministry switched on in parentShare, and never a full name: team
+-- totals (each category floored at zero, as the app computes them), first
+-- names for the MVP race, the week's verse, and events meant for parents.
+create or replace function public.public_board(p_code text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  o public.organizations;
+  share jsonb;
+  wk int;
+  out jsonb;
+begin
+  select * into o from public.organizations where config->>'parentCode' = p_code and length(p_code) >= 4;
+  if o.id is null then return null; end if;
+  share := coalesce(o.config->'parentShare', '{"standings": true, "verse": true, "calendar": true}'::jsonb);
+  select count(*) into wk from jsonb_array_elements_text(coalesce(o.config->'meetingDates', '[]'::jsonb)) d where d::date <= current_date;
+  wk := greatest(1, coalesce(nullif(wk, 0), (o.config->>'weekNumber')::int, 1));
+  out := jsonb_build_object('ministry', o.name, 'week', wk, 'seasonWeeks', coalesce((o.config->>'seasonWeeks')::int, 9));
+  if coalesce((share->>'standings')::boolean, true) then
+    out := out || jsonb_build_object('standings', (
+      select coalesce(jsonb_agg(jsonb_build_object('name', t.name, 'color', t.color, 'total', t.total) order by t.total desc), '[]'::jsonb)
+      from (
+        select tm.name, tm.color, coalesce(sum(greatest(c.pts, 0)), 0)::int as total
+        from public.teams tm
+        left join (
+          select team_id, category_key, sum(amount) as pts from public.score_entries
+          where org_id = o.id and status = 'approved' group by team_id, category_key
+        ) c on c.team_id = tm.id
+        where tm.org_id = o.id and not tm.archived
+        group by tm.id, tm.name, tm.color
+      ) t));
+  end if;
+  if coalesce((share->>'mvp')::boolean, false) then
+    out := out || jsonb_build_object('mvp', (
+      select coalesce(jsonb_agg(jsonb_build_object('name', split_part(x.student_name, ' ', 1), 'color', x.color, 'total', x.total) order by x.total desc), '[]'::jsonb)
+      from (
+        select e.student_name, tm.color, sum(e.amount)::int as total
+        from public.score_entries e join public.teams tm on tm.id = e.team_id
+        where e.org_id = o.id and e.status = 'approved' and e.student_name is not null
+        group by e.student_name, tm.color order by sum(e.amount) desc limit 5
+      ) x));
+  end if;
+  if coalesce((share->>'verse')::boolean, true) then
+    out := out || jsonb_build_object('verse', (
+      select v from jsonb_array_elements(coalesce(o.config->'memoryVerses', '[]'::jsonb)) v
+      where (v->>'week')::int <= wk order by (v->>'week')::int desc limit 1));
+  end if;
+  if coalesce((share->>'calendar')::boolean, true) then
+    out := out || jsonb_build_object('events', (
+      select coalesce(jsonb_agg(jsonb_build_object('title', e.title, 'meta', e.meta, 'day', e.day, 'color', e.color) order by e.day), '[]'::jsonb)
+      from public.events e
+      where e.org_id = o.id and e.status = 'approved' and 'parents' = any(e.audiences) and (e.day is null or e.day >= current_date)));
+  end if;
+  return out;
+end $$;
+grant execute on function public.public_board(text) to anon, authenticated;
+
+-- A leaked invite code is retired by issuing a new one. LEADER_ROLES only.
+create or replace function public.rotate_invite_code(p_org uuid)
+returns text language plpgsql security definer set search_path = public as $$
+declare v text;
+begin
+  if not public.has_role(p_org, array['leader','owner']::public.membership_role[]) then
+    raise exception 'only a ministry leader can change the invite code';
+  end if;
+  v := upper(substr(md5(gen_random_uuid()::text), 1, 8));
+  update public.organizations set invite_code = v where id = p_org;
+  return v;
+end $$;
+grant execute on function public.rotate_invite_code(uuid) to authenticated;
+
 -- Head counts for every event, for anyone in the ministry — no names.
 create or replace function public.rsvp_counts(p_org uuid)
 returns table (event_id uuid, going int, maybe int, out_count int, guests int)

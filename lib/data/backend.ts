@@ -9,7 +9,7 @@
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CareReminder, Category, ChatMessage, HuddleState, LedgerEntry, MinistryConfig,
-  GameState, LibraryUnit, MediaItem, MinistryData, MinistryEvent, PracticeRow, PrayerQueued, Rsvp, RsvpCount, Student, Team
+  GameState, LibraryUnit, PersonRow, MediaItem, MinistryData, MinistryEvent, PracticeRow, PrayerQueued, Rsvp, RsvpCount, Student, Team
 } from '@/lib/types/model';
 
 export type SyncEvent =
@@ -43,7 +43,11 @@ export type SyncEvent =
   | { kind: 'vote'; awardId: string; period: string; choice: string }
   | { kind: 'nominee'; awardId: string; id: string; name: string }
   | { kind: 'event'; event: MinistryEvent }
-  | { kind: 'eventRemove'; id: string };
+  | { kind: 'eventRemove'; id: string }
+  | { kind: 'studentRemove'; id: string }
+  | { kind: 'person'; person: PersonRow }
+  | { kind: 'personRemove'; id: string }
+  | { kind: 'rotateInvite' };
 
 /** A change that arrived from someone else's phone. */
 export type RemotePatch =

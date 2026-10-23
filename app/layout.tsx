@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
@@ -30,10 +31,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: PREFS_BOOT_SCRIPT }} />
-      </head>
       <body>
+        <Script id="sr-prefs" strategy="beforeInteractive">
+          {PREFS_BOOT_SCRIPT}
+        </Script>
         {children}
         <ServiceWorker />
       </body>

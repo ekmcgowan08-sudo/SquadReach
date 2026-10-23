@@ -614,6 +614,17 @@ export interface MinistryData {
   game: GameState;
   bracket: BracketData;
   challengeCredit: Record<string, string[]>;
+  /** Supabase, leaders only: everyone with a membership, for the Console. */
+  people?: PersonRow[];
+}
+
+/** A person with a role in the ministry (leaders see the list). */
+export interface PersonRow {
+  id: string;
+  name: string;
+  role: MembershipRole;
+  teamId: string | null;
+  studentName: string | null;
 }
 
 /** Who is signed in, as the server resolved it. */

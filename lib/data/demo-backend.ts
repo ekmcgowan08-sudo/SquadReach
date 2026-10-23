@@ -31,8 +31,10 @@ export const demoBackend: Backend = {
       if (raw) {
         const parsed = JSON.parse(raw) as MinistryData;
         /* A snapshot from an older build may be missing fields; fill them
-           from a fresh seed rather than crash on first read. */
-        return { ...demoMinistry(), ...parsed };
+           from a fresh seed rather than crash on first read. Config is
+           merged a level deeper, since new settings land inside it. */
+        const seed = demoMinistry();
+        return { ...seed, ...parsed, config: { ...seed.config, ...parsed.config }, tonight: { ...seed.tonight, ...parsed.tonight }, game: { ...seed.game, ...parsed.game } };
       }
     } catch {
       /* fall through to a fresh seed */

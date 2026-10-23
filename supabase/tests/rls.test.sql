@@ -339,6 +339,17 @@ reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000005');
 select pg_temp.check((select count(*) from library_units) = 1, 'another ministry reads the shared unit, not the private one');
 
+-- The public board answers by parent code, anonymously, with no full names.
+reset role;
+update organizations set config = config || '{"parentShare": {"standings": true, "mvp": true, "verse": true, "calendar": true}}'::jsonb where id = :'org';
+select config->>'parentCode' as pcode from organizations where id = :'org' \gset
+set role anon;
+select pg_temp.check((public.public_board(:'pcode'))->>'ministry' = 'Grace Community Students', 'the public board answers by parent code without signing in');
+select pg_temp.check(jsonb_array_length((public.public_board(:'pcode'))->'standings') = 4, 'and shows every squad''s total');
+select pg_temp.check(position(' ' in coalesce((public.public_board(:'pcode'))->'mvp'->0->>'name', '')) = 0, 'and only first names');
+select pg_temp.check(public.public_board('NOPE') is null, 'a wrong code returns nothing');
+reset role;
+
 -- Someone outside the ministry reads nothing at all.
 reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000005');
