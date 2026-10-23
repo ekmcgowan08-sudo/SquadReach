@@ -14,7 +14,7 @@ import { resetDemo } from '@/lib/data/demo-backend';
 import { heldTotal } from '@/lib/held';
 import {
   canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek, canPublishBoard,
-  canRunDoor, canSeeAttendance, canSeeCare, canServe, canShareRecap, canSwitchTeamView
+  canRunDoor, canRunLive, canSeeAttendance, canSeeCare, canServe, canShareRecap, canSwitchTeamView
 } from '@/lib/permissions';
 import { attendanceStats, checkinOpen, followups, isAfter, myNights, nextReminder, reminders, slipsView, weekday } from '@/lib/cycle';
 import { computeNotifications, eventLabel, myBible, myTeamId, openFollowups, teamOf, upcomingEvents } from '@/lib/selectors';
@@ -115,6 +115,7 @@ export function MoreScreen() {
       title: 'Tonight',
       visible: real,
       items: [
+        { label: 'Live', meta: canRunLive(p) ? 'run ministry time' : 'answer on your phone', icon: 'ph ph-broadcast', href: '/dashboard/live' },
         canPrepWeek(p) ? { label: 'Prep week', meta: nextRem ? 'next: ' + nextRem.label.toLowerCase() : 'all reminders posted', icon: 'ph ph-calendar-check', href: '/dashboard/prep-week' } : null,
         canNightRecap(p)
           ? {

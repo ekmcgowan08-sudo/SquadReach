@@ -2,7 +2,7 @@
    function by name (functions cannot cross the server/client boundary). */
 import {
   canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek,
-  canPublishBoard, canRunDoor, canScore, canSeeAttendance, canServe, canShareRecap
+  canPublishBoard, canRunDoor, canRunLive, canScore, canSeeAttendance, canServe, canShareRecap
 } from '@/lib/permissions';
 import { realRole, type Persona } from '@/lib/types/domain';
 
@@ -23,6 +23,7 @@ export const GATES = {
   serve: canServe,
   parents: canMessageParents,
   door: canRunDoor,
+  live: canRunLive,
   coachView: (p: Persona) => canOpenRoleView(p, 'coach'),
   captainView: (p: Persona) => canOpenRoleView(p, 'captain'),
   adminView: (p: Persona) => canOpenRoleView(p, 'admin'),

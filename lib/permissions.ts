@@ -54,6 +54,8 @@ export const canCoordinateServing = (p: Persona) => has(p, LEADER_ROLES);
 export const canMessageParents = (p: Persona) => has(p, LEADER_ROLES);
 /** The door kiosk checks students in, so it is roster work. */
 export const canRunDoor = (p: Persona) => has(p, ROSTER_EDIT_ROLES);
+/** Mirrors live_rooms_write: leaders run ministry time; everyone answers. */
+export const canRunLive = (p: Persona) => has(p, LEADER_ROLES);
 
 /* ── Role views ───────────────────────────────────────────────────────── */
 export type RoleView = 'coach' | 'captain' | 'admin' | 'parent' | 'congregation' | 'team';

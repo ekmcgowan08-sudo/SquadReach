@@ -51,8 +51,9 @@ export function demoPlan(now: number): Plan {
     ['2027-06-28', '2027-07-04']
   ];
   p.items = ITEMS.map((it, i) => ({ ...it, id: 'pi' + (i + 1) }));
-  const leads: Record<string, string> = { setup: 'Sam Okafor', huddle: 'Mike Torres', doors: 'Renee Boyd', game: 'Sam Okafor', worship: 'Priya Raman', teaching: 'Mike Torres', groups: 'Chris Alder', sendoff: 'Mike Torres', teardown: 'Ty Winslow', debrief: 'Mike Torres' };
-  const order = p.blocks.map((b) => ({ id: b.id, seg: b.seg, kind: b.name, title: b.id === 'game' ? 'Pipeline relay' : '', mins: b.mins, lead: leads[b.id] ?? null }));
+  p.blocks = p.blocks.map((b) => (b.id === 'ministry' ? { ...b, on: true } : b));
+  const leads: Record<string, string> = { setup: 'Sam Okafor', huddle: 'Mike Torres', doors: 'Renee Boyd', game: 'Sam Okafor', worship: 'Priya Raman', teaching: 'Mike Torres', ministry: 'Priya Raman', groups: 'Chris Alder', sendoff: 'Mike Torres', teardown: 'Ty Winslow', debrief: 'Mike Torres' };
+  const order = p.blocks.filter((b) => b.on).map((b) => ({ id: b.id, seg: b.seg, kind: b.name, title: b.id === 'game' ? 'Pipeline relay' : '', mins: b.mins, lead: leads[b.id] ?? null }));
   p.gatherings['2026-10-21'] = {
     order: order.map((b) => ({ ...b, title: b.id === 'game' ? 'Dodgeball' : b.title })),
     debrief: {
@@ -68,7 +69,31 @@ export function demoPlan(now: number): Plan {
       { id: 'pr1', name: 'Band rehearsal', day: -1, start: '19:00', mins: 90, people: ['Priya Raman', 'Ava Lin'] },
       { id: 'pr2', name: 'Game run-through', day: 0, start: '17:30', mins: 30, people: ['Sam Okafor'] }
     ],
-    brief: 'Week 9 of 9 — last night of the season. Name what the season was about before small groups.'
+    brief: 'Week 9 of 9 — last night of the season. Name what the season was about before small groups.',
+    live: {
+      acts: [
+        { id: 'lv1', type: 'trivia', prompt: 'Who wrote the letter to the Ephesians?', options: [{ l: 'Peter' }, { l: 'Paul', correct: true }, { l: 'John' }, { l: 'Luke' }], timer: 'night' },
+        { id: 'lv2', type: 'this', prompt: 'Harder to believe this week?', options: [{ l: 'God chose me' }, { l: 'God isn’t done with me' }], timer: 'night' },
+        { id: 'lv3', type: 'cloud', prompt: 'One word for this season', timer: 30 },
+        { id: 'lv4', type: 'verse', prompt: 'Finish Ephesians 2:8', verse: 'For by [grace] are ye saved through [faith]; and that not of yourselves: it is the gift of God.', timer: 30 },
+        { id: 'lv5', type: 'tug', prompt: 'Tug-of-war: pull for your squads', timer: 30 }
+      ]
+    }
+  };
+  p.gatherings['2026-10-21'].live = {
+    acts: [
+      { id: 'lw1', type: 'trivia', prompt: 'Which city was Paul writing to?', options: [{ l: 'Ephesus', correct: true }, { l: 'Corinth' }, { l: 'Rome' }], timer: 'night' },
+      { id: 'lw2', type: 'cloud', prompt: 'One word for how this week felt', timer: 'night' }
+    ],
+    decided: { tired: true, busy: true, hopeful: true },
+    results: {
+      at: now - 7 * 86_400_000 + 3_600_000,
+      by: 'Pastor Mike',
+      lines: [
+        { id: 'lw1', type: 'trivia', prompt: 'Which city was Paul writing to?', line: '71% chose Ephesus · 24 answered' },
+        { id: 'lw2', type: 'cloud', prompt: 'One word for how this week felt', line: 'Top words: tired, busy, hopeful · 3 approved' }
+      ]
+    }
   };
   p.published = { at: now - 20 * 86_400_000, by: 'Pastor Mike', items: Object.fromEntries(p.items.filter((x) => x.year === 0 && x.status === 'confirmed' && x.title !== 'Summer camp').map((x) => [x.id, x.title + '|' + x.lane + '|' + (x.month ?? '') + '|' + x.size])) };
   p.dismissed = [{ id: 'cov:sexuality|2031', reason: 'This class had the full weekend retreat on this in 2029, before the plan started tracking it.', at: now - 40 * 86_400_000, by: 'Pastor Mike' }];

@@ -6,6 +6,7 @@
    computed when it's read, never stored.
 
    Ministry year Y runs August 1 of startYear + Y to July 31 the year after. */
+import type { LiveActivity, LiveKind, LiveSettings } from '@/lib/live';
 import { addDays, advent1, easter, weekdayOf, ymd } from '@/lib/liturgical';
 
 export type ItemKind = 'series' | 'event' | 'trip' | 'milestone' | 'recurring' | 'goal';
@@ -100,6 +101,14 @@ export interface GatheringPlan {
     carriedTo?: string;
     carriedFrom?: string;
   };
+  /** Live ministry time: the night's activities (with their answers, so
+   *  leaders only), and what they showed once attached to the debrief. */
+  live?: {
+    acts: LiveActivity[];
+    /** Word-cloud words a leader showed (true) or kept off the screen. */
+    decided?: Record<string, boolean>;
+    results?: { at: number; by: string; lines: { id: string; type: LiveKind; prompt: string; line: string }[] };
+  };
 }
 
 export interface PlanSettings {
@@ -132,6 +141,8 @@ export interface Plan {
   /** Liturgical days in use (all on by default once the layer is on). */
   holyDays: Record<string, boolean>;
   changes: { id: string; at: number; by: string; line: string }[];
+  /** Live ministry time's night defaults; absent means LIVE_DEFAULTS. */
+  live?: LiveSettings;
 }
 
 export const LANE_DEFAULTS: PlanLane[] = [
@@ -168,6 +179,7 @@ export const BLOCK_DEFAULTS: BlockDef[] = [
   { id: 'game', name: 'Game', note: 'Large group', mins: 15, seg: 'main', on: true },
   { id: 'worship', name: 'Worship', note: 'Band, two or three songs', mins: 20, seg: 'main', on: true },
   { id: 'teaching', name: 'Teaching', note: 'The series message', mins: 25, seg: 'main', on: true },
+  { id: 'ministry', name: 'Ministry time', note: 'Live activities on phones', mins: 10, seg: 'main', on: false },
   { id: 'groups', name: 'Small groups', note: 'By grade and gender', mins: 30, seg: 'main', on: true },
   { id: 'sendoff', name: 'Send-off', note: 'Announcements and pickup', mins: 10, seg: 'main', on: true },
   { id: 'teardown', name: 'Tear down', note: 'Chairs stacked, sound off', mins: 20, seg: 'post', on: true },

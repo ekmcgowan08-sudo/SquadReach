@@ -6,6 +6,7 @@
    any given role can read or write, using the same constants as the UI.
 
    The store never knows which one it is talking to. */
+import type { LiveAnswer, LiveRoom } from '@/lib/live';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CareReminder, Category, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
@@ -89,5 +90,16 @@ export interface Backend {
   /** A short-lived URL for a stored file, or null where files stay on the phone. */
   fileUrl(path: string): Promise<string | null>;
   subscribe(onRemote: (patch: RemotePatch) => void): () => void;
+  /** Live ministry time, one night at a time. The room is what everyone may
+   *  see; answers come back to leaders only (their own, for anyone else). */
+  live: LiveChannel;
+}
+
+export interface LiveChannel {
+  load(night: string): Promise<{ room: LiveRoom | null; answers: LiveAnswer[] }>;
+  room(night: string, room: LiveRoom): Promise<void>;
+  answer(night: string, a: LiveAnswer): Promise<void>;
+  clear(night: string): Promise<void>;
+  subscribe(night: string, on: (p: { room?: LiveRoom; answer?: LiveAnswer; cleared?: boolean }) => void): () => void;
 }
 

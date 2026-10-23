@@ -9,6 +9,7 @@
 import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
 import { logsFromLedger } from '@/lib/logs';
+import { supabaseLive } from '@/lib/data/supabase-live';
 import { dmThread } from '@/lib/chat-dm';
 import { bibleStats } from '@/lib/bible';
 import { isoDay, periodKey, tonightDate, weekOf } from '@/lib/dates';
@@ -706,7 +707,9 @@ export function supabaseBackend(membership: Membership): Backend {
       return () => {
         void db.removeChannel(ch);
       };
-    }
+    },
+
+    live: supabaseLive(db, org, membership)
   };
   return backend;
 }

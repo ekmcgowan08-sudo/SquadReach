@@ -3,6 +3,7 @@
    season, cut into nights; one night, in detail: the service order with who
    leads each block, the practices that week, who serves, what goes out, and
    afterwards the debrief with minutes run against minutes planned. */
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useCycle } from '@/components/cycle/use-cycle';
@@ -316,6 +317,31 @@ function NightDetail({ night }: { night: string }) {
               Carry these timings to {fmtNight(next)}
             </Btn>
           ) : null}
+        </Panel>
+      ) : null}
+
+      {g.live?.acts.length ? (
+        <Panel
+          title="Live ministry time"
+          meta={g.live.results ? 'attached ' + when(g.live.results.at) + ' by ' + g.live.results.by : g.live.acts.length + ' activities planned'}
+          right={
+            <Link href={'/planner/live?night=' + night + (g.live.results ? '&tab=results' : '')} className="text-[12px] text-accent-300">
+              {g.live.results ? 'Results' : 'Set up'}
+            </Link>
+          }
+        >
+          {g.live.results ? (
+            <div className="flex flex-col gap-2">
+              {g.live.results.lines.map((l) => (
+                <div key={l.id} className="text-[12.5px] leading-[1.5]">
+                  <span className="text-neutral-100">{l.prompt}</span>
+                  <span className="text-neutral-500"> — {l.line}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-[12.5px] text-neutral-400">{g.live.acts.map((a) => a.prompt).join(' · ')}</div>
+          )}
         </Panel>
       ) : null}
 

@@ -1,6 +1,7 @@
 /* DEMO MODE — the whole ministry lives on this device. Every change is a
    snapshot write; there is nothing to sync and nobody else to hear from. */
 import type { Backend } from '@/lib/data/backend';
+import { demoLive } from '@/lib/data/demo-live';
 import { demoMinistry } from '@/lib/data/seed';
 import type { MinistryData } from '@/lib/types/model';
 
@@ -55,7 +56,8 @@ export const demoBackend: Backend = {
   },
   subscribe() {
     return () => {};
-  }
+  },
+  live: demoLive
 };
 
 export function resetDemo() {

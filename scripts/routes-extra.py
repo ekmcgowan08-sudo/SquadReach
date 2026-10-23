@@ -30,4 +30,5 @@ EXTRA.update({
     'door': ('DoorKioskScreen', 'door', 'door'),
     'here': ('HereScreen', 'door', 'member'),
     'report': ('ReportViewScreen', 'report-view', 'member'),
+    'live': ('LiveScreen', 'live', 'member'),
 })

@@ -1,5 +1,5 @@
 'use client';
-/* The planner's shell and shared pieces: the nine-link nav, the ⌘K
+/* The planner's shell and shared pieces: the ten-link nav, the ⌘K
    palette ("G then a letter" jumps anywhere), the plan's save path with
    undo/redo, and the card every screen is built from. */
 import Link from 'next/link';
@@ -20,6 +20,7 @@ export const PLANNER_NAV = [
   { href: '/planner/roadmap', label: 'Roadmap', key: 'r', icon: 'ph ph-map-trifold' },
   { href: '/planner/year', label: 'Ministry year', key: 'y', icon: 'ph ph-columns' },
   { href: '/planner/season', label: 'Season & night', key: 'n', icon: 'ph ph-moon-stars' },
+  { href: '/planner/live', label: 'Live', key: 'm', icon: 'ph ph-broadcast' },
   { href: '/planner/coverage', label: 'Coverage', key: 'c', icon: 'ph ph-grid-four' },
   { href: '/planner/liturgical', label: 'Liturgical', key: 'l', icon: 'ph ph-circle-half' },
   { href: '/planner/settings', label: 'Settings', key: 's', icon: 'ph ph-sliders-horizontal' }
@@ -37,7 +38,9 @@ const ACTIONS = [
   { label: 'Build the season', href: '/console?tab=season', group: 'Console' },
   { label: 'Publish the plan', href: '/planner/roadmap?publish=1', group: 'Plan' },
   { label: 'Print the one-pager', href: '/planner/one-pager?print=1', group: 'Plan' },
-  { label: 'Plan checks', href: '/planner/roadmap?view=checks', group: 'Plan' }
+  { label: 'Plan checks', href: '/planner/roadmap?view=checks', group: 'Plan' },
+  { label: 'Run ministry time', href: '/planner/live?tab=run', group: 'Tonight' },
+  { label: 'Open the room screen', href: '/live/room', group: 'Tonight' }
 ];
 
 /** "Move Gospel of Mark…" → "move Gospel of Mark…": names keep their capitals. */
