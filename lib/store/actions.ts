@@ -122,7 +122,7 @@ export function postCoachCheckin(get: Get, name: string, team: string, picks: Re
       why: name + ' · ' + q.label.toLowerCase() + (q.cat === 'visitors' ? ' · ' + visitors.trim() : ''),
       student: name,
       by,
-      detail: q.cat === 'visitors' ? { friends: parseFriendNames(visitors) } : null
+      detail: q.cat === 'visitors' ? { friends: parseFriendNames(visitors), friendKind: 'new' as const } : null
     }))
   ];
   const sum = rows.reduce((n, r) => n + r.amount, 0);
@@ -130,12 +130,14 @@ export function postCoachCheckin(get: Get, name: string, team: string, picks: Re
   if (!flag) return false;
   get().mutate((d) => {
     d.tonight.presence[name] = true;
+    d.tonight.via ??= {};
+    d.tonight.via[name] = 'leader';
     d.tonight.checkinDetail[name] = { pts: sum, count: picked.length, picks: { ...picks }, visitors };
     if (picked.some((q) => q.cat === 'visitors')) {
       d.visitorLog.unshift({ id: uid(), names: parseFriendNames(visitors), student: name, team, week: d.config.weekNumber, kind: 'new', at: Date.now() });
     }
   });
-  get().emit({ kind: 'presence', date: get().data.tonight.date, student: name, present: true });
+  get().emit({ kind: 'presence', date: get().data.tonight.date, student: name, present: true, via: 'leader' });
   const queued = !autoApproves(s.membership.persona);
   s.sayPosted(
     name + ' checked in — ' + fmt(sum) + ' pts ' + (queued ? 'sent for approval.' : 'to ' + teamOf(get().data, team).name + '.'),

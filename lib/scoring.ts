@@ -180,9 +180,9 @@ export function studentItemValue(it: StudentItem, sh: SheetState, ctx: ValueCtx)
 }
 
 export function sheetDetail(it: StudentItem, sh: SheetState, ctx: ValueCtx): EntryDetail | null {
-  if (it.expand === 'friends') return { count: Math.max(1, sh.counts[it.id] || 1) };
+  if (it.expand === 'friends') return { count: Math.max(1, sh.counts[it.id] || 1), ...(it.friendKind ? { friendKind: it.friendKind } : {}) };
   if (it.expand === 'articles') return { articles: Math.max(1, sh.articles || 1) };
-  if (it.expand === 'verses') return { verses: verseCount(it, sh, ctx) };
+  if (it.expand === 'verses') return { verses: verseCount(it, sh, ctx), verseSet: it.verseSet ?? 'week' };
   if (it.expand === 'proof') return { proof: !!sh.proof[it.id] };
   if (it.expand === 'where') return { place: sh.where || '' };
   return null;

@@ -8,6 +8,7 @@
    a replay over a flaky connection can never double-post. */
 import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
+import { logsFromLedger } from '@/lib/logs';
 import { bibleStats } from '@/lib/bible';
 import { isoDay, periodKey, tonightDate, weekOf } from '@/lib/dates';
 import { supabaseBrowser } from '@/lib/supabase/client';
@@ -453,6 +454,8 @@ export function supabaseBackend(membership: Membership): Backend {
       for (const doc of (docs.data ?? []) as { key: string; value: unknown }[]) {
         if (doc.key in d) (d as unknown as Record<string, unknown>)[doc.key] = doc.value;
       }
+      /* Who brought whom and who recited what live on the ledger's own rows. */
+      Object.assign(d, logsFromLedger(d.ledger, config.meetingDates));
 
       /* Tonight: attendance and the shared run sheet. */
       d.tonight.date = tonight;

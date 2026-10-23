@@ -42,6 +42,10 @@ export interface EntryDetail {
   proof?: boolean;
   place?: string;
   friends?: string[];
+  /** Friends already in the directory, or new to the ministry. */
+  friendKind?: 'known' | 'new';
+  /** Which board a verse count came from. */
+  verseSet?: 'sunday' | 'week';
   /** Photo proof, shrunk on the phone to a small JPEG data URL. */
   photo?: string;
 }
