@@ -82,9 +82,11 @@ export interface Notice {
   label: string;
   meta: string;
   href: string;
+  /** Which setting turns this kind off (lib/prefs NOTIF_TRIGGERS). */
+  trigger: string;
 }
 
-export function computeNotifications(d: MinistryData, m: Membership): Notice[] {
+export function computeNotifications(d: MinistryData, m: Membership, on: Record<string, boolean> = {}): Notice[] {
   const list: Notice[] = [];
   const p = m.persona;
   if (canApprove(p)) {
@@ -93,26 +95,29 @@ export function computeNotifications(d: MinistryData, m: Membership): Notice[] {
         icon: 'ph ph-user-focus',
         label: r.name + ' requested ' + personaDef(r.requestedRole).label + ' access',
         meta: r.flagged ? 'Parent link unconfirmed — verify first' : r.personType + ' · ' + r.household,
-        href: '/dashboard/access-requests'
+        href: '/dashboard/access-requests',
+        trigger: 'roleRequest'
       });
     }
     const pending = d.ledger.filter((e) => e.status === 'pending').length;
-    if (pending) list.push({ icon: 'ph ph-seal-check', label: pending + (pending === 1 ? ' point request' : ' point requests') + ' waiting on you', meta: 'Approve or send back from Home', href: '/dashboard/approvals' });
-    if (d.prayerQueue.length) list.push({ icon: 'ph ph-hands-praying', label: d.prayerQueue.length + (d.prayerQueue.length === 1 ? ' prayer request' : ' prayer requests') + ' to review', meta: 'Nothing is public until you post it', href: '/dashboard/follow-ups' });
+    if (pending) list.push({ icon: 'ph ph-seal-check', label: pending + (pending === 1 ? ' point request' : ' point requests') + ' waiting on you', meta: 'Approve or send back from Home', href: '/dashboard/approvals', trigger: 'approvals' });
+    if (d.prayerQueue.length) list.push({ icon: 'ph ph-hands-praying', label: d.prayerQueue.length + (d.prayerQueue.length === 1 ? ' prayer request' : ' prayer requests') + ' to review', meta: 'Nothing is public until you post it', href: '/dashboard/follow-ups', trigger: 'prayer' });
   }
   const next = d.events.find((e) => eventVisible(e, p));
-  if (next) list.push({ icon: 'ph ph-calendar-dots', label: 'Upcoming: ' + next.title, meta: next.date + ' · ' + next.meta, href: '/dashboard/events/' + next.id });
-  list.push({ icon: 'ph ph-chart-line-up', label: 'Week ' + d.config.weekNumber + ' summary ready', meta: fmt(pointBase(d.config)) + ' pt base · standings updated', href: '/dashboard' });
+  if (next) list.push({ icon: 'ph ph-calendar-dots', label: 'Upcoming: ' + next.title, meta: next.date + ' · ' + next.meta, href: '/dashboard/events/' + next.id, trigger: 'event' });
+  list.push({ icon: 'ph ph-chart-line-up', label: 'Week ' + d.config.weekNumber + ' summary ready', meta: fmt(pointBase(d.config)) + ' pt base · standings updated', href: '/dashboard', trigger: 'weeklySummary' });
   if (canHuddle(p)) {
     for (const it of d.huddle.runSheet.filter((x) => x.assignedTo && x.notifiedAt).slice(0, 4)) {
       const who = d.huddle.crew.find((c) => c.id === it.assignedTo);
-      if (who) list.push({ icon: 'ph ph-clipboard-text', label: who.name + ' owns ' + it.time + ' · ' + it.label, meta: 'Run sheet published', href: '/dashboard/huddle' });
+      if (who) list.push({ icon: 'ph ph-clipboard-text', label: who.name + ' owns ' + it.time + ' · ' + it.label, meta: 'Run sheet published', href: '/dashboard/huddle', trigger: 'runSheet' });
     }
   }
   const bible = myBible(d, m);
-  if (bible.streak > 0 && !bible.loggedToday) list.push({ icon: 'ph ph-fire', label: 'Your ' + bible.streak + '-day streak is on the line', meta: 'Practice today to keep it alive', href: '/dashboard/bible' });
-  if (!bible.loggedToday) list.push({ icon: 'ph ph-book-open-text', label: 'Bible practice reminder', meta: bible.due + ' verses due for review', href: '/dashboard/bible' });
-  return list;
+  /* Staff who have never practiced aren't nagged about a streak they never started. */
+  const practices = !!m.studentName || d.practiceLog.some((r) => r.who === practiceName(m));
+  if (practices && bible.streak > 0 && !bible.loggedToday) list.push({ icon: 'ph ph-fire', label: 'Your ' + bible.streak + '-day streak is on the line', meta: 'Practice today to keep it alive', href: '/dashboard/bible', trigger: 'streakBreak' });
+  if (practices && !bible.loggedToday) list.push({ icon: 'ph ph-book-open-text', label: 'Bible practice reminder', meta: bible.due + ' verses due for review', href: '/dashboard/bible', trigger: 'bibleReminder' });
+  return list.filter((n) => on[n.trigger] !== false);
 }
 
 /* ── the run sheet as a clock ─────────────────────────────────────────── */

@@ -7,6 +7,7 @@ import '@phosphor-icons/web/regular';
 import '@phosphor-icons/web/fill';
 import './globals.css';
 import { ServiceWorker } from '@/components/service-worker';
+import { PREFS_BOOT_SCRIPT } from '@/lib/prefs-boot';
 
 export const metadata: Metadata = {
   title: { default: 'SquadRise', template: '%s · SquadRise' },
@@ -23,12 +24,15 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
-  colorScheme: 'dark'
+  colorScheme: 'dark light'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PREFS_BOOT_SCRIPT }} />
+      </head>
       <body>
         {children}
         <ServiceWorker />

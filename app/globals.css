@@ -67,6 +67,55 @@
   --animate-sr-marquee: sr-marquee 22s linear infinite;
 }
 
+/* Light: Nocturne is a dark system, so light is the same ramps run the other
+   way. Ministry colours (squads, categories) are data and stay as they are. */
+:root[data-theme='light'] {
+  --color-bg: #f2f3f7;
+  --color-surface: #ffffff;
+  --color-text: #1b1d27;
+  --color-accent: #6f61c4;
+  --color-accent-2: #7d72c9;
+  --color-divider: color-mix(in srgb, #1b1d27 12%, transparent);
+  --color-neutral-100: #14161d;
+  --color-neutral-200: #23252f;
+  --color-neutral-300: #373a46;
+  --color-neutral-400: #4f5362;
+  --color-neutral-500: #646878;
+  --color-neutral-600: #858999;
+  --color-neutral-700: #b3b6c3;
+  --color-neutral-800: #d9dbe3;
+  --color-neutral-900: #eceef3;
+  --color-accent-100: #251f45;
+  --color-accent-200: #362d66;
+  --color-accent-300: #4b3f8c;
+  --color-accent-400: #5d51a8;
+  --color-accent-500: #6f61c4;
+  --color-accent-600: #9184d9;
+  --color-accent-700: #b8afe9;
+  --color-accent-800: #dcd7f6;
+  --color-accent-900: #efedfb;
+  --color-out: #a14848;
+  --color-over: #8a5a12;
+  --shadow-sm: 0 0 0 1px #dfe1e8;
+  --shadow-md: 0 0 0 1px #d0d3dc, 0 6px 18px rgba(20, 22, 29, 0.12);
+  --shadow-lg: 0 0 0 1px #b3b6c3, 0 16px 40px rgba(20, 22, 29, 0.18);
+}
+
+/* Cards that sit on the deep section gradient keep the dark ramp in either
+   theme — the gradient is the same colour in both. */
+.sr-dark {
+  --color-surface: #232532;
+  --color-text: #e9e9ed;
+  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+  --color-neutral-100: #f3f5fe; --color-neutral-200: #e4e7f5; --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca; --color-neutral-500: #9397ab; --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c; --color-neutral-800: #3f424d; --color-neutral-900: #292b31;
+  --color-accent-100: #f5f4ff; --color-accent-200: #e7e5fe; --color-accent-300: #d2cefd;
+  --color-accent-400: #b5abfc; --color-accent-500: #968ae0; --color-accent-600: #796cbf;
+  --color-accent-700: #5d5294; --color-accent-800: #423a6a; --color-accent-900: #2b2741;
+  color-scheme: dark;
+}
+
 @keyframes sr-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes sr-flash { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 @keyframes sr-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
@@ -80,6 +129,7 @@
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
   html { color-scheme: dark; background: var(--color-bg); }
+  html[data-theme='light'] { color-scheme: light; }
   body {
     margin: 0;
     background: var(--color-bg);
@@ -117,7 +167,7 @@
     scroll-behavior: auto !important;
   }
 }
-[data-reduce-motion='true'] *, [data-reduce-motion='true'] *::before, [data-reduce-motion='true'] *::after {
+[data-motion='reduce'] *, [data-motion='reduce'] *::before, [data-motion='reduce'] *::after {
   animation-duration: 0.001ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;

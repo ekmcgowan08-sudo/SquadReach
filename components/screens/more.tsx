@@ -15,6 +15,7 @@ import {
   canShareRecap, canSwitchTeamView
 } from '@/lib/permissions';
 import { computeNotifications, myBible, myTeamId, openFollowups, teamOf } from '@/lib/selectors';
+import { usePrefs } from '@/lib/prefs';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef, realRole } from '@/lib/types/domain';
 
@@ -37,7 +38,8 @@ export function MoreScreen() {
   const [q, setQ] = useState('');
   const [invite, setInvite] = useState(false);
   const p = m.persona;
-  const notifs = useMemo(() => computeNotifications(d, m), [d, m]);
+  const prefs = usePrefs();
+  const notifs = useMemo(() => computeNotifications(d, m, prefs.notifTriggers), [d, m, prefs.notifTriggers]);
   const myTeam = teamOf(d, myTeamId(m, d, coachTeam));
   const pendingAccess = d.accessRequests.filter((r) => r.status === 'pending').length;
   const pendingPts = new Set(d.ledger.filter((e) => e.status === 'pending').map((e) => e.batch ?? e.id)).size;

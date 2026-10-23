@@ -14,6 +14,7 @@ import { groupHeldEntries, heldTotal, wasHeld } from '@/lib/held';
 import { autoApproves, canApprove, canControlEvent, canHuddle } from '@/lib/permissions';
 import { deltaLabel, fmt, pointBase, studentRanks, studentTotal } from '@/lib/scoring';
 import { catOf, computeBadges, computeNotifications, myBible, myTeamId, sheetMinutes, teamOf, teamRoster } from '@/lib/selectors';
+import { usePrefs } from '@/lib/prefs';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
 function greeting(now = new Date()) {
@@ -28,7 +29,8 @@ export function HomeScreen() {
   const d = useApp((s) => s.data);
   const coachTeam = useApp((s) => s.coachTeam);
   const rows = useStandings();
-  const notifs = useMemo(() => computeNotifications(d, m), [d, m]);
+  const prefs = usePrefs();
+  const notifs = useMemo(() => computeNotifications(d, m, prefs.notifTriggers), [d, m, prefs.notifTriggers]);
 
   useEffect(() => {
     if (params.get('denied')) api().say('Your role does not have that screen.');
@@ -157,7 +159,7 @@ export function HomeScreen() {
 
       {/* tonight */}
       {!firstRun ? (
-        <div className="relative overflow-hidden rounded-lg px-4 pb-[14px] pt-4" style={{ background: 'linear-gradient(160deg,var(--color-section) 0%,#1d2044 70%)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="sr-dark relative overflow-hidden rounded-lg px-4 pb-[14px] pt-4" style={{ background: 'linear-gradient(160deg,var(--color-section) 0%,#1d2044 70%)', boxShadow: 'var(--shadow-sm)' }}>
           <div className="absolute inset-0 opacity-70" style={{ background: 'radial-gradient(90% 120% at 100% 0%, var(--color-section-glow) 0%, transparent 60%)' }} />
           <div className="relative flex flex-col gap-[11px]">
             <div className="flex items-center gap-2">
@@ -185,9 +187,9 @@ export function HomeScreen() {
       {canApprove(p) ? <WaitingOnYou /> : null}
       <StaleHeldCard />
       <OutboxCard />
-      <StandingsCard />
-      {!firstRun ? <RecentChanges /> : null}
-      <BadgesStrip />
+      {prefs.homeSections.standings ? <StandingsCard /> : null}
+      {!firstRun && prefs.homeSections.feed ? <RecentChanges /> : null}
+      {prefs.homeSections.badges ? <BadgesStrip /> : null}
 
       {/* quick links */}
       <div className="grid grid-cols-2 gap-[10px]">
@@ -217,7 +219,7 @@ export function HomeScreen() {
           ))}
       </div>
 
-      <ChurchCard />
+      {prefs.homeSections.church ? <ChurchCard /> : null}
     </Screen>
   );
 }
@@ -409,7 +411,7 @@ export function usePendingGroups() {
   }, [d.ledger]);
 }
 
-function WaitingOnYou() {
+export function WaitingOnYou() {
   const d = useAppData();
   const api = useAppApi();
   const groups = usePendingGroups();

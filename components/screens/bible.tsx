@@ -233,7 +233,7 @@ export function BibleScreen() {
         </div>
       ) : null}
 
-      <div className="rounded-lg px-4 pb-[15px] pt-4" style={{ ...CARD_VARS, background: 'linear-gradient(165deg, var(--color-section), #1c1f3f)', boxShadow: 'var(--shadow-sm)' }}>
+      <div className="sr-dark rounded-lg px-4 pb-[15px] pt-4" style={{ ...CARD_VARS, background: 'linear-gradient(165deg, var(--color-section), #1c1f3f)', boxShadow: 'var(--shadow-sm)' }}>
         <div className="mb-[11px] flex items-center gap-2">
           <span className="text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-accent-300">
             Week {d.config.weekNumber} · {verse?.ref ?? 'No verse set'}
