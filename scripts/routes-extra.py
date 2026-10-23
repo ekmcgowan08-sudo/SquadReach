@@ -15,4 +15,5 @@ EXTRA.update({
     'attendance': ('AttendanceScreen', 'night', 'attendance'),
     'parent-link': ('ParentLinkScreen', 'night', 'board'),
     'recap': ('RecapScreen', 'recap', 'recap'),
+    'media': ('MediaScreen', 'media', 'any'),
 })

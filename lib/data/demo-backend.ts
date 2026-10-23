@@ -47,6 +47,10 @@ export const demoBackend: Backend = {
   async pushEntries() {},
   async decideEntries() {},
   async sync() {},
+  /* Demo files never leave the phone; tiles read them from IndexedDB. */
+  async fileUrl() {
+    return null;
+  },
   subscribe() {
     return () => {};
   }

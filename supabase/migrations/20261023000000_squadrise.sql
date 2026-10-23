@@ -311,6 +311,21 @@ create table public.practice_log (
 );
 create index on public.practice_log (org_id, day desc);
 
+-- The week albums. Files live in the private 'media' storage bucket under
+-- <org>/<week>/<id>; this row is what the album lists.
+create table public.media_items (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  week int not null,
+  kind text not null check (kind in ('photo', 'video', 'audio')),
+  label text not null default '',
+  path text,
+  created_by uuid references public.memberships(id) on delete set null,
+  created_by_name text not null default '',
+  created_at timestamptz not null default now()
+);
+create index on public.media_items (org_id, week);
+
 -- The long tail a leader curates — small-group guides, award races, media
 -- album metadata, saved reports. One document per key per ministry.
 -- Nothing about students is written here by students.
@@ -342,6 +357,7 @@ alter table public.access_requests enable row level security;
 alter table public.activity_log enable row level security;
 alter table public.ministry_docs enable row level security;
 alter table public.practice_log enable row level security;
+alter table public.media_items enable row level security;
 
 -- organizations: members read; LEADER_ROLES edit the setup.
 create policy org_read on public.organizations for select using (public.is_member(id));
@@ -470,6 +486,14 @@ create policy practice_captain on public.practice_log for select
 create policy practice_log_own on public.practice_log for insert
   with check (public.is_member(org_id) and membership_id in (select m.id from public.memberships m where m.user_id = auth.uid() and m.org_id = practice_log.org_id));
 
+-- albums: members read and add their own; LEADER_ROLES remove anything.
+create policy media_read on public.media_items for select using (public.is_member(org_id));
+create policy media_add on public.media_items for insert
+  with check (public.is_member(org_id) and created_by in (select m.id from public.memberships m where m.user_id = auth.uid() and m.org_id = media_items.org_id));
+create policy media_remove on public.media_items for delete
+  using (public.has_role(org_id, array['leader','owner']::public.membership_role[])
+    or created_by in (select m.id from public.memberships m where m.user_id = auth.uid()));
+
 -- curated documents: members read; LEADER_ROLES write.
 create policy docs_read on public.ministry_docs for select using (public.is_member(org_id));
 create policy docs_write on public.ministry_docs for all
@@ -590,5 +614,22 @@ do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     alter publication supabase_realtime add table public.score_entries, public.nights;
+  end if;
+end $$;
+
+-- ── storage: the 'media' bucket ─────────────────────────────────────────
+-- Private. A member reads and writes under their own ministry's folder;
+-- the first path segment is the org id. Skipped where there is no storage
+-- schema (the plain-Postgres RLS tests).
+do $$
+begin
+  if exists (select 1 from pg_namespace where nspname = 'storage') then
+    insert into storage.buckets (id, name, public) values ('media', 'media', false) on conflict (id) do nothing;
+    execute $p$create policy media_obj_read on storage.objects for select
+      using (bucket_id = 'media' and public.is_member(((storage.foldername(name))[1])::uuid))$p$;
+    execute $p$create policy media_obj_write on storage.objects for insert
+      with check (bucket_id = 'media' and public.is_member(((storage.foldername(name))[1])::uuid))$p$;
+    execute $p$create policy media_obj_delete on storage.objects for delete
+      using (bucket_id = 'media' and public.has_role(((storage.foldername(name))[1])::uuid, array['leader','owner']::public.membership_role[]))$p$;
   end if;
 end $$;

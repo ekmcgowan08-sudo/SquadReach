@@ -9,7 +9,7 @@
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CareReminder, Category, ChatMessage, HuddleState, LedgerEntry, MinistryConfig,
-  GameState, MinistryData, PracticeRow, PrayerQueued, Rsvp, Student, Team
+  GameState, MediaItem, MinistryData, PracticeRow, PrayerQueued, Rsvp, Student, Team
 } from '@/lib/types/model';
 
 export type SyncEvent =
@@ -33,7 +33,12 @@ export type SyncEvent =
   | { kind: 'chat'; threadId: string; msg: ChatMessage }
   | { kind: 'rsvp'; eventId: string; name: string; rec: Rsvp }
   | { kind: 'practice'; row: PracticeRow }
-  | { kind: 'game'; game: GameState };
+  | { kind: 'game'; game: GameState }
+  /** A leader-curated document (small groups, awards, logs) saved whole. */
+  | { kind: 'doc'; key: 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog'; value: unknown }
+  /** A photo or video filed into a week album; the file uploads with it. */
+  | { kind: 'media'; item: MediaItem; file: Blob }
+  | { kind: 'mediaRemove'; id: string; path: string | null };
 
 /** A change that arrived from someone else's phone. */
 export type RemotePatch =
@@ -52,6 +57,8 @@ export interface Backend {
   pushEntries(entries: LedgerEntry[]): Promise<void>;
   decideEntries(ids: string[], status: ScoreEntryStatus, by: string): Promise<void>;
   sync(event: SyncEvent): Promise<void>;
+  /** A short-lived URL for a stored file, or null where files stay on the phone. */
+  fileUrl(path: string): Promise<string | null>;
   subscribe(onRemote: (patch: RemotePatch) => void): () => void;
 }
 

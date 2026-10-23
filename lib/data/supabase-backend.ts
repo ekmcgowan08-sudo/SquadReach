@@ -73,7 +73,7 @@ export function supabaseBackend(membership: Membership): Backend {
       const d = emptyMinistry();
       const since = new Date();
       since.setDate(since.getDate() - 60);
-      const [orgRow, teams, cats, students, entries, prayers, care, events, challenges, access, log, docs, practice] = await Promise.all([
+      const [orgRow, teams, cats, students, entries, prayers, care, events, challenges, access, log, docs, practice, media] = await Promise.all([
         db.from('organizations').select('id, name, config, invite_code').eq('id', org).single(),
         db.from('teams').select('*').eq('org_id', org).eq('archived', false).order('sort'),
         db.from('categories').select('*').eq('org_id', org).eq('archived', false).order('sort'),
@@ -86,7 +86,8 @@ export function supabaseBackend(membership: Membership): Backend {
         db.from('access_requests').select('*').eq('org_id', org).eq('status', 'pending').order('created_at'),
         db.from('activity_log').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(200),
         db.from('ministry_docs').select('key, value').eq('org_id', org),
-        db.from('practice_log').select('*').eq('org_id', org).gte('day', isoDay(since)).order('day', { ascending: false }).limit(5000)
+        db.from('practice_log').select('*').eq('org_id', org).gte('day', isoDay(since)).order('day', { ascending: false }).limit(5000),
+        db.from('media_items').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(1000)
       ]);
 
       const o = must(orgRow) as { name: string; config: Partial<MinistryConfig>; invite_code: string };
@@ -108,6 +109,9 @@ export function supabaseBackend(membership: Membership): Backend {
         (s): Student => ({ id: s.id, name: s.name, team: s.team_id, grade: s.grade, captain: s.captain, guest: s.guest, newInDb: s.new_in_db })
       );
       d.ledger = (must(entries) as EntryRow[]).map(toEntry);
+      d.media = ((media.data ?? []) as { id: string; week: number; kind: 'photo' | 'video' | 'audio'; label: string; path: string | null; created_by_name: string; created_at: string }[]).map((r) => ({
+        id: r.id, week: r.week, kind: r.kind, label: r.label, path: r.path, by: r.created_by_name, at: new Date(r.created_at).getTime()
+      }));
       d.practiceLog = ((practice.data ?? []) as { id: string; who: string; team_id: string | null; day: string; ref: string; mode: string; created_at: string }[]).map((r) => ({
         id: r.id, who: r.who, team: r.team_id, day: r.day, ref: r.ref, mode: r.mode, at: new Date(r.created_at).getTime()
       }));
@@ -259,6 +263,24 @@ export function supabaseBackend(membership: Membership): Backend {
         case 'config':
           await db.from('organizations').update({ name: e.config.ministryName, config: e.config }).eq('id', org);
           return;
+        case 'doc':
+          await db.from('ministry_docs').upsert({ org_id: org, key: e.key, value: e.value, updated_at: new Date().toISOString() });
+          return;
+        case 'media': {
+          const path = e.item.path ?? org + '/' + e.item.week + '/' + e.item.id;
+          const up = await db.storage.from('media').upload(path, e.file, { contentType: e.file.type || 'application/octet-stream', upsert: true });
+          if (up.error) throw up.error;
+          const ins = await db.from('media_items').upsert(
+            { id: e.item.id, org_id: org, week: e.item.week, kind: e.item.kind, label: e.item.label, path, created_by: membership.membershipId, created_by_name: e.item.by ?? '' },
+            { onConflict: 'id', ignoreDuplicates: true }
+          );
+          if (ins.error) throw ins.error;
+          return;
+        }
+        case 'mediaRemove':
+          if (e.path) await db.storage.from('media').remove([e.path]);
+          await db.from('media_items').delete().eq('id', e.id);
+          return;
         case 'team':
           await db.from('teams').upsert({ id: e.team.id, org_id: org, name: e.team.name, color: e.team.color, mascot_name: e.team.mascotName, mascot_story: e.team.mascotStory, sort: e.team.sort });
           return;
@@ -303,6 +325,11 @@ export function supabaseBackend(membership: Membership): Backend {
       }
     },
 
+    async fileUrl(path: string) {
+      const r = await db.storage.from('media').createSignedUrl(path, 60 * 60);
+      return r.data?.signedUrl ?? null;
+    },
+
     subscribe(onRemote: (p: RemotePatch) => void) {
       const ch = db
         .channel('org-' + org)
@@ -326,4 +353,4 @@ export function supabaseBackend(membership: Membership): Backend {
 }
 
 /** Leader-curated documents that live in ministry_docs, by MinistryData key. */
-export const DOC_KEYS = ['smallGroups', 'awards', 'media', 'visitorLog', 'verseLog'] as const;
+export const DOC_KEYS = ['smallGroups', 'awards', 'visitorLog', 'verseLog'] as const;

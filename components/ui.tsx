@@ -75,7 +75,7 @@ export function Stat({ label, value, hint, className }: { label: string; value: 
 
 /** Primary: accent OUTLINE on transparent — never a filled block. */
 export function Btn({
-  children, onClick, variant = 'primary', className, disabled, type = 'button', style, ariaLabel, href
+  children, onClick, variant = 'primary', className, disabled, type = 'button', style, ariaLabel, href, download
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -86,8 +86,17 @@ export function Btn({
   style?: CSSProperties;
   ariaLabel?: string;
   href?: string;
+  /** A file link (blob: or signed URL): a plain anchor that downloads. */
+  download?: string;
 }) {
   const cls = cx('btn', 'btn-' + variant, className);
+  if (href && download) {
+    return (
+      <a href={href} download={download} className={cls} style={style} aria-label={ariaLabel}>
+        {children}
+      </a>
+    );
+  }
   if (href) {
     return (
       <Link href={href} className={cls} style={style} aria-label={ariaLabel}>

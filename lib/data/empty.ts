@@ -57,6 +57,7 @@ export function emptyMinistry(): MinistryData {
     awardVotes: {},
     media: [],
     clips: [],
+    filmMarks: [],
     chatThreads: [],
     chatMsgs: {},
     chatUnread: {},

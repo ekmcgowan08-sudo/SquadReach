@@ -395,20 +395,38 @@ export interface MediaItem {
   week: number;
   kind: 'photo' | 'video' | 'audio';
   label: string;
-  /** Object URL / storage URL. Null for a placeholder slot. */
+  /** Storage path in the 'media' bucket (Supabase mode). */
+  path?: string | null;
+  /** IndexedDB key of the file on this phone, when it was taken here. */
+  localKey?: string | null;
+  /** Legacy/placeholder: a slot with neither path nor localKey shows as a label. */
   url?: string | null;
+  by?: string;
   at: number;
 }
 
+/** A filmed clip. The video stays on the phone that filmed it (IndexedDB)
+ *  until someone saves or shares it — nothing is uploaded on its own. */
 export interface Clip {
   id: string;
-  url: string;
+  localKey: string;
+  mime: string;
   dur: number;
   at: number;
   /** "YEL 320 · BLU 275" — the game-points line burned into the scorebug. */
   line: string;
   mb: number;
   week: number;
+  /** Seconds into the clip where a highlight was pinned. */
+  pins: number[];
+}
+
+/** A highlight pinned while the camera was off — a note for the editor. */
+export interface FilmMark {
+  id: string;
+  clock: string;
+  period: string;
+  at: number;
 }
 
 export interface ChatThread {
@@ -530,6 +548,7 @@ export interface MinistryData {
   awardVotes: Record<string, string>;
   media: MediaItem[];
   clips: Clip[];
+  filmMarks: FilmMark[];
   chatThreads: ChatThread[];
   chatMsgs: Record<string, ChatMessage[]>;
   chatUnread: Record<string, number>;

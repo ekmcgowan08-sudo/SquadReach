@@ -467,6 +467,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
       { id: 'm3-2', week: 3, kind: 'photo' as const, label: 'Altar call', url: null, at: now - 42 * DAY }
     ],
     clips: [],
+    filmMarks: [],
     chatThreads: CHAT_THREADS,
     chatMsgs: CHAT_SEED,
     chatUnread: { all: 2, leaders: 1, 'team-blue': 3, parents: 0, 'dm-mike': 0, 'dm-zoe': 1 },
