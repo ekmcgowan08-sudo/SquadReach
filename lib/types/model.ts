@@ -423,6 +423,11 @@ export interface LibraryPlacement {
   /** Whose point values the week uses — confirmed, never rescaled. */
   pts: 'theirs' | 'ours';
   at: number;
+  /** A copy of the unit as it was when placed: if its author edits it later,
+   *  this week doesn't change under you. */
+  copy?: Pick<LibraryUnit, 'summary' | 'includes' | 'pts' | 'span' | 'theme'>;
+  /** The authoring church, kept with the copy. Null when it's our own. */
+  credit?: string | null;
 }
 
 export interface Award {
@@ -629,6 +634,8 @@ export interface MinistryData {
   challengeCredit: Record<string, string[]>;
   /** Supabase, leaders only: everyone with a membership, for the Console. */
   people?: PersonRow[];
+  /** Supabase: who you can start a direct message with. */
+  chatDirectory?: import('@/lib/chat-dm').DirectoryEntry[];
   /** Who was present on each past meeting night (iso → names). Tonight is
    *  tonight.presence; this is the history the recap reads. */
   presenceLog: Record<string, string[]>;

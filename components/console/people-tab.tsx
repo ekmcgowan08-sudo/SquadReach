@@ -196,6 +196,8 @@ export function PeopleTab() {
 function PeopleList({ people }: { people: PersonRow[] }) {
   const d = useApp((s) => s.data);
   const me = useApp((s) => s.membership.membershipId);
+  /* Only an owner makes an owner, or changes one (the database holds the same line). */
+  const isOwner = useApp((s) => s.membership.persona === 'owner');
   const api = useAppApi();
   const save = (p: PersonRow) => {
     api().mutate((x) => {
@@ -216,14 +218,14 @@ function PeopleList({ people }: { people: PersonRow[] }) {
           <select
             className="input !min-h-9 w-auto !py-0"
             value={p.role}
-            disabled={p.id === me}
+            disabled={p.id === me || (p.role === 'owner' && !isOwner)}
             onChange={(e) => {
               save({ ...p, role: e.target.value as MembershipRole });
               api().logActivity('Changed ' + p.name + '’s role to ' + ROLE_LABELS[e.target.value as MembershipRole]);
             }}
             aria-label={'Role for ' + p.name}
           >
-            {MEMBERSHIP_ROLES.filter((r) => r !== 'owner' || p.role === 'owner').map((r) => (
+            {MEMBERSHIP_ROLES.filter((r) => r !== 'owner' || isOwner || p.role === 'owner').map((r) => (
               <option key={r} value={r}>
                 {ROLE_LABELS[r]}
               </option>

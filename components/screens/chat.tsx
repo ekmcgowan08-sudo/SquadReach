@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/sheet';
 import { Icon, Screen, initialsOf } from '@/components/ui';
+import { dmThread, dmThreadId } from '@/lib/chat-dm';
 import { holdsSheet } from '@/lib/permissions';
 import { chatThreadsFor, teamOf } from '@/lib/selectors';
 import { sendChat } from '@/lib/store/actions';
 import { useApp, useAppApi } from '@/lib/store/provider';
+import { personaDef } from '@/lib/types/domain';
 import type { ChatThread } from '@/lib/types/model';
 
 export function ChatScreen() {
@@ -27,7 +29,9 @@ function ThreadList() {
   const [filter, setFilter] = useState<'all' | 'groups' | 'dms'>('all');
   const [composer, setComposer] = useState(false);
   const p = m.persona;
-  const canDm = m.mode === 'demo' && holdsSheet(p);
+  /* Demo: the volunteer set starts messages. With accounts, anyone can — the
+     directory only offers who the database will let them reach. */
+  const canDm = m.mode === 'demo' ? holdsSheet(p) : !!m.membershipId;
   const needle = q.trim().toLowerCase();
   const coachTeam = useApp((s) => s.coachTeam);
   const mineName = (from?: string) => !!from && (from === m.displayName || from.startsWith(m.displayName + ' '));
@@ -270,23 +274,45 @@ function ThreadView({ id }: { id: string }) {
   );
 }
 
-/** Demo: start a direct message with someone on the roster or the crew. */
+/** Start a direct message. Adults on the team can message each other
+ *  privately; a thread with a student is open door — every leader can read
+ *  it. Students can't message each other. */
 function NewMessage({ open, onClose }: { open: boolean; onClose: () => void }) {
   const d = useApp((s) => s.data);
+  const m = useApp((s) => s.membership);
   const api = useAppApi();
   const router = useRouter();
   const [q, setQ] = useState('');
   const people = useMemo(() => {
-    const crew = d.huddle.crew.map((c) => ({ name: c.name, meta: c.job || 'Volunteer', tint: '#26404d' }));
-    const kids = d.roster.map((r) => ({ name: r.name, meta: teamOf(d, r.team).name + ' · Grade ' + r.grade + (r.captain ? ' · captain' : ''), tint: teamOf(d, r.team).color }));
     const needle = q.trim().toLowerCase();
+    if (m.mode === 'supabase') {
+      return (d.chatDirectory ?? [])
+        .filter((x) => x.id !== m.membershipId)
+        .map((x) => ({ key: x.id, name: x.name, meta: personaDef(x.role).label + (x.teamId ? ' · ' + teamOf(d, x.teamId).name : ''), tint: x.role === 'member' || x.role === 'captain' ? teamOf(d, x.teamId).color : '#26404d', student: x.role === 'member' || x.role === 'captain' }))
+        .filter((x) => !needle || x.name.toLowerCase().includes(needle))
+        .slice(0, 60);
+    }
+    const crew = d.huddle.crew.map((c) => ({ key: c.name, name: c.name, meta: c.job || 'Volunteer', tint: '#26404d', student: false }));
+    const kids = d.roster.map((r) => ({ key: r.name, name: r.name, meta: teamOf(d, r.team).name + ' · Grade ' + r.grade + (r.captain ? ' · captain' : ''), tint: teamOf(d, r.team).color, student: true }));
     return [...crew, ...kids].filter((x) => !needle || x.name.toLowerCase().includes(needle)).slice(0, 40);
-  }, [d, q]);
-  const start = (name: string, meta: string, tint: string) => {
-    const id = 'dm-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    if (!d.chatThreads.some((t) => t.id === id)) {
-      const staff = ['leader', 'owner', 'scorekeeper', 'coach'] as const;
-      api().mutate((x) => void x.chatThreads.push({ id, kind: 'dm', name, sub: meta, tint, read: [...staff], post: [...staff] }));
+  }, [d, m, q]);
+  const start = (x: (typeof people)[number]) => {
+    let id: string;
+    if (m.mode === 'supabase') {
+      id = dmThreadId(m.membershipId!, x.key);
+      if (!d.chatThreads.some((t) => t.id === id)) {
+        const t = dmThread(id, d.chatDirectory ?? [], m);
+        if (t) api().mutate((y) => void y.chatThreads.push(t));
+      }
+    } else {
+      id = 'dm-' + x.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      if (!d.chatThreads.some((t) => t.id === id)) {
+        const staff = ['leader', 'owner', 'scorekeeper', 'coach'] as const;
+        api().mutate((y) => {
+          y.chatThreads.push({ id, kind: 'dm', name: x.name, sub: x.meta + (x.student ? ' · open door' : ''), tint: x.tint, read: [...staff], post: [...staff] });
+          if (x.student) (y.chatMsgs[id] ??= []).push({ id: id + '-door', day: 'Today', time: '', system: true, text: 'Open door: every leader can read this thread.' });
+        });
+      }
     }
     onClose();
     router.push('/dashboard/chat?t=' + encodeURIComponent(id));
@@ -294,10 +320,11 @@ function NewMessage({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Sheet open={open} onClose={onClose} label="New message" maxH="78%">
       <div className="text-[16px] font-medium leading-[1.2] text-neutral-100">New message</div>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the roster" aria-label="Search the roster" className="input" />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name" aria-label="Search by name" className="input" />
+      <div className="text-[11px] leading-[1.45] text-neutral-500 text-pretty">Messages with a student are open door: every leader can read them. Students can’t message each other.</div>
       <div className="flex flex-col">
         {people.map((x) => (
-          <button key={x.name} onClick={() => start(x.name, x.meta, x.tint)} className="flex min-h-[52px] w-full items-center gap-[10px] border-t border-divider px-1 py-[9px] text-left first:border-t-0">
+          <button key={x.key} onClick={() => start(x)} className="flex min-h-[52px] w-full items-center gap-[10px] border-t border-divider px-1 py-[9px] text-left first:border-t-0">
             <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full text-[11px] font-semibold leading-none text-neutral-100" style={{ background: 'color-mix(in srgb, ' + x.tint + ' 60%, var(--color-neutral-900))' }}>
               {initialsOf(x.name)}
             </div>

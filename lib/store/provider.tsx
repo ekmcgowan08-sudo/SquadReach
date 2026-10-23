@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
+import { dmThread } from '@/lib/chat-dm';
 import { demoBackend } from '@/lib/data/demo-backend';
 import { emptyMinistry } from '@/lib/data/empty';
 import { demoMinistry } from '@/lib/data/seed';
@@ -76,6 +77,10 @@ export function AppProvider({ membership, roles, children }: { membership: Membe
         });
       } else if (patch.kind === 'chat') {
         s.mutate((d) => {
+          if (patch.threadId.startsWith('dm:') && !d.chatThreads.some((t) => t.id === patch.threadId)) {
+            const t = dmThread(patch.threadId, d.chatDirectory ?? [], s.membership);
+            if (t) d.chatThreads.push(t);
+          }
           const list = (d.chatMsgs[patch.threadId] ??= []);
           const i = list.findIndex((x) => x.id === patch.msg.id);
           if (i >= 0) list[i] = { ...list[i], ...patch.msg, status: 'sent' };

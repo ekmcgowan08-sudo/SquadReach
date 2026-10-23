@@ -9,6 +9,7 @@
 import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
 import { logsFromLedger } from '@/lib/logs';
+import { dmThread } from '@/lib/chat-dm';
 import { bibleStats } from '@/lib/bible';
 import { isoDay, periodKey, tonightDate, weekOf } from '@/lib/dates';
 import { supabaseBrowser } from '@/lib/supabase/client';
@@ -564,6 +565,15 @@ export function supabaseBackend(membership: Membership): Backend {
          squad — RLS (chat_can) decides which of them return any rows. */
       d.chatThreads = chatThreads(d.teams, d.roster.length, membership);
       for (const row of ((chat.data ?? []) as ChatRow[]).reverse()) (d.chatMsgs[row.thread_id] ??= []).push(toChat(row, membership.membershipId));
+      /* Direct messages: the database only returned threads this person may
+         read; name them from the directory (or the author line). */
+      const dir = await db.rpc('chat_directory', { p_org: org });
+      d.chatDirectory = ((dir.data ?? []) as { id: string; name: string; role: PersonRow['role']; team_id: string | null }[]).map((r) => ({ id: r.id, name: r.name, role: r.role, teamId: r.team_id }));
+      const authors = new Map(((chat.data ?? []) as ChatRow[]).filter((r) => r.author).map((r) => [r.author as string, r.author_name]));
+      for (const id of Object.keys(d.chatMsgs).filter((x) => x.startsWith('dm:'))) {
+        const t = dmThread(id, d.chatDirectory, membership, authors);
+        if (t) d.chatThreads.push(t);
+      }
 
       /* The week around the night. Each read returns only what this role may
          see (RLS), so a student's load simply comes back empty here. */

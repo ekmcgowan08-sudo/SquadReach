@@ -100,6 +100,7 @@ export function LibraryScreen() {
                 <div className="text-[13px] font-medium leading-[1.3] text-neutral-100">{p.title}</div>
                 <div className="mt-[3px] text-[11px] leading-[1.3] text-neutral-500">
                   {kindOf(p.kind).one} · Week {p.week} · {p.pts === 'theirs' ? 'their point values' : 'our point values'}
+                  {p.credit ? ' · from ' + p.credit : ''}
                 </div>
               </div>
               {leader ? (
@@ -163,7 +164,17 @@ function UnitSheet({ unit, onClose, onPlace }: { unit: LibraryUnit; onClose: () 
   const place = () => {
     if (!week) return api().say('Pick the week it lands on.');
     if (!pts) return api().say('Confirm whose point values this week uses.');
-    onPlace({ id: uid(), unit: unit.id, title: unit.title, kind: unit.kind, week, pts, at: nowMs() });
+    onPlace({
+      id: uid(),
+      unit: unit.id,
+      title: unit.title,
+      kind: unit.kind,
+      week,
+      pts,
+      at: nowMs(),
+      copy: { summary: unit.summary, includes: [...unit.includes], pts: unit.pts.map(([c, n]) => [c, n] as [string, number]), span: unit.span, theme: unit.theme },
+      credit: unit.church
+    });
     api().logActivity('Placed “' + unit.title + '” on Week ' + week + (unit.church ? ' — from ' + unit.church + ', ' + (pts === 'theirs' ? 'their point values' : 'our point values') : ''));
     api().say('On Week ' + week + '. It shows on the Season plan.');
     onClose();
