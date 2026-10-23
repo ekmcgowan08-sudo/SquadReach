@@ -2,4 +2,6 @@
 EXTRA.update({
     'huddle': ('HuddleScreen', 'huddle', 'huddle'),
     'races': ('RacesScreen', 'races', 'member'),
+    'follow-ups': ('FollowUpsScreen', 'follow-ups', 'member'),
+    'bible': ('BibleScreen', 'bible', 'any'),
 })

@@ -15,7 +15,7 @@ import { Btn, Icon, Screen, ScreenHeader } from '@/components/ui';
 import { longDate } from '@/lib/dates';
 import { uncoveredPosts } from '@/lib/feeds';
 import { canApprove, canEditRoster, holdsSheet } from '@/lib/permissions';
-import { runMinutes, teamOf } from '@/lib/selectors';
+import { openFollowups, runMinutes, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { CrewMember, CrewState, HuddleState } from '@/lib/types/model';
@@ -101,7 +101,7 @@ export function HuddleScreen() {
   const serving = new Set(Object.values(h.covered));
   const bench = h.bench.filter((b) => !serving.has(b.id));
   const postedTeams = Object.keys(d.tonight.checkinPosted);
-  const flagged = new Set(d.careReminders.map((r) => r.name));
+  const flagged = new Set(openFollowups(d).map((r) => r.name));
   const missing = postedTeams
     .flatMap((t) => d.roster.filter((r) => r.team === t && !d.tonight.presence[r.name]).map((r) => r.name))
     .filter((n) => !flagged.has(n))
@@ -184,7 +184,7 @@ export function HuddleScreen() {
       api().say('Type a name first.');
       return;
     }
-    if (d.careReminders.some((r) => r.name === n)) {
+    if (openFollowups(d).some((r) => r.name === n)) {
       api().say(n.split(' ')[0] + ' is already on the care list.');
       return;
     }
@@ -288,7 +288,7 @@ export function HuddleScreen() {
           <div className="flex flex-col gap-2 border-t border-divider pt-3">
             <div className="text-[13px] font-medium leading-[1.2] text-neutral-100">Anyone to follow up on?</div>
             <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">
-              A name here lands on Follow-ups › Team care with who flagged it and when. {d.careReminders.length === 1 ? 'One person is on the care list' : d.careReminders.length + ' people are on the care list'}.
+              A name here lands on Follow-ups › Team care with who flagged it and when. {openFollowups(d).length === 1 ? 'One person is on the care list' : openFollowups(d).length + ' people are on the care list'}.
             </div>
             {missing.length ? (
               <>

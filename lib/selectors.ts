@@ -4,6 +4,7 @@ import { uncoveredPosts } from '@/lib/feeds';
 import { fmt, pointBase } from '@/lib/scoring';
 import { canApprove, canHuddle } from '@/lib/permissions';
 import { personaDef, type Persona } from '@/lib/types/domain';
+import { bibleStats } from '@/lib/bible';
 import type { AudienceId, Membership, MinistryData, MinistryEvent, RunSheetItem } from '@/lib/types/model';
 
 export const teamOf = (d: MinistryData, id: string | null | undefined) =>
@@ -108,8 +109,9 @@ export function computeNotifications(d: MinistryData, m: Membership): Notice[] {
       if (who) list.push({ icon: 'ph ph-clipboard-text', label: who.name + ' owns ' + it.time + ' · ' + it.label, meta: 'Run sheet published', href: '/dashboard/huddle' });
     }
   }
-  if (d.bible.streak > 0) list.push({ icon: 'ph ph-fire', label: 'Your ' + d.bible.streak + '-day streak is on the line', meta: 'Practice today to keep it alive', href: '/dashboard/bible' });
-  if (!d.bible.loggedToday) list.push({ icon: 'ph ph-book-open-text', label: 'Bible practice reminder', meta: d.bible.due + ' verses due for review', href: '/dashboard/bible' });
+  const bible = myBible(d, m);
+  if (bible.streak > 0 && !bible.loggedToday) list.push({ icon: 'ph ph-fire', label: 'Your ' + bible.streak + '-day streak is on the line', meta: 'Practice today to keep it alive', href: '/dashboard/bible' });
+  if (!bible.loggedToday) list.push({ icon: 'ph ph-book-open-text', label: 'Bible practice reminder', meta: bible.due + ' verses due for review', href: '/dashboard/bible' });
   return list;
 }
 
@@ -202,3 +204,12 @@ export function leaderNeeds(d: MinistryData) {
     out.push({ id: 'debrief', icon: 'ph-notepad', title: 'Tonight is not debriefed yet', meta: 'Three things at 8:50 — held entries, who to follow up on, one change', href: '/dashboard/huddle' });
   return out;
 }
+
+/** Open follow-ups only: private notes live in the same table but never close. */
+export const openFollowups = (d: MinistryData) => d.careReminders.filter((r) => r.kind !== 'note' && !r.done);
+export const careNotes = (d: MinistryData) => d.careReminders.filter((r) => r.kind === 'note').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
+
+/** Whose practice rows are "mine": the student a member plays as, else the person. */
+export const practiceName = (m: Membership) => m.studentName ?? m.displayName;
+export const myBible = (d: MinistryData, m: Membership, now = new Date()) =>
+  bibleStats(d.practiceLog.filter((r) => r.who === practiceName(m)), d.config.memoryVerses, d.config.weekNumber, now);

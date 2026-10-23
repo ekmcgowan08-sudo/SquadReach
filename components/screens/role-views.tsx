@@ -12,6 +12,7 @@ import { Btn, Icon, PreviewStrip, Screen, ScreenHeader } from '@/components/ui';
 import { ago } from '@/lib/dates';
 import { autoApproves, canEditRoster, canScore, canSwitchTeamView, isPreviewing } from '@/lib/permissions';
 import { deltaLabel, fmt, studentTotal } from '@/lib/scoring';
+import { bibleStats } from '@/lib/bible';
 import { catOf, eventVisible, myTeamId, teamMetaLabel, teamOf, teamRoster } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef } from '@/lib/types/domain';
@@ -511,6 +512,7 @@ export function ParentViewScreen() {
   const events = d.events.filter((e) => e.roles.includes('parents')).slice(0, 3);
   const here = kid ? !!d.tonight.presence[kid.name] : false;
   const badge = d.studentBadges.find((b) => b.name === kid?.name);
+  const kidBible = bibleStats(d.practiceLog.filter((r) => r.who === kid?.name), d.config.memoryVerses, d.config.weekNumber);
   const board = (typeof window !== 'undefined' ? window.location.host : 'squadrise.app') + '/b/' + d.config.parentCode;
   if (!kid) return null;
   return (
@@ -542,8 +544,8 @@ export function ParentViewScreen() {
         </div>
         <div className="mt-3 flex gap-2">
           {[
-            { label: 'Verses due', value: String(d.bible.due), hint: 'this week' },
-            { label: 'Streak', value: String(badge ? badge.bibleStreak : d.bible.streak), hint: 'days' }
+            { label: 'Verses due', value: String(kidBible.due), hint: 'this week' },
+            { label: 'Streak', value: String(Math.max(kidBible.streak, badge?.bibleStreak ?? 0)), hint: 'days' }
           ].map((st) => (
             <div key={st.label} className="flex-1 rounded-md bg-neutral-900 px-[11px] py-[10px]">
               <div className="text-[9.5px] uppercase leading-none tracking-[.08em] text-neutral-500">{st.label}</div>

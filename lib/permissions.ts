@@ -23,6 +23,8 @@ export const canScore = (p: Persona) => has(p, SCORE_ENTRY_ROLES);
 export const canApprove = (p: Persona) => has(p, LEADER_ROLES);
 /** Team Care notes. Scorekeeper owns the ledger, not the roster. */
 export const canSeeCare = (p: Persona) => has(p, ROSTER_EDIT_ROLES);
+/** Mirrors prayer_read_queue: only LEADER_ROLES see requests before the wall. */
+export const canReviewPrayer = (p: Persona) => has(p, LEADER_ROLES);
 /** Roster edits and presence marks. */
 export const canEditRoster = (p: Persona) => has(p, ROSTER_EDIT_ROLES);
 /** Game timer and Projector Mode. Not a coach. */

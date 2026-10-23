@@ -4,8 +4,10 @@
    with no Supabase project configured. Real data comes from the ministry's
    own setup; nothing here is read in Supabase mode.
    ───────────────────────────────────────────────────────────────────────── */
+import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
+import { isoDay } from '@/lib/dates';
 import type {
-  AudienceId, ChatMessage, ChatThread, HuddleState, LedgerEntry, MinistryData, Rsvp, Student, StudentBadge
+  AudienceId, ChatMessage, ChatThread, HuddleState, LedgerEntry, MinistryData, PracticeRow, Rsvp, Student, StudentBadge
 } from '@/lib/types/model';
 
 const MIN = 60_000;
@@ -340,7 +342,8 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
         facebook: 'facebook.com/gracecommunity',
         tiktok: ''
       },
-      checkinAutoCats: { visitors: true, general: false, bible: false, spiritwear: false, verses: false, games: false, media: false }
+      checkinAutoCats: { visitors: true, general: false, bible: false, spiritwear: false, verses: false, games: false, media: false },
+      memoryVerses: DEFAULT_MEMORY_VERSES
     },
     teams: [
       { id: 'yellow', name: 'Yellow', color: '#EAB308', sort: 0, mascotName: 'Blaze the Hornet', mascotStory: 'Blaze showed up in week one on a hand-painted sign and never left. Yellow claims him as proof that the loudest team wins.' },
@@ -371,7 +374,10 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     ],
     careReminders: [
       { id: 'r1', initials: 'WP', name: 'Wyatt Price', meta: 'Missed 3 weeks · Coach Chris flagged Oct 9' },
-      { id: 'r2', initials: 'JO', name: 'Janelle Owen', meta: 'Asked to talk after small group · 4 days ago' }
+      { id: 'r2', initials: 'JO', name: 'Janelle Owen', meta: 'Asked to talk after small group · 4 days ago' },
+      { id: 'n1', kind: 'note', initials: 'WP', name: 'Wyatt Price', meta: 'Coach Chris · Oct 9', flaggedBy: 'Coach Chris', at: now - 14 * DAY, body: 'Dad moved out in September. He is showing up to games but leaves before the Word. Not pushing him to talk yet — just want him seen.' },
+      { id: 'n2', kind: 'note', initials: 'JO', name: 'Janelle Owen', meta: 'Pastor Mike · Oct 12', flaggedBy: 'Pastor Mike', at: now - 11 * DAY, body: 'Anxiety around finals. Mom asked whether counseling through the church is an option. Sent her the Grace Counseling contact.' },
+      { id: 'n3', kind: 'note', initials: 'IS', name: 'Isaac Smith', meta: 'Coach Mario · Oct 4', flaggedBy: 'Coach Mario', at: now - 19 * DAY, body: 'Working nights to help at home, which is why he misses first half. Told him that is not something to apologize for.' }
     ],
     events: [
       { id: 'e1', title: 'Week 6 · Capture the Flag', meta: 'Wed 6:45p · Main Gym + field', date: 'Oct 22', color: '#EA580C', roles: ALL_AUDIENCES },
@@ -454,11 +460,27 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     chatUnread: { all: 2, leaders: 1, 'team-blue': 3, parents: 0, 'dm-mike': 0, 'dm-zoe': 1 },
     rsvps: seedRsvps(),
     attendanceHistory: attendanceHistory(),
-    bible: { streak: 12, xp: 340, due: 3, loggedToday: false },
+    practiceLog: seedPractice(now),
     tonight: { date: '2026-10-28', presence: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
     bracket: { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} },
     challengeCredit: {}
   };
+}
+
+/** Practice history that matches the design: Ellison on a 12-day run with
+ *  three older verses due, Isaac already in today, Wyatt not started. */
+function seedPractice(now: number): PracticeRow[] {
+  const rows: PracticeRow[] = [];
+  const add = (who: string, team: string, daysAgo: number, ref: string, mode: string) => {
+    const d = new Date(now - daysAgo * DAY);
+    rows.push({ id: 'pr-' + rows.length, who, team, day: isoDay(d), ref, mode, at: d.getTime() });
+  };
+  const refs = DEFAULT_MEMORY_VERSES.map((v) => v.ref);
+  for (let i = 1; i <= 12; i++) add('Ellison Reid', 'yellow', i, refs[8 - ((i - 1) % 6)], i % 3 ? 'flashcard' : 'type');
+  for (let i = 0; i < 6; i++) add('Isaac Smith', 'red', i, refs[8 - (i % 4)], 'firstletter');
+  for (let i = 2; i < 6; i++) add('Janelle Owen', 'blue', i, refs[8 - (i % 4)], 'flashcard');
+  for (let i = 1; i < 9; i++) add('Luke Jarvis', 'yellow', i, refs[8 - (i % 3)], 'say');
+  return rows;
 }
 
 /** Who each demo persona is signed in as. */

@@ -234,6 +234,8 @@ create table public.care_notes (
   name text not null,
   meta text not null default '',
   flagged_by text not null default '',
+  kind text not null default 'followup' check (kind in ('followup', 'note')),
+  body text not null default '',
   done boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -291,6 +293,22 @@ create table public.activity_log (
 );
 create index on public.activity_log (org_id, created_at desc);
 
+-- Bible practice: that someone did the work, never how well. One row per
+-- person per day keeps the streak honest across phones.
+create table public.practice_log (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  membership_id uuid not null references public.memberships(id) on delete cascade,
+  who text not null,
+  team_id uuid references public.teams(id) on delete set null,
+  day date not null,
+  ref text not null,
+  mode text not null default '',
+  created_at timestamptz not null default now(),
+  unique (membership_id, day)
+);
+create index on public.practice_log (org_id, day desc);
+
 -- The long tail a leader curates — small-group guides, award races, media
 -- album metadata, saved reports. One document per key per ministry.
 -- Nothing about students is written here by students.
@@ -321,6 +339,7 @@ alter table public.challenges enable row level security;
 alter table public.access_requests enable row level security;
 alter table public.activity_log enable row level security;
 alter table public.ministry_docs enable row level security;
+alter table public.practice_log enable row level security;
 
 -- organizations: members read; LEADER_ROLES edit the setup.
 create policy org_read on public.organizations for select using (public.is_member(id));
@@ -434,6 +453,20 @@ create policy log_read on public.activity_log for select
   using (public.has_role(org_id, array['leader','owner']::public.membership_role[]));
 create policy log_append on public.activity_log for insert
   with check (public.is_member(org_id) and actor in (select m.id from public.memberships m where m.user_id = auth.uid()));
+
+-- practice: you log your own; SHEET_ROLES see everyone's, a captain sees
+-- their own squad's — "your leaders see that you showed up".
+create policy practice_own on public.practice_log for select
+  using (membership_id in (select m.id from public.memberships m where m.user_id = auth.uid()));
+create policy practice_staff on public.practice_log for select
+  using (public.has_role(org_id, array['coach','scorekeeper','leader','owner']::public.membership_role[]));
+create policy practice_captain on public.practice_log for select
+  using (exists (
+    select 1 from public.memberships m
+    where m.user_id = auth.uid() and m.org_id = practice_log.org_id and m.role = 'captain' and m.team_id = practice_log.team_id
+  ));
+create policy practice_log_own on public.practice_log for insert
+  with check (public.is_member(org_id) and membership_id in (select m.id from public.memberships m where m.user_id = auth.uid() and m.org_id = practice_log.org_id));
 
 -- curated documents: members read; LEADER_ROLES write.
 create policy docs_read on public.ministry_docs for select using (public.is_member(org_id));

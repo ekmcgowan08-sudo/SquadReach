@@ -102,6 +102,9 @@ export interface CareReminder {
   flaggedBy?: string;
   at?: number;
   done?: boolean;
+  /** 'note' rows are private coach notes; they never close. */
+  kind?: 'followup' | 'note';
+  body?: string;
 }
 
 export type AudienceId = 'members' | 'captains' | 'coaches' | 'scorekeeper' | 'leaders' | 'parents' | 'admins';
@@ -178,6 +181,7 @@ export interface MinistryConfig {
   church: ChurchInfo;
   /** Categories that attendance posting also pays, beyond General. */
   checkinAutoCats: Record<string, boolean>;
+  memoryVerses: MemoryVerse[];
 }
 
 /* ── The 6:15 huddle ─────────────────────────────────────────────────── */
@@ -256,6 +260,25 @@ export interface VerseLogRow {
   label: string;
   count: number;
   pts: number;
+}
+
+/** The week's memory verse; text keyed by translation (KJV, ASV, RVR1909…). */
+export interface MemoryVerse {
+  week: number;
+  ref: string;
+  text: Record<string, string>;
+}
+
+/** One logged Bible practice. Leaders see that it happened, never a score. */
+export interface PracticeRow {
+  id: string;
+  who: string;
+  team: string | null;
+  /** Local day, YYYY-MM-DD — one row per person per day. */
+  day: string;
+  ref: string;
+  mode: string;
+  at: number;
 }
 
 export interface Achievement {
@@ -446,7 +469,7 @@ export interface MinistryData {
   chatUnread: Record<string, number>;
   rsvps: Record<string, Record<string, Rsvp>>;
   attendanceHistory: Record<string, number[]>;
-  bible: { streak: number; xp: number; due: number; loggedToday: boolean };
+  practiceLog: PracticeRow[];
   tonight: TonightState;
   bracket: BracketData;
   challengeCredit: Record<string, string[]>;

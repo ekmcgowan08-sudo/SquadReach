@@ -8,7 +8,7 @@
    a replay over a flaky connection can never double-post. */
 import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
-import { tonightDate, weekOf } from '@/lib/dates';
+import { isoDay, tonightDate, weekOf } from '@/lib/dates';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
@@ -71,7 +71,9 @@ export function supabaseBackend(membership: Membership): Backend {
 
     async load(): Promise<MinistryData> {
       const d = emptyMinistry();
-      const [orgRow, teams, cats, students, entries, prayers, care, events, challenges, access, log, docs] = await Promise.all([
+      const since = new Date();
+      since.setDate(since.getDate() - 60);
+      const [orgRow, teams, cats, students, entries, prayers, care, events, challenges, access, log, docs, practice] = await Promise.all([
         db.from('organizations').select('id, name, config, invite_code').eq('id', org).single(),
         db.from('teams').select('*').eq('org_id', org).eq('archived', false).order('sort'),
         db.from('categories').select('*').eq('org_id', org).eq('archived', false).order('sort'),
@@ -83,7 +85,8 @@ export function supabaseBackend(membership: Membership): Backend {
         db.from('challenges').select('*').eq('org_id', org).order('created_at'),
         db.from('access_requests').select('*').eq('org_id', org).eq('status', 'pending').order('created_at'),
         db.from('activity_log').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(200),
-        db.from('ministry_docs').select('key, value').eq('org_id', org)
+        db.from('ministry_docs').select('key, value').eq('org_id', org),
+        db.from('practice_log').select('*').eq('org_id', org).gte('day', isoDay(since)).order('day', { ascending: false }).limit(5000)
       ]);
 
       const o = must(orgRow) as { name: string; config: Partial<MinistryConfig>; invite_code: string };
@@ -105,6 +108,9 @@ export function supabaseBackend(membership: Membership): Backend {
         (s): Student => ({ id: s.id, name: s.name, team: s.team_id, grade: s.grade, captain: s.captain, guest: s.guest, newInDb: s.new_in_db })
       );
       d.ledger = (must(entries) as EntryRow[]).map(toEntry);
+      d.practiceLog = ((practice.data ?? []) as { id: string; who: string; team_id: string | null; day: string; ref: string; mode: string; created_at: string }[]).map((r) => ({
+        id: r.id, who: r.who, team: r.team_id, day: r.day, ref: r.ref, mode: r.mode, at: new Date(r.created_at).getTime()
+      }));
 
       const prayerRows = must(prayers) as { id: string; who: string; meta: string; body: string; status: string; praying: number; answered: boolean; created_at: string }[];
       let mine = new Set<string>();
@@ -119,8 +125,10 @@ export function supabaseBackend(membership: Membership): Backend {
         .filter((p) => p.status === 'queued')
         .map((p) => ({ id: p.id, who: p.who, meta: p.meta, body: p.body, at: new Date(p.created_at).getTime() }));
 
-      d.careReminders = ((care.data ?? []) as { id: string; name: string; meta: string; flagged_by: string; created_at: string }[]).map((c) => ({
+      d.careReminders = ((care.data ?? []) as { id: string; name: string; meta: string; flagged_by: string; kind: 'followup' | 'note'; body: string; created_at: string }[]).map((c) => ({
         id: c.id,
+        kind: c.kind,
+        body: c.body,
         name: c.name,
         initials: c.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
         meta: c.meta,
@@ -215,7 +223,7 @@ export function supabaseBackend(membership: Membership): Backend {
           await db.from('prayer_requests').update({ answered: e.on }).eq('id', e.id);
           return;
         case 'careAdd':
-          await db.from('care_notes').insert({ id: e.item.id, org_id: org, name: e.item.name, meta: e.item.meta, flagged_by: e.item.flaggedBy ?? '' });
+          await db.from('care_notes').insert({ id: e.item.id, org_id: org, name: e.item.name, meta: e.item.meta, flagged_by: e.item.flaggedBy ?? '', kind: e.item.kind ?? 'followup', body: e.item.body ?? '' });
           return;
         case 'careDone':
           await db.from('care_notes').update({ done: true }).eq('id', e.id);
@@ -262,6 +270,13 @@ export function supabaseBackend(membership: Membership): Backend {
         case 'chat':
         case 'rsvp':
           /* Chat and RSVPs run on this device in this release. */
+          return;
+        case 'practice':
+          if (!membership.membershipId) return;
+          await db.from('practice_log').upsert(
+            { id: e.row.id, org_id: org, membership_id: membership.membershipId, who: e.row.who, team_id: e.row.team, day: e.row.day, ref: e.row.ref, mode: e.row.mode },
+            { onConflict: 'membership_id,day', ignoreDuplicates: true }
+          );
           return;
       }
     },

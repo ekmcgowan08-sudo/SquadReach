@@ -14,7 +14,7 @@ import {
   canApprove, canControlEvent, canHuddle, canOpenLibrary, canOpenRoleView, canPublishBoard, canSeeAttendance, canSeeCare,
   canShareRecap, canSwitchTeamView
 } from '@/lib/permissions';
-import { computeNotifications, myTeamId, teamOf } from '@/lib/selectors';
+import { computeNotifications, myBible, myTeamId, openFollowups, teamOf } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef, realRole } from '@/lib/types/domain';
 
@@ -81,9 +81,9 @@ export function MoreScreen() {
       title: 'Discipleship',
       visible: true,
       items: [
-        { label: 'Bible & Memory', meta: d.bible.due + ' due', icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
+        { label: 'Bible & Memory', meta: myBible(d, m).due + ' due', icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
         canSeeCare(p)
-          ? { label: 'Prayer & Care', meta: d.prayerQueue.length + ' to review · ' + d.careReminders.length + ' follow-ups', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' }
+          ? { label: 'Prayer & Care', meta: d.prayerQueue.length + ' to review · ' + openFollowups(d).length + ' follow-ups', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' }
           : { label: 'Prayer Wall', meta: d.prayers.length + ' on the wall', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' }
       ]
     },

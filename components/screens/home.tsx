@@ -13,7 +13,7 @@ import { churchRows, churchSocials } from '@/lib/feeds';
 import { groupHeldEntries, heldTotal, wasHeld } from '@/lib/held';
 import { autoApproves, canApprove, canControlEvent, canHuddle } from '@/lib/permissions';
 import { deltaLabel, fmt, pointBase, studentRanks, studentTotal } from '@/lib/scoring';
-import { catOf, computeBadges, computeNotifications, myTeamId, sheetMinutes, teamOf, teamRoster } from '@/lib/selectors';
+import { catOf, computeBadges, computeNotifications, myBible, myTeamId, sheetMinutes, teamOf, teamRoster } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
 function greeting(now = new Date()) {
@@ -193,7 +193,7 @@ export function HomeScreen() {
       <div className="grid grid-cols-2 gap-[10px]">
         {[
           canHuddle(p) ? { label: 'Huddle', meta: d.huddle.runSheet.length ? d.huddle.runSheet[Math.min(d.huddle.runIdx, d.huddle.runSheet.length - 1)].time + ' · ' + d.huddle.runSheet[Math.min(d.huddle.runIdx, d.huddle.runSheet.length - 1)].label : 'no run sheet yet', icon: 'ph ph-users-four', href: '/dashboard/huddle' } : null,
-          { label: 'Bible & Memory', meta: d.bible.due + ' verses due', icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
+          { label: 'Bible & Memory', meta: myBible(d, m).due + ' verses due', icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
           { label: 'Media', meta: 'Week ' + d.config.weekNumber + ' album', icon: 'ph ph-camera', href: '/dashboard/media' },
           canControlEvent(p) ? { label: 'Game timer', meta: d.config.gameName || 'no game set', icon: 'ph ph-timer', href: '/dashboard/games' } : null,
           { label: 'Calendar', meta: d.events[0] ? 'Next: ' + d.events[0].date : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },
