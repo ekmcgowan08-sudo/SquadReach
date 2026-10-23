@@ -41,6 +41,20 @@ export const canPublishBoard = (p: Persona) => has(p, LEADER_ROLES);
 /** The library: volunteer-and-up reads, only leaders place. */
 export const canOpenLibrary = (p: Persona) => has(p, SCORE_ENTRY_ROLES);
 
+/* ── the week around the night ─────────────────────────────────────── */
+/** Prep week: the reminders that go out and what must be ready. */
+export const canPrepWeek = (p: Persona) => has(p, LEADER_ROLES);
+/** Night recap: attendance, follow-ups, notes. Coaches own most follow-ups. */
+export const canNightRecap = (p: Persona) => has(p, ROSTER_EDIT_ROLES);
+/** Serving & swaps: anyone on the volunteer schedule. */
+export const canServe = (p: Persona) => has(p, SCORE_ENTRY_ROLES);
+/** Approving swaps, filling spots and inviting volunteers: the coordinator. */
+export const canCoordinateServing = (p: Persona) => has(p, LEADER_ROLES);
+/** Messaging families, slips, pickup — and every family's contact details. */
+export const canMessageParents = (p: Persona) => has(p, LEADER_ROLES);
+/** The door kiosk checks students in, so it is roster work. */
+export const canRunDoor = (p: Persona) => has(p, ROSTER_EDIT_ROLES);
+
 /* ── Role views ───────────────────────────────────────────────────────── */
 export type RoleView = 'coach' | 'captain' | 'admin' | 'parent' | 'congregation' | 'team';
 

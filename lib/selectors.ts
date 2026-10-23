@@ -2,7 +2,8 @@
    two screens can never disagree about the same number. */
 import { uncoveredPosts } from '@/lib/feeds';
 import { fmt, pointBase } from '@/lib/scoring';
-import { canApprove, canHuddle, holdsSheet } from '@/lib/permissions';
+import { canApprove, canCoordinateServing, canHuddle, canMessageParents, canNightRecap, canPrepWeek, holdsSheet } from '@/lib/permissions';
+import { cycleNeeds, reminders, selfName, type CycleNeed } from '@/lib/cycle';
 import { personaDef, type Persona } from '@/lib/types/domain';
 import { bibleStats } from '@/lib/bible';
 import { isoDay } from '@/lib/dates';
@@ -113,6 +114,19 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
       const who = d.huddle.crew.find((c) => c.id === it.assignedTo);
       if (who) list.push({ icon: 'ph ph-clipboard-text', label: who.name + ' owns ' + it.time + ' · ' + it.label, meta: 'Run sheet published', href: '/dashboard/huddle', trigger: 'runSheet' });
     }
+  }
+  /* The week around the night. */
+  const iso = d.tonight.date;
+  if (iso && d.config.cycle) {
+    const now = Date.now();
+    const me = { name: servingName(d, m), leader: canApprove(p) };
+    if (canHuddle(p)) {
+      const posted = reminders(d, iso, now).filter((r) => r.sent && r.aud.includes('leaders') && now - r.sentAt < 3 * 86_400_000).pop();
+      if (posted) list.push({ icon: 'ph ph-bell-ringing', label: posted.label + ' · ' + posted.text, meta: 'Prep reminder', href: canPrepWeek(p) ? '/dashboard/prep-week' : '/dashboard/serving', trigger: 'nightCycle' });
+      for (const s of d.serving.swaps.filter((x) => x.from === me.name && x.status !== 'pending' && now - x.at < 14 * 86_400_000).slice(0, 2))
+        list.push({ icon: 'ph ph-swap', label: 'Your swap for ' + s.role.toLowerCase() + ' was ' + s.status, meta: s.status === 'approved' ? (s.to ?? 'Someone') + ' takes it' : 'You are still on', href: '/dashboard/serving', trigger: 'nightCycle' });
+    }
+    for (const n of myCycleNeeds(d, m, now)) list.push({ icon: 'ph ' + n.icon, label: n.title, meta: n.meta, href: n.href, trigger: 'nightCycle' });
   }
   const bible = myBible(d, m);
   /* Staff who have never practiced aren't nagged about a streak they never started. */
@@ -265,3 +279,20 @@ export function chatStamp(at: number, now = new Date()): { day: string; time: st
   const time = ((h + 11) % 12) + 1 + ':' + String(d.getMinutes()).padStart(2, '0') + (h < 12 ? 'a' : 'p');
   return { day, time };
 }
+
+/** The night cycle's "needs you" rows this person may act on: each row only
+ *  when its screen is one they can open. */
+export function myCycleNeeds(d: MinistryData, m: Membership, now: number): CycleNeed[] {
+  const p = m.persona;
+  const iso = d.tonight.date;
+  if (!iso || !d.config.cycle) return [];
+  const me = { name: servingName(d, m), leader: canApprove(p) };
+  return cycleNeeds(d, iso, now, me).filter((n) =>
+    n.id === 'cy-swaps' ? canCoordinateServing(p) : n.id.startsWith('cy-slip') ? canMessageParents(p) : canNightRecap(p)
+  );
+}
+
+/** The name someone serves under. With accounts it is exactly their display
+ *  name — the database checks swaps and availability against it. The demo
+ *  matches "Coach Chris" to crew "Chris Alder". */
+export const servingName = (d: MinistryData, m: Membership) => (m.mode === 'supabase' ? m.displayName : selfName(d, m.displayName));

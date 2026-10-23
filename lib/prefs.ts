@@ -13,7 +13,8 @@ export const NOTIF_TRIGGERS = [
   { key: 'weeklySummary', label: 'Weekly summary', hint: 'Points and standings recap' },
   { key: 'runSheet', label: 'Run sheet assignments', hint: 'When the huddle sheet is published' },
   { key: 'streakBreak', label: 'Streak about to break', hint: 'Nudge before it resets' },
-  { key: 'bibleReminder', label: 'Bible reading reminder', hint: 'When review is due' }
+  { key: 'bibleReminder', label: 'Bible reading reminder', hint: 'When review is due' },
+  { key: 'nightCycle', label: 'The week around the night', hint: 'Prep reminders, swaps, the door, follow-ups' }
 ] as const;
 export type NotifTrigger = (typeof NOTIF_TRIGGERS)[number]['key'];
 
@@ -33,15 +34,18 @@ export interface Prefs {
   tourSeen: boolean;
   /** The walkthrough: on, and which step. Survives navigation and reloads. */
   tour: { on: boolean; i: number };
+  /** Demo only: the moment of the week the night-cycle screens preview. */
+  cyclePreview: string | null;
 }
 
 const DEFAULTS: Prefs = {
   theme: 'dark',
   reduceMotion: false,
   homeSections: { standings: true, feed: true, badges: true, church: true },
-  notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true },
+  notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true, nightCycle: true },
   tourSeen: false,
-  tour: { on: false, i: 0 }
+  tour: { on: false, i: 0 },
+  cyclePreview: null
 };
 
 let current: Prefs = DEFAULTS;

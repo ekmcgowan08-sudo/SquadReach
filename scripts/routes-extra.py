@@ -23,4 +23,10 @@ EXTRA.update({
     'awards': ('AwardsScreen', 'awards', 'any'),
     'library': ('LibraryScreen', 'library', 'library'),
     'walkthrough': ('WalkthroughStart', 'walkthrough', 'any'),
+    'prep-week': ('PrepWeekScreen', 'prep-week', 'prep'),
+    'night-recap': ('NightRecapScreen', 'night-recap', 'nightRecap'),
+    'serving': ('ServingScreen', 'serving', 'serve'),
+    'parents': ('ParentsScreen', 'parents', 'parents'),
+    'door': ('DoorKioskScreen', 'door', 'door'),
+    'here': ('HereScreen', 'door', 'member'),
 })

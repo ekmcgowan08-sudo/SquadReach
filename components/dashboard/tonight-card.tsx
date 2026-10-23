@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@/components/ui';
 import { availableBench, uncoveredPosts } from '@/lib/feeds';
-import { leaderNeeds, nightPhase } from '@/lib/selectors';
+import { leaderNeeds, myCycleNeeds, nightPhase } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
 const SEG = { pre: 'oklch(0.63 0.085 168)', main: 'oklch(0.63 0.085 292)', post: 'oklch(0.63 0.085 42)' };
@@ -25,7 +25,8 @@ export function TonightCard() {
 
   const h = d.huddle;
   const phase = useMemo(() => nightPhase(h.runSheet, h.runIdx, now), [h.runSheet, h.runIdx, now]);
-  const needs = useMemo(() => leaderNeeds(d).filter((n) => !h.dismissed[n.id]), [d, h.dismissed]);
+  const m = useApp((s) => s.membership);
+  const needs = useMemo(() => [...leaderNeeds(d), ...myCycleNeeds(d, m, now.getTime())].filter((n) => !h.dismissed[n.id]), [d, m, now, h.dismissed]);
   const posts = useMemo(() => uncoveredPosts(h), [h]);
   const bench = useMemo(() => availableBench(h), [h]);
   if (!phase) return null;

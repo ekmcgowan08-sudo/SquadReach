@@ -1,8 +1,8 @@
 /* Named gates, so a server page and its client screen check the SAME
    function by name (functions cannot cross the server/client boundary). */
 import {
-  canApprove, canControlEvent, canHuddle, canOpenLibrary, canOpenRoleView, canPublishBoard, canScore, canSeeAttendance,
-  canShareRecap
+  canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek,
+  canPublishBoard, canRunDoor, canScore, canSeeAttendance, canServe, canShareRecap
 } from '@/lib/permissions';
 import { realRole, type Persona } from '@/lib/types/domain';
 
@@ -18,6 +18,11 @@ export const GATES = {
   attendance: canSeeAttendance,
   recap: canShareRecap,
   board: canPublishBoard,
+  prep: canPrepWeek,
+  nightRecap: canNightRecap,
+  serve: canServe,
+  parents: canMessageParents,
+  door: canRunDoor,
   coachView: (p: Persona) => canOpenRoleView(p, 'coach'),
   captainView: (p: Persona) => canOpenRoleView(p, 'captain'),
   adminView: (p: Persona) => canOpenRoleView(p, 'admin'),

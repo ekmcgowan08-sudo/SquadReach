@@ -34,7 +34,7 @@ export const demoBackend: Backend = {
            from a fresh seed rather than crash on first read. Config is
            merged a level deeper, since new settings land inside it. */
         const seed = demoMinistry();
-        return { ...seed, ...parsed, config: { ...seed.config, ...parsed.config }, tonight: { ...seed.tonight, ...parsed.tonight }, game: { ...seed.game, ...parsed.game } };
+        return { ...seed, ...parsed, config: { ...seed.config, ...parsed.config, cycle: { ...seed.config.cycle, ...parsed.config?.cycle } }, tonight: { ...seed.tonight, ...parsed.tonight }, game: { ...seed.game, ...parsed.game } };
       }
     } catch {
       /* fall through to a fresh seed */

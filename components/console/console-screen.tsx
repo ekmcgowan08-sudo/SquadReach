@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { HuddleTab } from '@/components/console/huddle-tab';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
+import { CycleSection } from '@/components/console/cycle-section';
 import { PeopleTab } from '@/components/console/people-tab';
 import { ReportsTab } from '@/components/console/reports-tab';
 import { ScoringTab } from '@/components/console/scoring-tab';
@@ -154,6 +155,8 @@ function SetupTab() {
           <Field label="Verse board bonus" type="number" value={c.verseBoard} onSave={(v) => save({ verseBoard: Math.max(0, Number(v) || 0) })} />
         </div>
       </Section>
+
+      <CycleSection />
 
       <Section title="Memory verses" sub="One per week. KJV text fills the drills; add ASV or RVR1909 if you use them.">
         <div className="flex flex-col gap-2">

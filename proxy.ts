@@ -28,5 +28,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   /* Everything but static files, the service worker and the public board. */
-  matcher: ['/((?!_next/static|_next/image|sw.js|manifest.webmanifest|icon|apple-touch-icon.png|offline.html|b/).*)']
+  matcher: ['/((?!_next/static|_next/image|sw.js|manifest.webmanifest|icon|apple-touch-icon.png|offline.html|b/|f/).*)']
 };

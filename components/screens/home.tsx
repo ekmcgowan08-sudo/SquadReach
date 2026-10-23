@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { StandingsCard, useStandings } from '@/components/dashboard/standings-list';
 import { TonightCard } from '@/components/dashboard/tonight-card';
+import { CheckInCard, ParentTonight } from '@/components/cycle/home-cards';
 import { Sheet } from '@/components/sheet';
 import { Avatar, Btn, Icon, Screen, Stat, initialsOf } from '@/components/ui';
 import { ago } from '@/lib/dates';
@@ -142,6 +143,7 @@ export function HomeScreen() {
           href="/console"
         />
       ) : null}
+      {p === 'member' || p === 'captain' ? <CheckInCard /> : null}
       {p === 'member' || p === 'captain' ? <StudentCard /> : null}
       {p === 'captain' ? (
         <RoleFocus
@@ -157,6 +159,7 @@ export function HomeScreen() {
           href="/dashboard/captain-view"
         />
       ) : null}
+      {p === 'parent' ? <ParentTonight /> : null}
       {p === 'parent' ? <ParentCard /> : null}
 
       {/* tonight */}

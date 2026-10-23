@@ -177,6 +177,8 @@ export interface ChurchInfo {
 
 export interface MinistryConfig {
   ministryName: string;
+  /** The week around the night: times, reminders, serving roles. */
+  cycle: CycleConfig;
   pointBase: number;
   weekGrowthPct: number;
   goalValue: number;
@@ -552,6 +554,8 @@ export interface GameState {
 export interface TonightState {
   date: string;
   presence: Record<string, boolean>;
+  /** How each present student got in: the door QR / kiosk, or a leader's tap. */
+  via: Record<string, CheckinVia>;
   checkinDetail: Record<string, { pts: number; count: number; picks: Record<string, boolean>; visitors: string }>;
   /** 'posted' | 'held' | {count, held} — HOW it completed, never a bare boolean. */
   checkinPosted: Record<string, 'posted' | 'held' | { count: number; held: boolean }>;
@@ -616,6 +620,124 @@ export interface MinistryData {
   challengeCredit: Record<string, string[]>;
   /** Supabase, leaders only: everyone with a membership, for the Console. */
   people?: PersonRow[];
+  /** Who was present on each past meeting night (iso → names). Tonight is
+   *  tonight.presence; this is the history the recap reads. */
+  presenceLog: Record<string, string[]>;
+  /** Per meeting night (iso): reminders, follow-ups, notes, pickup. */
+  cycle: Record<string, NightCycle>;
+  serving: ServingState;
+  /** Guardian and private family link, per student name. Roster editors only. */
+  families: Record<string, Family>;
+  slips: PermissionSlip[];
+  /** `${slipId}|${student}` → who signed and when. */
+  slipSigned: Record<string, { by: string; at: number }>;
+  parentMsgs: ParentMessage[];
+}
+
+/* ── The week around the night ──────────────────────────────────────────
+   Prep reminders before it, attendance during it, follow-ups after it,
+   the volunteer schedule around it, and what families see. */
+export type CheckinVia = 'qr' | 'leader';
+export type ReminderAudience = 'leaders' | 'parents';
+
+export interface ReminderDef {
+  id: string;
+  /** "3 days out" */
+  label: string;
+  /** Days before the meeting night it goes out, at `time` (24h "HH:MM"). */
+  days: number;
+  time: string;
+  /** When above zero: minutes before setup instead of days/time. */
+  beforeMin: number;
+  aud: ReminderAudience[];
+  /** A template: {week} {game} {setup} {doors} {pickup} {place} {ministry} {day}. */
+  text: string;
+}
+
+export interface CycleConfig {
+  /** 24h "HH:MM" on the meeting night. Setup is when the crew arrives. */
+  setupAt: string;
+  doorsAt: string;
+  endAt: string;
+  pickupAt: string;
+  pickupPlace: string;
+  /** Follow-ups are due this long after the night wraps. */
+  followupHours: number;
+  /** Self check-in opens this many minutes before doors. */
+  checkinOpensMin: number;
+  serveRoles: string[];
+  reminders: ReminderDef[];
+}
+
+export interface NightCycle {
+  rem: Record<string, { off?: boolean; sentAt?: number; text?: string }>;
+  fu: Record<string, { done?: boolean; at?: number; text?: string; by?: string }>;
+  notes: { well: string; change: string };
+  /** Minutes the pickup time moved tonight (+ later, − earlier). */
+  pickupShift: number;
+  /** Someone at the door who isn't on any roster — a leader goes over. */
+  doorFlags: { id: string; name: string; at: number; done?: boolean }[];
+}
+
+export interface SwapRequest {
+  id: string;
+  from: string;
+  night: string;
+  role: string;
+  /** Who they propose, or null for "anyone". */
+  to: string | null;
+  why: string;
+  status: 'pending' | 'approved' | 'declined';
+  at: number;
+  decidedBy?: string;
+}
+
+export interface VolunteerInvite {
+  id: string;
+  name: string;
+  contact: string;
+  role: string;
+  status: 'sent' | 'accepted';
+  at: number;
+}
+
+export interface ServingState {
+  /** `${iso}|${role}` → who serves, or null for an open spot. */
+  sched: Record<string, string | null>;
+  /** `${name}|${iso}` → in or away. Missing means not said. */
+  avail: Record<string, 'yes' | 'no'>;
+  swaps: SwapRequest[];
+  invites: VolunteerInvite[];
+}
+
+export interface Family {
+  guardian: string;
+  contact: string;
+  /** The private family link (/f/<token>). Rotating it revokes the old one. */
+  token: string;
+}
+
+export interface PermissionSlip {
+  id: string;
+  title: string;
+  /** Local "YYYY-MM-DDTHH:MM" the slip is due. */
+  due: string;
+  /** Everyone, or the students it covers. */
+  kids: 'all' | string[];
+  at: number;
+}
+
+export interface ParentMessage {
+  id: string;
+  from: string;
+  /** 'all' · 'slip:<id>' · 'unsigned:<id>' · a student's name. */
+  to: string;
+  /** Resolved when sent, so a later roster change can't widen who got it. */
+  kids: string[];
+  text: string;
+  at: number;
+  /** student → read at */
+  reads: Record<string, number>;
 }
 
 /** A person with a role in the ministry (leaders see the list). */

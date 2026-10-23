@@ -6,14 +6,16 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { InviteSheet } from '@/components/dashboard/invite-sheet';
+import { useCycle } from '@/components/cycle/use-cycle';
 import { crewAll } from '@/components/screens/huddle';
 import { Icon, Screen } from '@/components/ui';
 import { resetDemo } from '@/lib/data/demo-backend';
 import { heldTotal } from '@/lib/held';
 import {
-  canApprove, canControlEvent, canHuddle, canOpenLibrary, canOpenRoleView, canPublishBoard, canSeeAttendance, canSeeCare,
-  canShareRecap, canSwitchTeamView
+  canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek, canPublishBoard,
+  canRunDoor, canSeeAttendance, canSeeCare, canServe, canShareRecap, canSwitchTeamView
 } from '@/lib/permissions';
+import { attendanceStats, checkinOpen, followups, isAfter, myNights, nextReminder, reminders, slipsView, weekday } from '@/lib/cycle';
 import { computeNotifications, eventLabel, myBible, myTeamId, openFollowups, teamOf, upcomingEvents } from '@/lib/selectors';
 import { usePrefs } from '@/lib/prefs';
 import { useApp, useAppApi } from '@/lib/store/provider';
@@ -47,6 +49,13 @@ export function MoreScreen() {
   const hereCount = crewIds.filter((id) => d.huddle.crewState[id] === 'here').length;
   const sheetNow = d.huddle.runSheet[Math.min(d.huddle.runIdx, Math.max(0, d.huddle.runSheet.length - 1))];
   const real = !!realRole(p);
+  const cy = useCycle();
+  const cyAfter = isAfter(cy.t, cy.now);
+  const nextRem = canPrepWeek(p) ? nextReminder(reminders(d, cy.iso, cy.now)) : null;
+  const myFu = cyAfter && canNightRecap(p) ? followups(d, cy.iso, cy.now, cy.me).filter((f) => f.mine && !f.done).length : 0;
+  const swaps = d.serving.swaps.filter((x) => x.status === 'pending').length;
+  const myServe = canServe(p) ? myNights(d, cy.me.name, cy.nights) : [];
+  const firstSlip = slipsView(d)[0];
 
   const groups: { title: string; visible: boolean; items: (Item | null)[] }[] = [
     {
@@ -105,6 +114,20 @@ export function MoreScreen() {
       title: 'Tonight',
       visible: real,
       items: [
+        canPrepWeek(p) ? { label: 'Prep week', meta: nextRem ? 'next: ' + nextRem.label.toLowerCase() : 'all reminders posted', icon: 'ph ph-calendar-check', href: '/dashboard/prep-week' } : null,
+        canNightRecap(p)
+          ? {
+              label: 'Night recap',
+              meta: cyAfter ? (myFu ? myFu + ' follow-ups yours' : 'follow-ups done') : checkinOpen(cy.t, cy.now) ? attendanceStats(d).here + ' checked in' : 'opens ' + weekday(cy.iso),
+              icon: 'ph ph-clipboard-text',
+              href: '/dashboard/night-recap'
+            }
+          : null,
+        canServe(p)
+          ? { label: 'Serving & swaps', meta: canApprove(p) ? (swaps ? swaps + ' swaps waiting' : 'no swaps') : myServe[0] ? myServe[0].role.toLowerCase() + ' · ' + myServe.length + ' nights' : 'not scheduled', icon: 'ph ph-swap', href: '/dashboard/serving' }
+          : null,
+        canMessageParents(p) ? { label: 'Message parents', meta: firstSlip ? firstSlip.signedN + ' of ' + firstSlip.total + ' signed · ' + firstSlip.slip.title.split(/ · | from /)[0] : 'families, slips, pickup', icon: 'ph ph-chat-circle-text', href: '/dashboard/parents' } : null,
+        canRunDoor(p) ? { label: 'Door kiosk', meta: 'students check themselves in', icon: 'ph ph-device-tablet', href: '/dashboard/door' } : null,
         canHuddle(p) && sheetNow ? { label: 'Huddle & run sheet', meta: sheetNow.time + ' · ' + sheetNow.label + ' · ' + hereCount + ' of ' + crewIds.length + ' here', icon: 'ph ph-users-four', href: '/dashboard/huddle' } : null,
         canControlEvent(p) ? { label: 'Game timer', meta: 'week ' + d.config.weekNumber, icon: 'ph ph-timer', href: '/dashboard/games' } : null,
         { label: 'Submit Points', meta: 'with photo proof', icon: 'ph ph-paper-plane-tilt', href: '/dashboard/submit-points' },

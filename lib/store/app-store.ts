@@ -26,10 +26,11 @@ import {
 import { readHeld, removeHeld, writeHeld, writeHeldSync } from '@/lib/store/held-store';
 import { autoApproves, canApprove, canEditRoster, canScore } from '@/lib/permissions';
 import { attendanceRows } from '@/lib/feeds';
+import { selfCheckin } from '@/lib/cycle';
 import { fmt, pointBase, standings } from '@/lib/scoring';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
-  ActivityLine, EntryDetail, HeldOp, LedgerEntry, Membership, MinistryData
+  ActivityLine, EntryDetail, HeldOp, LedgerEntry, Membership, MinistryData, CheckinVia
 } from '@/lib/types/model';
 
 export const uid = () =>
@@ -115,7 +116,9 @@ export interface AppState {
   /* tonight */
   setCoachTeam(id: string): void;
   togglePresence(name: string): void;
-  setPresence(name: string, on: boolean): void;
+  setPresence(name: string, on: boolean, via?: CheckinVia): void;
+  /** A student checking themselves in from the door QR. */
+  selfCheckIn(): boolean;
   markAllPresent(team: string, on: boolean): void;
   postAttendance(team: string): DoneFlag;
 
@@ -638,14 +641,39 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           const on = !get().data.tonight.presence[name];
           get().setPresence(name, on);
         },
-        setPresence(name, on) {
+        setPresence(name, on, via = 'leader') {
           if (!canEditRoster(get().membership.persona)) return;
           set((s) => {
-            if (on) s.data.tonight.presence[name] = true;
-            else delete s.data.tonight.presence[name];
+            s.data.tonight.via ??= {};
+            if (on) {
+              s.data.tonight.presence[name] = true;
+              s.data.tonight.via[name] = via;
+            } else {
+              delete s.data.tonight.presence[name];
+              delete s.data.tonight.via[name];
+            }
           });
           save();
-          get().emit({ kind: 'presence', date: get().data.tonight.date, student: name, present: on });
+          get().emit({ kind: 'presence', date: get().data.tonight.date, student: name, present: on, via });
+        },
+        selfCheckIn() {
+          const s = get();
+          const name = s.membership.studentName;
+          const kid = s.data.roster.find((r) => r.name === name);
+          const ok = selfCheckin(s.data, kid, Date.now());
+          if (!ok.ok || !name) {
+            s.say(ok.why);
+            return false;
+          }
+          set((st) => {
+            st.data.tonight.presence[name] = true;
+            st.data.tonight.via ??= {};
+            st.data.tonight.via[name] = 'qr';
+          });
+          save();
+          get().emit({ kind: 'selfCheckin', date: get().data.tonight.date });
+          s.say('You’re in. Go find your squad.');
+          return true;
         },
         markAllPresent(team, on) {
           if (!canEditRoster(get().membership.persona)) return;

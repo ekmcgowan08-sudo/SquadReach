@@ -5,6 +5,7 @@
    own setup; nothing here is read in Supabase mode.
    ───────────────────────────────────────────────────────────────────────── */
 import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
+import { DEFAULT_CYCLE, upcomingNights } from '@/lib/cycle';
 import { DEMO_LIBRARY } from '@/lib/library';
 import { DEFAULT_PENALTIES, emptyGame } from '@/lib/game';
 import { isoDay } from '@/lib/dates';
@@ -14,6 +15,7 @@ import type {
 
 const MIN = 60_000;
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
 
 /* [name, team, grade, flags]  flags: c = captain, g = guest, n = new in the directory */
 const ROSTER_ROWS: [string, string, string, string][] = [
@@ -327,6 +329,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
   return {
     config: {
       ministryName: 'Grace Community Students',
+      cycle: DEFAULT_CYCLE,
       pointBase: 900,
       weekGrowthPct: 8,
       goalValue: 25,
@@ -485,10 +488,95 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     rsvps: seedRsvps(),
     attendanceHistory: attendanceHistory(),
     practiceLog: seedPractice(now),
-    tonight: { date: '2026-10-28', presence: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
+    tonight: { date: '2026-10-28', presence: {}, via: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
     game: emptyGame(),
     bracket: { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} },
-    challengeCredit: {}
+    challengeCredit: {},
+    ...seedCycle(now)
+  };
+}
+
+const DEMO_NIGHTS = ['2026-09-02', '2026-09-09', '2026-09-16', '2026-09-23', '2026-09-30', '2026-10-07', '2026-10-14', '2026-10-21', '2026-10-28'];
+const GUARDIAN_FIRST = ['Tara', 'Sam', 'Kim', 'Dev', 'Rae', 'Lena', 'Carla', 'Grace', 'Nate', 'Mira', 'June', 'Paul', 'Ana', 'Wei', 'Rob', 'Jess', 'Owen', 'Beth', 'Luis', 'Erin'];
+
+/** Who came each past week, consistent with the squad heat map: each week
+ *  the most regular students fill the squad's percentage for that week. */
+function seedPresenceLog(): Record<string, string[]> {
+  const pct = attendanceHistory();
+  const out: Record<string, string[]> = {};
+  DEMO_NIGHTS.slice(0, -1).forEach((iso, w) => {
+    const names: string[] = [];
+    for (const team of ['yellow', 'red', 'blue', 'green']) {
+      const kids = ROSTER.filter((r) => r.team === team && !r.guest);
+      const k = Math.round((kids.length * (pct[team]?.[w] ?? 0)) / 100);
+      const ranked = [...kids].sort((a, b) => (hashStr(a.name) % 100) + (hashStr(a.name + iso) % 45) - ((hashStr(b.name) % 100) + (hashStr(b.name + iso) % 45)));
+      names.push(...ranked.slice(0, k).map((r) => r.name));
+    }
+    /* Guests came in their last two weeks only — that's what made them guests. */
+    for (const g of ROSTER.filter((r) => r.guest)) if (w >= 6 && hashStr(g.name + iso) % 3 !== 0) names.push(g.name);
+    out[iso] = names;
+  });
+  return out;
+}
+
+function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 'serving' | 'families' | 'slips' | 'slipSigned' | 'parentMsgs'> {
+  const families: MinistryData['families'] = {};
+  for (const r of ROSTER) {
+    if (r.guest) continue;
+    const last = r.name.split(' ').slice(-1)[0];
+    const h = hashStr('family:' + r.name);
+    families[r.name] = {
+      guardian: r.name === 'Ellison Reid' ? 'Dana Reid' : GUARDIAN_FIRST[h % GUARDIAN_FIRST.length] + ' ' + last,
+      contact: '(417) 555-' + String(1000 + (h % 9000)).padStart(4, '0'),
+      token: r.name === 'Ellison Reid' ? 'demo-reid-family' : 'demo-' + h.toString(36)
+    };
+  }
+  const van = ['Melanie Russell', 'Isaac Smith', 'Wyatt Price', 'Noah Godshall', 'Hannah Duff', 'Amelia Duff'];
+  const slipSigned: MinistryData['slipSigned'] = {
+    'van|Melanie Russell': { by: families['Melanie Russell'].guardian, at: now - 30 * HOUR },
+    'van|Hannah Duff': { by: families['Hannah Duff'].guardian, at: now - 20 * HOUR }
+  };
+  ROSTER.filter((r) => !r.guest && r.name !== 'Ellison Reid' && hashStr('retreat:' + r.name) % 3 === 0).forEach((r) => {
+    slipSigned['retreat|' + r.name] = { by: families[r.name].guardian, at: now - (hashStr(r.name) % 9) * DAY };
+  });
+  const everyone = ROSTER.filter((r) => !r.guest).map((r) => r.name);
+  const reads: Record<string, number> = {};
+  everyone.filter((n) => hashStr('read:' + n) % 2 === 0).forEach((n) => (reads[n] = now - 2 * DAY));
+
+  const nights = upcomingNights(DEMO_NIGHTS, '2026-10-28', 4);
+  const plan: (string | null)[][] = [
+    ['Renee Boyd', 'Sam Okafor', 'Priya Raman', 'Ty Winslow', 'Beth Naylor'],
+    ['Jordan Pike', 'Marcus Hall', 'Priya Raman', 'Chris Alder', 'Beth Naylor'],
+    ['Renee Boyd', 'Sam Okafor', 'Priya Raman', null, 'Dana Boyd'],
+    ['Jordan Pike', 'Chris Alder', null, 'Ty Winslow', null]
+  ];
+  const sched: Record<string, string | null> = {};
+  nights.forEach((n, i) => DEFAULT_CYCLE.serveRoles.forEach((role, j) => (sched[n + '|' + role] = plan[i][j])));
+
+  return {
+    presenceLog: seedPresenceLog(),
+    cycle: {},
+    serving: {
+      sched,
+      avail: { ['Jordan Pike|' + nights[1]]: 'yes', ['Jordan Pike|' + nights[2]]: 'yes', ['Marcus Hall|' + nights[1]]: 'no', ['Priya Raman|' + nights[2]]: 'no', ['Kara Judd|' + nights[2]]: 'yes', ['Beth Naylor|' + nights[3]]: 'no' },
+      swaps: [
+        { id: 'sw1', from: 'Marcus Hall', night: nights[1], role: 'Game lead', to: 'Jordan Pike', why: 'Out of town for a wedding.', status: 'pending', at: now - 26 * HOUR },
+        { id: 'sw2', from: 'Priya Raman', night: nights[2], role: 'Worship', to: null, why: 'Picked up a work shift.', status: 'pending', at: now - 5 * HOUR }
+      ],
+      invites: [
+        { id: 'iv1', name: 'Hannah Cole', contact: 'hannah.cole@example.com', role: 'Small group leader', status: 'accepted', at: now - 19 * DAY },
+        { id: 'iv2', name: 'Tyler Ng', contact: '(417) 555-0310', role: 'Van driver', status: 'sent', at: now - 2 * DAY }
+      ]
+    },
+    families,
+    slips: [
+      { id: 'van', title: 'Van ride from Lincoln Middle', due: '2026-10-28T18:00', kids: van, at: now - 6 * DAY },
+      { id: 'retreat', title: 'Fall retreat · Nov 13–15', due: '2026-11-06', kids: 'all', at: now - 17 * DAY }
+    ],
+    slipSigned,
+    parentMsgs: [
+      { id: 'pm1', from: 'Pastor Mike', to: 'all', kids: everyone, text: 'Fall retreat sign-ups are open. The slip is in your family link — $85 covers lodging and meals, and nobody stays home over money.', at: now - 17 * DAY, reads }
+    ]
   };
 }
 

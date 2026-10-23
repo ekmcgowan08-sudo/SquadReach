@@ -1,12 +1,14 @@
 /* A ministry with nothing in it yet — the shape a Supabase load fills in.
    Every list starts empty; nothing here is demo data. */
 import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
+import { DEFAULT_CYCLE } from '@/lib/cycle';
 import { DEFAULT_PENALTIES, emptyGame } from '@/lib/game';
 import { DEFAULT_READY } from '@/lib/data/seed';
 import type { MinistryConfig, MinistryData } from '@/lib/types/model';
 
 export const DEFAULT_CONFIG: MinistryConfig = {
   ministryName: 'Your ministry',
+  cycle: DEFAULT_CYCLE,
   pointBase: 400,
   weekGrowthPct: 8,
   goalValue: 25,
@@ -66,9 +68,16 @@ export function emptyMinistry(): MinistryData {
     rsvps: {},
     attendanceHistory: {},
     practiceLog: [],
-    tonight: { date: '', presence: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
+    tonight: { date: '', presence: {}, via: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
     game: emptyGame(),
     bracket: { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} },
-    challengeCredit: {}
+    challengeCredit: {},
+    presenceLog: {},
+    cycle: {},
+    serving: { sched: {}, avail: {}, swaps: [], invites: [] },
+    families: {},
+    slips: [],
+    slipSigned: {},
+    parentMsgs: []
   };
 }
