@@ -159,7 +159,6 @@ function ThreadView({ id }: { id: string }) {
     setDraft('');
   };
 
-  let lastDay = '';
   return (
     <div data-screen-label="Chat thread" className="flex min-h-full flex-col">
       <div className="sticky top-0 z-[3] flex items-center gap-[9px] border-b border-divider px-[14px] py-2 backdrop-blur-[10px]" style={{ background: 'color-mix(in srgb, var(--color-bg) 90%, #000)' }}>
@@ -180,9 +179,8 @@ function ThreadView({ id }: { id: string }) {
       ) : null}
       {msgs.length ? (
         <div className="flex flex-1 flex-col gap-[9px] px-4 pb-[10px] pt-[14px]">
-          {msgs.map((x) => {
-            const showDay = x.day !== lastDay;
-            lastDay = x.day;
+          {msgs.map((x, k) => {
+            const showDay = k === 0 || x.day !== msgs[k - 1].day;
             return (
               <div key={x.id} className="flex flex-col gap-[9px]">
                 {showDay ? <div className="self-center py-[6px] text-[9.5px] font-medium uppercase leading-none tracking-[.1em] text-neutral-500">{x.day}</div> : null}

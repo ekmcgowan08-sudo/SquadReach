@@ -47,3 +47,7 @@ export function ago(ts: number, now = Date.now()): string {
   const hrs = Math.round(mins / 60);
   return hrs < 24 ? hrs + 'h ago' : Math.round(hrs / 24) + 'd ago';
 }
+
+/** The clock, for event handlers. (Render code reads time through useNow so
+ *  a render stays a pure function of state.) */
+export const nowMs = () => Date.now();

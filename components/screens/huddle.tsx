@@ -12,7 +12,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Btn, Icon, Screen, ScreenHeader } from '@/components/ui';
-import { longDate } from '@/lib/dates';
+import { longDate, nowMs } from '@/lib/dates';
 import { uncoveredPosts } from '@/lib/feeds';
 import { canApprove, canEditRoster, holdsSheet } from '@/lib/permissions';
 import { openFollowups, runMinutes, teamOf } from '@/lib/selectors';
@@ -57,7 +57,7 @@ export function HuddleScreen() {
   const api = useAppApi();
   const router = useRouter();
   const save = useHuddleSave();
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => nowMs());
   const [openItem, setOpenItem] = useState<string | null>(null);
   const [openCrew, setOpenCrew] = useState<string | null>(null);
   const [benchFor, setBenchFor] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function HuddleScreen() {
   const [flagName, setFlagName] = useState('');
   const [debriefNote, setDebriefNote] = useState('');
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 20_000);
+    const t = setInterval(() => setNow(nowMs()), 20_000);
     return () => clearInterval(t);
   }, []);
 
@@ -122,9 +122,9 @@ export function HuddleScreen() {
         if (i < next) x.runDone[it.id] = true;
       });
       x.runIdx = next;
-      x.runAdvancedAt = Date.now();
+      x.runAdvancedAt = nowMs();
     });
-    setNow(Date.now());
+    setNow(nowMs());
     setOpenItem(null);
     api().logActivity('Run sheet moved to ' + sheet[next].time + ' ' + sheet[next].label);
     api().say(sheet[next].time + ' · ' + sheet[next].label + '. Everyone serving sees it.');
@@ -188,7 +188,7 @@ export function HuddleScreen() {
       api().say(n.split(' ')[0] + ' is already on the care list.');
       return;
     }
-    const item = { id: uid(), initials: n.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), name: n, meta: 'Flagged at debrief · ' + m.displayName + ' · tonight', flaggedBy: m.displayName, at: Date.now() };
+    const item = { id: uid(), initials: n.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), name: n, meta: 'Flagged at debrief · ' + m.displayName + ' · tonight', flaggedBy: m.displayName, at: nowMs() };
     api().mutate((x) => {
       x.careReminders.push(item);
     });
@@ -205,7 +205,7 @@ export function HuddleScreen() {
     }
     const wk = d.config.weekNumber + 1;
     save((x) => {
-      x.debriefNotes.push({ id: uid(), text: v, week: wk, at: Date.now() });
+      x.debriefNotes.push({ id: uid(), text: v, week: wk, at: nowMs() });
     });
     setDebriefNote('');
     api().logActivity('Debrief note filed on Week ' + wk + ': ' + v);

@@ -73,7 +73,7 @@ export function MoreScreen() {
               icon: 'ph ph-arrow-counter-clockwise',
               onClick: () => {
                 resetDemo();
-                window.location.href = '/dashboard';
+                window.location.reload();
               }
             }
           : { label: 'Sign out', meta: m.displayName, icon: 'ph ph-sign-out', href: '/logout' }

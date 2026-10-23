@@ -2,15 +2,13 @@
 /* A bottom sheet over the phone. Escape and the backdrop close it; focus
    moves into it on open. Escape inside a field blurs the field instead —
    collapsing a form is a surprise, not a dismissal. */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useOverlayHost } from '@/lib/use-overlay-host';
 
 export function Sheet({ open, onClose, label, children, z = 80, maxH = '88%' }: { open: boolean; onClose: () => void; label: string; children: ReactNode; z?: number; maxH?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [host, setHost] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setHost(document.getElementById('sr-overlay'));
-  }, []);
+  const host = useOverlayHost();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {

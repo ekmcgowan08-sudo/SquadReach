@@ -3,10 +3,10 @@
    leader approves and decides who sees it. An event's RSVPs are counted for
    everyone, named only for the volunteer set. */
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf } from '@/components/ui';
-import { isoDay } from '@/lib/dates';
+import { isoDay, nowMs } from '@/lib/dates';
 import { canApprove } from '@/lib/permissions';
 import { ALL_AUDIENCES, canRsvp, canSeeRsvpNames, eventLabel, practiceName, rsvpTally, teamOf, upcomingEvents } from '@/lib/selectors';
 import { sendChat, sendRsvp } from '@/lib/store/actions';
@@ -53,7 +53,7 @@ export function CalendarScreen() {
   const me = practiceName(m);
   const proposals = d.events.filter((e) => e.status === 'proposed' && (leader || (e.by ?? '').startsWith(me)));
 
-  const cells = useMemo(() => {
+  const cells = (() => {
     const first = month.getDay();
     const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
     const visible = d.events.filter((e) => e.status !== 'proposed' && e.iso);
@@ -64,7 +64,7 @@ export function CalendarScreen() {
       const ev = visible.find((e) => e.iso === iso && (leader || upcomingEvents(d, p, '0000').includes(e)));
       return { day, iso, ev, meeting: d.config.meetingDates.includes(iso) };
     });
-  }, [month, d, p, leader]);
+  })();
 
   const decline = (e: MinistryEvent) => {
     api().mutate((x) => void (x.events = x.events.filter((y) => y.id !== e.id)));
@@ -244,7 +244,7 @@ function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }
   const leader = canApprove(m.persona);
   const [team, setTeam] = useState<string | null>(null);
   const [title, setTitle] = useState('');
-  const [iso, setIso] = useState(isoDay(new Date(Date.now() + 7 * 86_400_000)));
+  const [iso, setIso] = useState(() => isoDay(new Date(nowMs() + 7 * 86_400_000)));
   const [time, setTime] = useState('7:00p');
   const [place, setPlace] = useState('');
   const [roles, setRoles] = useState<AudienceId[]>([...ALL_AUDIENCES]);

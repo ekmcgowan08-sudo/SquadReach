@@ -5,7 +5,7 @@
    else's view is PREVIEWING, and the strip says so. */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { InviteSheet } from '@/components/dashboard/invite-sheet';
 import { useStandings } from '@/components/dashboard/standings-list';
 import { Btn, Icon, PreviewStrip, Screen, ScreenHeader } from '@/components/ui';
@@ -206,15 +206,11 @@ export function CaptainViewScreen() {
   const roster = teamRoster(d, myId);
   const missing = roster.filter((r) => !d.tonight.presence[r.name]);
   const pushes = d.challenges.filter((c) => !c.team || c.team === myId);
-  const earners = useMemo(
-    () =>
-      roster
-        .map((r) => ({ name: r.name, pts: studentTotal(r.name, d.ledger, d.studentSeedPoints) }))
-        .filter((r) => r.pts > 0)
-        .sort((a, b) => b.pts - a.pts)
-        .slice(0, 5),
-    [roster, d.ledger, d.studentSeedPoints]
-  );
+  const earners = roster
+    .map((r) => ({ name: r.name, pts: studentTotal(r.name, d.ledger, d.studentSeedPoints) }))
+    .filter((r) => r.pts > 0)
+    .sort((a, b) => b.pts - a.pts)
+    .slice(0, 5);
   const top = earners[0]?.pts ?? 0;
 
   /* A nudge is a push notification, so it has no outbox — offline it simply

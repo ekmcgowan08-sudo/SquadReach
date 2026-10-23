@@ -8,6 +8,7 @@
    a replay over a flaky connection can never double-post. */
 import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
+import { bibleStats } from '@/lib/bible';
 import { isoDay, tonightDate, weekOf } from '@/lib/dates';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { chatStamp } from '@/lib/selectors';
@@ -221,6 +222,25 @@ export function supabaseBackend(membership: Membership): Backend {
         const n = rosterSize.get(t.id) ?? 0;
         d.attendanceHistory[t.id] = config.meetingDates.map((iso) => (n ? Math.round(((hits.get(t.id + '|' + iso) ?? 0) / n) * 100) : 0));
       }
+      /* Badges: an attendance streak (consecutive meeting nights present, up
+         to tonight) next to a Bible streak (consecutive days practiced). */
+      const presentOn = new Map<string, Set<string>>();
+      for (const r of (season.data ?? []) as { student_id: string; meeting_date: string }[]) {
+        (presentOn.get(r.student_id) ?? presentOn.set(r.student_id, new Set()).get(r.student_id)!).add(r.meeting_date);
+      }
+      const past = config.meetingDates.filter((iso) => iso <= tonight).reverse();
+      d.studentBadges = studentRows
+        .map((st) => {
+          const seen = presentOn.get(st.id) ?? new Set<string>();
+          let attend = 0;
+          for (const iso of past) {
+            if (!seen.has(iso)) break;
+            attend++;
+          }
+          const bible = bibleStats(d.practiceLog.filter((r) => r.who === st.name), config.memoryVerses, config.weekNumber).streak;
+          return { name: st.name, team: st.team_id ?? '', attendStreak: attend, bibleStreak: bible };
+        })
+        .filter((b) => b.attendStreak || b.bibleStreak);
       const byId = new Map(studentRows.map((s) => [s.id, s.name]));
       for (const a of (att.data ?? []) as { student_id: string; present: boolean }[]) {
         const name = byId.get(a.student_id);

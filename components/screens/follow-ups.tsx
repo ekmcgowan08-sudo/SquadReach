@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf } from '@/components/ui';
+import { nowMs } from '@/lib/dates';
 import { canReviewPrayer, canSeeCare } from '@/lib/permissions';
 import { careNotes, myTeamId, openFollowups, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
@@ -66,7 +67,7 @@ function PrayerWall() {
     const who = anon ? 'Anonymous' : me;
     const team = myTeamId(m, d, coachTeam);
     const meta = 'submitted just now · ' + (anon ? (student ? student.grade + 'th grade' : 'kept private') : team ? teamOf(d, team).name : m.firstName);
-    const item: PrayerQueued = { id: uid(), who, meta, body, at: Date.now() };
+    const item: PrayerQueued = { id: uid(), who, meta, body, at: nowMs() };
     api().mutate((x) => {
       x.prayerQueue.unshift(item);
     });
@@ -82,7 +83,7 @@ function PrayerWall() {
     api().mutate((x) => {
       const moving = x.prayerQueue.filter((q) => ids.includes(q.id));
       x.prayerQueue = x.prayerQueue.filter((q) => !ids.includes(q.id));
-      x.prayers.unshift(...moving.map((q) => ({ id: q.id, who: q.who, meta: 'Just now · posted by a leader', body: q.body, praying: 0, prayed: false, answered: false, at: Date.now() })));
+      x.prayers.unshift(...moving.map((q) => ({ id: q.id, who: q.who, meta: 'Just now · posted by a leader', body: q.body, praying: 0, prayed: false, answered: false, at: nowMs() })));
     });
     api().emit({ kind: 'prayerPost', ids });
     api().logActivity('Posted ' + (ids.length === 1 ? 'a prayer request' : ids.length + ' prayer requests') + ' to the wall');
@@ -90,7 +91,7 @@ function PrayerWall() {
   };
 
   const hold = (q: PrayerQueued) => {
-    const item: CareReminder = { id: uid(), kind: 'followup', initials: q.who === 'Anonymous' ? '··' : initialsOf(q.who), name: q.who, meta: 'Held prayer request · talk before posting · ' + m.firstName, flaggedBy: m.displayName, at: Date.now() };
+    const item: CareReminder = { id: uid(), kind: 'followup', initials: q.who === 'Anonymous' ? '··' : initialsOf(q.who), name: q.who, meta: 'Held prayer request · talk before posting · ' + m.firstName, flaggedBy: m.displayName, at: nowMs() };
     api().mutate((x) => {
       x.prayerQueue = x.prayerQueue.filter((y) => y.id !== q.id);
       x.careReminders.push(item);
@@ -250,7 +251,7 @@ function TeamCare() {
       api().say('Who it’s about, and a line or two about what you saw.');
       return;
     }
-    const item: CareReminder = { id: uid(), kind: 'note', initials: initialsOf(name), name, meta: m.displayName + ' · ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), flaggedBy: m.displayName, at: Date.now(), body: text };
+    const item: CareReminder = { id: uid(), kind: 'note', initials: initialsOf(name), name, meta: m.displayName + ' · ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), flaggedBy: m.displayName, at: nowMs(), body: text };
     api().mutate((x) => {
       x.careReminders.push(item);
     });

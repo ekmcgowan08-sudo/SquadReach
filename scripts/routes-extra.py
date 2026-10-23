@@ -18,4 +18,6 @@ EXTRA.update({
     'media': ('MediaScreen', 'media', 'any'),
     'calendar': ('CalendarScreen', 'calendar', 'any'),
     'chat': ('ChatScreen', 'chat', 'any'),
+    'season-plan': ('SeasonScreen', 'season', 'any'),
+    'badges': ('BadgesScreen', 'season', 'any'),
 })

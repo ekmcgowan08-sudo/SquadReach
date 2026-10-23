@@ -16,6 +16,7 @@ import { autoApproves, canApprove, canControlEvent, canHuddle } from '@/lib/perm
 import { deltaLabel, fmt, pointBase, studentRanks, studentTotal } from '@/lib/scoring';
 import { catOf, computeBadges, computeNotifications, eventLabel, myBible, myTeamId, sheetMinutes, teamOf, teamRoster, upcomingEvents } from '@/lib/selectors';
 import { usePrefs } from '@/lib/prefs';
+import { useNow } from '@/lib/use-now';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
 function greeting(now = new Date()) {
@@ -507,12 +508,13 @@ function StaleHeldCard() {
   const stale = useApp((s) => s.staleHeld);
   const offline = useApp((s) => !s.netOnline || s.offlineSim);
   const api = useAppApi();
+  const now = useNow(false);
   if (!stale) return null;
   const n = heldTotal(stale);
   const sum = stale.outbox.reduce((t, q) => t + (q.kind === 'entry' ? q.entry.amount : 0), 0);
   const entries = stale.outbox.filter((q) => q.kind === 'entry').length;
   const dt = new Date(stale.since);
-  const days = Math.floor((Date.now() - stale.since) / 86_400_000);
+  const days = Math.floor((now - stale.since) / 86_400_000);
   const time = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(' ', '');
   const when = 'from ' + (days >= 6 ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' }) : dt.toLocaleDateString([], { weekday: 'long' })) + ', ' + time;
   return (

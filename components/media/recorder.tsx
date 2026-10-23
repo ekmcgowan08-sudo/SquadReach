@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@/components/ui';
+import { nowMs } from '@/lib/dates';
 import { bracketWinPayable, settleFromClip } from '@/lib/feeds';
 import { putBlob } from '@/lib/media-store';
 import { canScore } from '@/lib/permissions';
@@ -20,6 +21,7 @@ import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { Team } from '@/lib/types/model';
 import { useNow } from '@/lib/use-now';
+import { useOverlayHost } from '@/lib/use-overlay-host';
 
 const W = 1280;
 const H = 720;
@@ -61,7 +63,7 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
   const m = useApp((s) => s.membership);
   const api = useAppApi();
   const scorer = canScore(m.persona);
-  const [host, setHost] = useState<HTMLElement | null>(null);
+  const host = useOverlayHost();
   const [panel, setPanel] = useState<'score' | 'setup' | 'clips'>('score');
   const [floor, setFloor] = useState<string[]>(() => d.teams.slice(0, 2).map((t) => t.id));
   const [tally, setTally] = useState<Record<string, number>>({});
@@ -88,7 +90,6 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
   const goal = d.config.goalValue || 25;
   const now = useNow(open && (clock.startedAt != null || !!rec), 250);
 
-  useEffect(() => setHost(document.getElementById('sr-overlay')), []);
   useEffect(() => {
     drawState.current = { teams, tally, clock, period, overlayOn, brand: d.config.ministryName, recording: !!rec };
   }, [teams, tally, clock, period, overlayOn, d.config.ministryName, rec]);
@@ -235,7 +236,7 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
       return;
     }
     chunks.current = [];
-    const startedAt = Date.now();
+    const startedAt = nowMs();
     const playing = [...floor];
     r.ondataavailable = (e) => e.data.size && chunks.current.push(e.data);
     r.onstop = () => {

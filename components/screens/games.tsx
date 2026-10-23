@@ -9,6 +9,7 @@ import { Btn, Icon, Screen, tint } from '@/components/ui';
 import {
   activeTeams, clock, emptyLane, flipNote, heatRows, laneOf, laneSec, placementAwards, soloSec, startLane, stopLane
 } from '@/lib/game';
+import { nowMs } from '@/lib/dates';
 import { postedLabel, wasHeld } from '@/lib/held';
 import { canApprove } from '@/lib/permissions';
 import { fmt, pointBase } from '@/lib/scoring';
@@ -61,14 +62,14 @@ export function GamesScreen() {
   const soloDone = g.mode === 'single' && g.solo.mode === 'down' && g.solo.startedAt != null && soloSec(g, now) <= 0;
 
   const toggleLane = (teamId: string) => {
-    const t = Date.now();
+    const t = nowMs();
     change((x) => {
       const lane = x.lanes[teamId] ?? emptyLane();
       x.lanes[teamId] = lane.startedAt != null ? stopLane(lane, t) : startLane(lane, t);
     }, true);
   };
   const startMany = (ids: string[]) => {
-    const t = Date.now();
+    const t = nowMs();
     change((x) => {
       for (const id of ids) x.lanes[id] = startLane(x.lanes[id] ?? emptyLane(), t);
     }, true);
@@ -81,7 +82,7 @@ export function GamesScreen() {
       l.counts = { ...l.counts, [p.id]: Math.max(0, (l.counts[p.id] ?? 0) + delta) };
       x.lanes[teamId] = l;
       /* A penalty shows on the projector for as long as it costs. */
-      if (delta > 0) x.effects = x.effects.filter((e) => Date.now() < e.startAt + e.sec * 1000).concat({ key: uid(), teamId, penaltyId: p.id, startAt: Date.now(), sec: Math.min(p.sec, 30) || 10 });
+      if (delta > 0) x.effects = x.effects.filter((e) => nowMs() < e.startAt + e.sec * 1000).concat({ key: uid(), teamId, penaltyId: p.id, startAt: nowMs(), sec: Math.min(p.sec, 30) || 10 });
     }, true);
   };
 
@@ -99,7 +100,7 @@ export function GamesScreen() {
     const label = d.config.gameName || 'Game';
     const flag = api().awardMany(awards.map((a) => ({ team: a.team, cat: 'games', amount: a.amount, why: label + ' · placement ' + a.place, batch })));
     if (!flag) return;
-    const t = Date.now();
+    const t = nowMs();
     api().mutate((x) => {
       x.tonight.heatPosted = flag === 'held' ? 'held' : 'posted';
       for (const id of Object.keys(x.game.lanes)) x.game.lanes[id] = stopLane(x.game.lanes[id], t);
@@ -194,7 +195,7 @@ export function GamesScreen() {
               <Btn
                 className="min-h-12 flex-[2] justify-center"
                 onClick={() => {
-                  const t = Date.now();
+                  const t = nowMs();
                   change((x) => {
                     const s = x.solo;
                     x.solo = s.startedAt != null ? { ...s, elapsedMs: s.elapsedMs + (t - s.startedAt), startedAt: null } : { ...s, startedAt: t };

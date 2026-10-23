@@ -75,8 +75,8 @@ export function BibleScreen() {
   const verse = verseForWeek(d.config.memoryVerses, d.config.weekNumber);
   const text = verse?.text[version] ?? null;
   const shown = text ?? 'This translation needs a licensed Bible content source to display verse text — pick KJV, ASV or RVR1909 to try the drills now.';
-  const arr = useMemo(() => words(shown), [shown]);
-  const blankSet = useMemo(() => new Set(blankIdxs(shown)), [shown]);
+  const arr = words(shown);
+  const blankSet = new Set(blankIdxs(shown));
   const stats = myBible(d, m);
 
   const reset = () => {

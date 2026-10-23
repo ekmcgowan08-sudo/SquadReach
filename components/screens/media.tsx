@@ -2,7 +2,7 @@
 /* MEDIA & FILM — every photo and clip lands in the week it happened in and
    stays there. Film opens the scoreboard camera; Capture files photos. */
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Recorder } from '@/components/media/recorder';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader } from '@/components/ui';
@@ -37,7 +37,7 @@ export function MediaScreen() {
   const [clip, setClip] = useState<Clip | null>(null);
   const wk = d.config.weekNumber;
 
-  const albums = useMemo(() => {
+  const albums = (() => {
     const weeks = new Set<number>([wk]);
     for (const x of d.media) weeks.add(x.week);
     for (const c of d.clips) weeks.add(c.week);
@@ -55,7 +55,7 @@ export function MediaScreen() {
         };
       })
       .filter((a) => a.week === wk || a.clips.length || a.items.length);
-  }, [d.media, d.clips, d.config.meetingDates, d.config.gameName, wk]);
+  })();
 
   return (
     <Screen label="Media & film">
