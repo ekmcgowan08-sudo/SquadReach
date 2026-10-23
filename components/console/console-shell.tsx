@@ -18,6 +18,10 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
           <span className="text-neutral-700">/</span>
           <div className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-200">{name} · Console</div>
           {offline ? <span className="rounded-full border border-neutral-700 px-2 py-1 text-[10.5px] text-neutral-400">No signal — changes wait</span> : null}
+          <Link href="/planner" className="hidden min-h-11 items-center gap-[6px] rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-300 sm:flex">
+            <Icon name="ph ph-map-trifold" className="text-[14px]" />
+            Planner
+          </Link>
           <Link href="/projector" className="hidden min-h-11 items-center gap-[6px] rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-300 sm:flex">
             <Icon name="ph ph-monitor-play" className="text-[14px]" />
             Projector

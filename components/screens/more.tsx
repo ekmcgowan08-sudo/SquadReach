@@ -158,6 +158,7 @@ export function MoreScreen() {
         { label: 'People & Roles', meta: d.roster.length + ' people', icon: 'ph ph-users-three', href: '/console?tab=people' },
         { label: 'Audit Log', meta: 'everything', icon: 'ph ph-list-magnifying-glass', href: '/dashboard/audit' },
         { label: 'Web Dashboard', meta: 'full control', icon: 'ph ph-gauge', href: '/console' },
+        { label: 'Planner', meta: 'seven years · seasons · nights', icon: 'ph ph-map-trifold', href: '/planner' },
         canControlEvent(p) ? { label: 'Projector Mode', meta: 'second screen', icon: 'ph ph-projector-screen', href: '/projector' } : null
       ]
     }

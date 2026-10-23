@@ -6,6 +6,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
 import { DEFAULT_CYCLE, upcomingNights } from '@/lib/cycle';
+import { demoPlan } from '@/lib/data/seed-plan';
 import { DEMO_LIBRARY } from '@/lib/library';
 import { DEFAULT_PENALTIES, emptyGame } from '@/lib/game';
 import { isoDay } from '@/lib/dates';
@@ -520,7 +521,7 @@ function seedPresenceLog(): Record<string, string[]> {
   return out;
 }
 
-function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 'serving' | 'families' | 'slips' | 'slipSigned' | 'parentMsgs' | 'seasons' | 'customReports' | 'deliveries' | 'reportSendLog'> {
+function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 'serving' | 'families' | 'slips' | 'slipSigned' | 'parentMsgs' | 'seasons' | 'customReports' | 'deliveries' | 'reportSendLog' | 'plan'> {
   const families: MinistryData['families'] = {};
   for (const r of ROSTER) {
     if (r.guest) continue;
@@ -595,7 +596,8 @@ function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 's
       { id: 'dl2', report: 'roster', audience: 'leaders', scope: 'all', cadence: 'weekly', day: 4, time: '09:00', on: true },
       { id: 'dl3', report: 'visitors', audience: 'leaders', scope: 'all', cadence: 'nightAfter', day: 0, time: '08:00', on: true }
     ],
-    reportSendLog: []
+    reportSendLog: [],
+    plan: demoPlan(now)
   };
 }
 

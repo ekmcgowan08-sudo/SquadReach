@@ -13,7 +13,7 @@ import { uncoveredPosts } from '@/lib/feeds';
 import { useAppApi } from '@/lib/store/provider';
 import Link from 'next/link';
 
-export function PrepWeekScreen() {
+export function PrepWeekScreen({ bare }: { bare?: boolean } = {}) {
   const { d, m, iso, night, t, now, stages, preview } = useCycle();
   const api = useAppApi();
   const saveNight = useNightSave();
@@ -61,7 +61,7 @@ export function PrepWeekScreen() {
 
   return (
     <Screen label="Prep week">
-      <ScreenHeader title="Prep week" sub={dayLabel(t.setup) + ' · week ' + week + (d.config.gameName ? ' · ' + d.config.gameName : '')} back="/dashboard/more" />
+      {!bare ? <ScreenHeader title="Prep week" sub={dayLabel(t.setup) + ' · week ' + week + (d.config.gameName ? ' · ' + d.config.gameName : '')} back="/dashboard/more" /> : null}
       <PreviewClock t={t} stages={stages} current={preview?.id ?? null} mode={m.mode} />
 
       <div className="sr-card px-[15px] py-4">

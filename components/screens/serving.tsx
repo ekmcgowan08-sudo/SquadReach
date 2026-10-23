@@ -18,13 +18,13 @@ import type { SwapRequest, VolunteerInvite } from '@/lib/types/model';
 const nightLabel = (iso: string) => dayLabel(atLocal(iso, '12:00'));
 const availTag = (a: 'yes' | 'no' | null) => (a === 'yes' ? 'in' : a === 'no' ? 'away' : undefined);
 
-export function ServingScreen() {
+export function ServingScreen({ bare }: { bare?: boolean } = {}) {
   const { m, iso, nights } = useCycle();
   const coord = canCoordinateServing(m.persona);
   const [view, setView] = useState<'schedule' | 'mine'>(coord ? 'schedule' : 'mine');
   return (
     <Screen label="Serving and swaps">
-      <ScreenHeader title="Serving" sub={'Next four ' + weekday(iso) + 's · swaps need approval'} back="/dashboard/more" />
+      {!bare ? <ScreenHeader title="Serving" sub={'Next four ' + weekday(iso) + 's · swaps need approval'} back="/dashboard/more" /> : null}
       {coord ? (
         <Seg
           value={view}

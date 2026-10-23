@@ -2,6 +2,7 @@
    Every list starts empty; nothing here is demo data. */
 import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
 import { DEFAULT_CYCLE } from '@/lib/cycle';
+import { emptyPlan } from '@/lib/plan';
 import { DEFAULT_PENALTIES, emptyGame } from '@/lib/game';
 import { DEFAULT_READY } from '@/lib/data/seed';
 import type { MinistryConfig, MinistryData } from '@/lib/types/model';
@@ -82,6 +83,10 @@ export function emptyMinistry(): MinistryData {
     seasons: [],
     customReports: [],
     deliveries: [],
-    reportSendLog: []
+    reportSendLog: [],
+    plan: emptyPlan(planYear(new Date()))
   };
 }
+
+/** The August that starts the ministry year a date falls in. */
+export const planYear = (d: Date) => (d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1);

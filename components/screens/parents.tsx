@@ -15,7 +15,7 @@ import { uid } from '@/lib/store/app-store';
 import { useAppApi } from '@/lib/store/provider';
 import type { Family, PermissionSlip } from '@/lib/types/model';
 
-export function ParentsScreen() {
+export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
   const { d, m, iso, night, t, today } = useCycle();
   const api = useAppApi();
   const saveNight = useNightSave();
@@ -65,7 +65,7 @@ export function ParentsScreen() {
 
   return (
     <Screen label="Message parents">
-      <ScreenHeader title="Parents" sub={families + ' families · ' + d.config.ministryName} back="/dashboard/more" />
+      {!bare ? <ScreenHeader title="Parents" sub={families + ' families · ' + d.config.ministryName} back="/dashboard/more" /> : null}
 
       <div className="sr-card flex flex-col gap-[10px] px-[14px] py-[13px]">
         <div className="-mx-[14px] flex gap-[6px] overflow-x-auto px-[14px]" style={{ scrollbarWidth: 'none' }}>

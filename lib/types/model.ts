@@ -4,6 +4,7 @@
    lib/data/supabase-backend.ts for the mapping. */
 import type { MembershipRole, Persona, ScoreEntryStatus } from './domain';
 import type { SavedSeason } from '@/lib/season';
+import type { Plan } from '@/lib/plan';
 
 export interface Team {
   id: string;
@@ -656,6 +657,8 @@ export interface MinistryData {
   deliveries: Delivery[];
   /** Deliveries sent by hand ("Send now"), newest first. */
   reportSendLog: { id: string; delivery: string; period: string; at: number; by: string }[];
+  /** The seven-year plan: lanes, seasons, items, gathering plans. */
+  plan: Plan;
 }
 
 /* ── reports ─────────────────────────────────────────────────────────── */

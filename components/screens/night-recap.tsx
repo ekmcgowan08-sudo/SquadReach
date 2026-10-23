@@ -19,14 +19,14 @@ import type { Student } from '@/lib/types/model';
 
 type Tab = 'att' | 'fu' | 'notes';
 
-export function NightRecapScreen() {
+export function NightRecapScreen({ bare }: { bare?: boolean } = {}) {
   const c = useCycle();
   const after = isAfter(c.t, c.now);
   const [tab, setTab] = useState<Tab | null>(null);
   const cur: Tab = tab ?? (after ? 'fu' : 'att');
   return (
     <Screen label="Night recap">
-      <ScreenHeader title="Recap" sub={after ? dueLine(c.t, c.now) : dayLabel(c.t.setup) + ' · attendance, follow-ups, notes'} back="/dashboard/more" />
+      {!bare ? <ScreenHeader title="Recap" sub={after ? dueLine(c.t, c.now) : dayLabel(c.t.setup) + ' · attendance, follow-ups, notes'} back="/dashboard/more" /> : null}
       <PreviewClock t={c.t} stages={c.stages} current={c.preview?.id ?? null} mode={c.m.mode} />
       <Seg
         value={cur}
