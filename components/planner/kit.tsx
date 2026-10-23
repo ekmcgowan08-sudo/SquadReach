@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { PushBanner, Ready, Toast } from '@/components/shell/phone-shell';
-import { Icon, cx } from '@/components/ui';
+import { Btn, Icon, cx } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
+import type { Health } from '@/lib/plan-insights';
 import type { Plan } from '@/lib/plan';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
@@ -35,9 +36,12 @@ const ACTIONS = [
   { label: 'Build a report', href: '/console?tab=reports', group: 'Console' },
   { label: 'Build the season', href: '/console?tab=season', group: 'Console' },
   { label: 'Publish the plan', href: '/planner/roadmap?publish=1', group: 'Plan' },
-  { label: 'Print the one-pager', href: '/planner/roadmap?print=1', group: 'Plan' },
+  { label: 'Print the one-pager', href: '/planner/one-pager?print=1', group: 'Plan' },
   { label: 'Plan checks', href: '/planner/roadmap?view=checks', group: 'Plan' }
 ];
+
+/** "Move Gospel of Mark…" → "move Gospel of Mark…": names keep their capitals. */
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /* ── undo / redo for the plan ─────────────────────────────────────────── */
 const hist = { undo: [] as { plan: Plan; label: string }[], redo: [] as { plan: Plan; label: string }[], v: 0 };
@@ -82,7 +86,7 @@ export function usePlanUndo() {
     to.push({ plan: structuredClone(api().data.plan), label: step.label });
     api().mutate((x) => void (x.plan = step.plan));
     api().emit({ kind: 'doc', key: 'plan', value: api().data.plan });
-    api().say(verb + ': ' + step.label.toLowerCase());
+    api().say(verb + ': ' + lowerFirst(step.label));
     bump();
   };
   return {
@@ -115,7 +119,7 @@ export function UndoButtons() {
   }, [u]);
   return (
     <div className="flex gap-1">
-      <button onClick={u.undo} disabled={!u.canUndo} title={u.undoLabel ? 'Undo ' + u.undoLabel.toLowerCase() + ' (⌘Z)' : 'Nothing to undo'} aria-label="Undo" className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-800 text-neutral-300 disabled:opacity-40">
+      <button onClick={u.undo} disabled={!u.canUndo} title={u.undoLabel ? 'Undo ' + lowerFirst(u.undoLabel) + ' (⌘Z)' : 'Nothing to undo'} aria-label="Undo" className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-800 text-neutral-300 disabled:opacity-40">
         <Icon name="ph ph-arrow-counter-clockwise" className="text-[14px]" />
       </button>
       <button onClick={u.redo} disabled={!u.canRedo} title="Redo (⇧⌘Z)" aria-label="Redo" className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-800 text-neutral-300 disabled:opacity-40">
@@ -297,5 +301,61 @@ export function PageHead({ kicker, title, sub, right }: { kicker?: string; title
       </div>
       {right}
     </div>
+  );
+}
+
+/* ── health: three statuses, each with its reason ───────────────────── */
+export const HEALTH: Record<Health | 'dismissed', { label: string; color: string }> = {
+  healthy: { label: 'Healthy', color: 'oklch(0.66 0.085 292)' },
+  attention: { label: 'Attention needed', color: 'oklch(0.72 0.105 66)' },
+  gap: { label: 'Gap', color: 'oklch(0.66 0.11 24)' },
+  dismissed: { label: 'Set aside', color: 'var(--color-neutral-600)' }
+};
+
+/** Set a check, suggestion or coverage cell aside — always with a reason. */
+export function DismissBox({ id, onDone }: { id: string; onDone?: () => void }) {
+  const m = useApp((s) => s.membership);
+  const save = usePlanSave();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  if (!open)
+    return (
+      <button onClick={() => setOpen(true)} className="self-start text-[12px] text-neutral-500 hover:text-neutral-300">
+        Set aside…
+      </button>
+    );
+  return (
+    <div className="flex gap-2">
+      <input
+        autoFocus
+        className="input !min-h-9 flex-1 !py-0 text-[12px]"
+        placeholder="Why set it aside? (recorded)"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), setOpen(false))}
+        aria-label="Reason"
+      />
+      <Btn
+        variant="ghost"
+        className="px-3 text-[12px]"
+        disabled={!reason.trim()}
+        onClick={() => {
+          save((x) => void x.dismissed.push({ id, reason: reason.trim(), at: nowMs(), by: m.displayName }), 'Set aside with a reason');
+          setReason('');
+          setOpen(false);
+          onDone?.();
+        }}
+      >
+        Set aside
+      </Btn>
+    </div>
+  );
+}
+
+export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className="relative h-6 w-10 flex-none rounded-full" style={{ background: on ? 'var(--color-accent-500)' : 'var(--color-neutral-800)' }}>
+      <span className="absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-all" style={{ left: on ? 19 : 3 }} />
+    </button>
   );
 }

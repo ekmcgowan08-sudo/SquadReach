@@ -39,6 +39,8 @@ export interface Prefs {
   cyclePreview: string | null;
   /** Walkthrough chapters this person has ticked off. */
   walkthroughDone: Record<string, boolean>;
+  /** The planner's printed one-pager: paper size and ground. */
+  onePager: { paper: 'letter' | 'a4'; ground: 'light' | 'dark' };
 }
 
 const DEFAULTS: Prefs = {
@@ -49,7 +51,8 @@ const DEFAULTS: Prefs = {
   tourSeen: false,
   tour: { on: false, i: 0 },
   cyclePreview: null,
-  walkthroughDone: {}
+  walkthroughDone: {},
+  onePager: { paper: 'letter', ground: 'light' }
 };
 
 let current: Prefs = DEFAULTS;
@@ -67,7 +70,8 @@ function load(): Prefs {
         ...DEFAULTS,
         ...p,
         homeSections: { ...DEFAULTS.homeSections, ...p.homeSections },
-        notifTriggers: { ...DEFAULTS.notifTriggers, ...p.notifTriggers }
+        notifTriggers: { ...DEFAULTS.notifTriggers, ...p.notifTriggers },
+        onePager: { ...DEFAULTS.onePager, ...p.onePager }
       };
     }
   } catch {

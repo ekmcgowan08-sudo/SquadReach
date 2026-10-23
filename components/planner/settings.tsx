@@ -5,7 +5,7 @@
    everyone on staff; each is one undo step and lands in Recent changes. */
 import { useState } from 'react';
 import { useSaveConfig } from '@/components/console/kit';
-import { PageHead, Panel, UndoButtons, usePlanSave } from '@/components/planner/kit';
+import { PageHead, Panel, Toggle, UndoButtons, usePlanSave } from '@/components/planner/kit';
 import { Btn, Icon, cx } from '@/components/ui';
 import { advent1, addDays, easter } from '@/lib/liturgical';
 import { BLOCK_DEFAULTS, DEBRIEF_DEFAULTS, HUES, LANE_DEFAULTS, SEASON_DEFAULTS, laneColor, nightsOf, seasonsOf, yearLabel, type SeasonAnchor } from '@/lib/plan';
@@ -59,14 +59,6 @@ export function PlannerSettings() {
 
 function Row({ children, off }: { children: React.ReactNode; off?: boolean }) {
   return <div className={cx('grid items-center gap-2 border-t border-divider py-2 first:border-t-0', off && 'opacity-60')}>{children}</div>;
-}
-
-function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className="relative h-6 w-10 flex-none rounded-full" style={{ background: on ? 'var(--color-accent-500)' : 'var(--color-neutral-800)' }}>
-      <span className="absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-all" style={{ left: on ? 19 : 3 }} />
-    </button>
-  );
 }
 
 function Basics() {
