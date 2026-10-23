@@ -8,8 +8,10 @@ import {
   sheetDetail, sheetFriendCount, studentItemValue, verseCount, type SheetState, type ValueCtx
 } from '@/lib/scoring';
 import { autoApproves } from '@/lib/permissions';
-import { teamOf } from '@/lib/selectors';
+import { chatStamp, teamOf } from '@/lib/selectors';
 import { uid, type AppState } from '@/lib/store/app-store';
+import { personaDef } from '@/lib/types/domain';
+import type { Rsvp } from '@/lib/types/model';
 
 type Get = () => AppState;
 
@@ -140,4 +142,45 @@ export function postCoachCheckin(get: Get, name: string, team: string, picks: Re
     name + ' marked here — ' + fmt(sum) + ' pts held until you have signal.'
   );
   return true;
+}
+
+/* ── chat and RSVPs ──────────────────────────────────────────────────────
+   Not points, so not the outbox: sent straight away, or kept on the phone
+   marked held and resent by resendSoftHeld() when signal returns. */
+export function sendChat(get: Get, threadId: string, text: string): void {
+  const s = get();
+  const body = text.trim();
+  if (!body) return;
+  const at = Date.now();
+  const m = s.membership;
+  const held = s.offline();
+  const msg = {
+    id: uid(), at, ...chatStamp(at), from: m.displayName, roleLabel: personaDef(m.persona).label, text: body, mine: true,
+    status: held ? ('pending' as const) : ('sent' as const), heldAt: held ? at : undefined
+  };
+  s.mutate((d) => void (d.chatMsgs[threadId] ??= []).push(msg));
+  if (held) return;
+  s.backend.sync({ kind: 'chat', threadId, msg }).catch(() =>
+    get().mutate((d) => {
+      const x = d.chatMsgs[threadId]?.find((y) => y.id === msg.id);
+      if (x) {
+        x.status = 'pending';
+        x.heldAt = Date.now();
+      }
+    })
+  );
+}
+
+export function sendRsvp(get: Get, eventId: string, name: string, rec: Rsvp): void {
+  const s = get();
+  const held = s.offline();
+  const next: Rsvp = { status: rec.status, guests: rec.guests, ...(held ? { heldAt: Date.now() } : {}) };
+  s.mutate((d) => void ((d.rsvps[eventId] ??= {})[name] = next));
+  if (held) return;
+  s.backend.sync({ kind: 'rsvp', eventId, name, rec: next }).catch(() =>
+    get().mutate((d) => {
+      const r = d.rsvps[eventId]?.[name];
+      if (r) r.heldAt = Date.now();
+    })
+  );
 }

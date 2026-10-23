@@ -115,9 +115,19 @@ export interface MinistryEvent {
   id: string;
   title: string;
   meta: string;
+  /** Display label ('Oct 22'); derived from `iso` when there is one. */
   date: string;
   color: string;
   roles: AudienceId[];
+  iso?: string | null;
+  time?: string;
+  place?: string;
+  /** Coaches, captains and scorekeepers propose; LEADER_ROLES approve. */
+  status?: 'proposed' | 'approved';
+  by?: string;
+  rsvpClosed?: boolean;
+  /** Local day a leader last nudged the no-replies (one a day). */
+  nudgedOn?: string;
 }
 
 export interface Challenge {
@@ -439,12 +449,16 @@ export interface ChatThread {
   /** Who may open it, and who may post — by persona. */
   read: Persona[];
   post: Persona[];
+  /** A squad thread: students outside the squad never see it. */
+  team?: string;
 }
 
 export interface ChatMessage {
   id: string;
+  /** Display labels; derived from `at` for real messages. */
   day: string;
   time: string;
+  at?: number;
   from?: string;
   roleLabel?: string;
   tint?: string;
@@ -459,6 +473,13 @@ export interface Rsvp {
   status: 'going' | 'maybe' | 'out';
   guests: number;
   heldAt?: number;
+}
+
+export interface RsvpCount {
+  going: number;
+  maybe: number;
+  out: number;
+  guests: number;
 }
 
 /** Tonight's floor: who is here and what has been posted. Presence is
@@ -553,6 +574,8 @@ export interface MinistryData {
   chatMsgs: Record<string, ChatMessage[]>;
   chatUnread: Record<string, number>;
   rsvps: Record<string, Record<string, Rsvp>>;
+  /** Supabase: head counts from rsvp_counts(), for roles that can't read names. */
+  rsvpCounts?: Record<string, RsvpCount>;
   attendanceHistory: Record<string, number[]>;
   practiceLog: PracticeRow[];
   tonight: TonightState;

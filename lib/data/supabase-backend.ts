@@ -10,9 +10,11 @@ import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
 import { isoDay, tonightDate, weekOf } from '@/lib/dates';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import type { ScoreEntryStatus } from '@/lib/types/domain';
+import { chatStamp } from '@/lib/selectors';
+import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
-  AccessRequest, Category, LedgerEntry, Membership, MinistryConfig, MinistryData, MinistryEvent, Student, Team
+  AccessRequest, Category, ChatMessage, ChatThread, LedgerEntry, Membership, MinistryConfig, MinistryData, MinistryEvent, Rsvp, RsvpCount,
+  Student, Team
 } from '@/lib/types/model';
 
 interface EntryRow {
@@ -53,6 +55,44 @@ const toEntry = (r: EntryRow): LedgerEntry => ({
 });
 
 const ALL_AUDIENCES = ['members', 'captains', 'coaches', 'scorekeeper', 'leaders', 'parents', 'admins'] as const;
+
+interface ChatRow {
+  id: string;
+  thread_id: string;
+  author: string | null;
+  author_name: string;
+  role_label: string;
+  body: string;
+  created_at: string;
+}
+
+function toChat(r: ChatRow, me: string | null): ChatMessage {
+  const at = new Date(r.created_at).getTime();
+  return { id: r.id, at, ...chatStamp(at), from: r.author_name, roleLabel: r.role_label, text: r.body, mine: !!me && r.author === me, status: 'sent' };
+}
+
+function countsFrom(rows: unknown): Record<string, RsvpCount> {
+  const out: Record<string, RsvpCount> = {};
+  for (const r of (rows ?? []) as { event_id: string; going: number; maybe: number; out_count: number; guests: number }[]) {
+    out[r.event_id] = { going: r.going, maybe: r.maybe, out: r.out_count, guests: r.guests };
+  }
+  return out;
+}
+
+const STAFF: Persona[] = ['leader', 'owner', 'scorekeeper', 'coach'];
+/** The threads chat_can() allows, as the list screen shows them. */
+function chatThreads(teams: Team[], rosterSize: number, m: Membership): ChatThread[] {
+  const all: Persona[] = ['leader', 'owner', 'scorekeeper', 'coach', 'captain', 'member'];
+  const out: ChatThread[] = [
+    { id: 'all', kind: 'announce', name: 'Announcements', sub: rosterSize + ' students', icon: 'ph-fill ph-megaphone', tint: '#3a3860', read: all, post: STAFF },
+    { id: 'leaders', kind: 'group', name: 'Leaders & coaches', sub: 'the volunteer set', icon: 'ph-fill ph-users-three', tint: '#26404d', read: STAFF, post: STAFF }
+  ];
+  for (const t of teams) {
+    if (!STAFF.includes(m.persona) && m.teamId !== t.id) continue;
+    out.push({ id: 'team-' + t.id, kind: 'team', name: t.name + ' Squad', sub: 'squad thread', icon: 'ph-fill ph-shield-check', tint: t.color, read: all, post: all, team: t.id });
+  }
+  return out;
+}
 
 export function supabaseBackend(membership: Membership): Backend {
   const db = supabaseBrowser();
@@ -139,8 +179,11 @@ export function supabaseBackend(membership: Membership): Backend {
         flaggedBy: c.flagged_by,
         at: new Date(c.created_at).getTime()
       }));
-      d.events = ((events.data ?? []) as { id: string; title: string; meta: string; date_label: string; color: string; audiences: string[] }[]).map(
-        (e): MinistryEvent => ({ id: e.id, title: e.title, meta: e.meta, date: e.date_label, color: e.color, roles: (e.audiences.length ? e.audiences : [...ALL_AUDIENCES]) as MinistryEvent['roles'] })
+      d.events = ((events.data ?? []) as { id: string; title: string; meta: string; date_label: string; color: string; audiences: string[]; day: string | null; time_label: string; place: string; status: 'proposed' | 'approved'; proposed_by: string; rsvp_closed: boolean }[]).map(
+        (e): MinistryEvent => ({
+          id: e.id, title: e.title, meta: e.meta, date: e.date_label, color: e.color, roles: (e.audiences.length ? e.audiences : [...ALL_AUDIENCES]) as MinistryEvent['roles'],
+          iso: e.day, time: e.time_label, place: e.place, status: e.status, by: e.proposed_by, rsvpClosed: e.rsvp_closed
+        })
       );
       d.challenges = ((challenges.data ?? []) as { id: string; kind: 'Team' | 'Individual'; title: string; body: string; points_label: string; status: string; done: boolean; team_id: string | null; category_key: string | null; amount: number | null }[]).map((c) => ({
         id: c.id, kind: c.kind, title: c.title, body: c.body, pointsLabel: c.points_label, status: c.status, done: c.done,
@@ -188,6 +231,22 @@ export function supabaseBackend(membership: Membership): Backend {
       if (h && Object.keys(h).length) d.huddle = { ...d.huddle, ...h };
       const g = nightRow?.game;
       if (g && Object.keys(g).length) d.game = { ...d.game, ...g };
+
+      /* RSVPs (yours, or everyone's for the volunteer set) and head counts. */
+      const [rs, counts, chat] = await Promise.all([
+        db.from('rsvps').select('event_id, name, status, guests').eq('org_id', org),
+        db.rpc('rsvp_counts', { p_org: org }),
+        db.from('chat_messages').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(400)
+      ]);
+      for (const r of (rs.data ?? []) as { event_id: string; name: string; status: Rsvp['status']; guests: number }[]) {
+        (d.rsvps[r.event_id] ??= {})[r.name] = { status: r.status, guests: r.guests };
+      }
+      d.rsvpCounts = countsFrom(counts.data);
+
+      /* Chat: the announcement thread, the volunteer thread, and one thread per
+         squad — RLS (chat_can) decides which of them return any rows. */
+      d.chatThreads = chatThreads(d.teams, d.roster.length, membership);
+      for (const row of ((chat.data ?? []) as ChatRow[]).reverse()) (d.chatMsgs[row.thread_id] ??= []).push(toChat(row, membership.membershipId));
       return d;
     },
 
@@ -311,9 +370,34 @@ export function supabaseBackend(membership: Membership): Backend {
           await db.from('attendance').upsert({ org_id: org, meeting_date: e.date || tonight, student_id: sid, present: e.present, marked_by: membership.membershipId, updated_at: new Date().toISOString() });
           return;
         }
-        case 'chat':
-        case 'rsvp':
-          /* Chat and RSVPs run on this device in this release. */
+        case 'chat': {
+          const r = await db.from('chat_messages').upsert(
+            { id: e.msg.id, org_id: org, thread_id: e.threadId, author: membership.membershipId, author_name: membership.displayName, role_label: e.msg.roleLabel ?? '', body: e.msg.text },
+            { onConflict: 'id', ignoreDuplicates: true }
+          );
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'rsvp': {
+          if (!membership.membershipId) return;
+          const r = await db.from('rsvps').upsert(
+            { event_id: e.eventId, org_id: org, membership_id: membership.membershipId, name: e.name, status: e.rec.status, guests: e.rec.guests, updated_at: new Date().toISOString() },
+            { onConflict: 'event_id,membership_id' }
+          );
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'event': {
+          const ev = e.event;
+          const r = await db.from('events').upsert({
+            id: ev.id, org_id: org, title: ev.title, meta: ev.meta, date_label: ev.date, color: ev.color, audiences: ev.roles,
+            day: ev.iso ?? null, time_label: ev.time ?? '', place: ev.place ?? '', status: ev.status ?? 'approved', proposed_by: ev.by ?? '', rsvp_closed: !!ev.rsvpClosed
+          });
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'eventRemove':
+          await db.from('events').delete().eq('id', e.id);
           return;
         case 'practice':
           if (!membership.membershipId) return;
@@ -336,6 +420,16 @@ export function supabaseBackend(membership: Membership): Backend {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'score_entries', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
           const row = payload.new as EntryRow | undefined;
           if (row && row.id) onRemote({ kind: 'entries', entries: [toEntry(row)] });
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
+          const row = payload.new as ChatRow | undefined;
+          if (row?.id) onRemote({ kind: 'chat', threadId: row.thread_id, msg: toChat(row, membership.membershipId) });
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
+          const row = payload.new as { event_id?: string; name?: string; status?: Rsvp['status']; guests?: number } | undefined;
+          if (!row?.event_id || !row.name || !row.status) return;
+          const rec: Rsvp = { status: row.status, guests: row.guests ?? 0 };
+          void db.rpc('rsvp_counts', { p_org: org }).then((c: { data: unknown }) => onRemote({ kind: 'rsvp', eventId: row.event_id!, name: row.name!, rec, counts: countsFrom(c.data) }));
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'nights', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
           const row = payload.new as { meeting_date?: string; huddle?: MinistryData['huddle']; game?: MinistryData['game'] } | undefined;

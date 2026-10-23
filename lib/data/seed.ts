@@ -251,7 +251,9 @@ const CHAT_THREADS: ChatThread[] = [
     read: ['leader', 'owner', 'scorekeeper', 'coach', 'captain', 'member', 'parent', 'congregation'], post: ['leader', 'owner', 'scorekeeper', 'coach'] },
   { id: 'leaders', kind: 'group', name: 'Leaders & coaches', sub: '11 members', icon: 'ph-fill ph-users-three', tint: '#26404d',
     read: ['leader', 'owner', 'scorekeeper', 'coach'], post: ['leader', 'owner', 'scorekeeper', 'coach'] },
-  { id: 'team-blue', kind: 'team', name: 'Blue Squad', sub: '21 members · Blue', icon: 'ph-fill ph-shield-check', tint: '#1e3a8a',
+  { id: 'team-blue', kind: 'team', name: 'Blue Squad', sub: '32 members · Blue', icon: 'ph-fill ph-shield-check', tint: '#1e3a8a', team: 'blue',
+    read: ['leader', 'owner', 'scorekeeper', 'coach', 'captain', 'member'], post: ['leader', 'owner', 'scorekeeper', 'coach', 'captain', 'member'] },
+  { id: 'team-yellow', kind: 'team', name: 'Yellow Squad', sub: '28 members · Yellow', icon: 'ph-fill ph-shield-check', tint: '#a16207', team: 'yellow',
     read: ['leader', 'owner', 'scorekeeper', 'coach', 'captain', 'member'], post: ['leader', 'owner', 'scorekeeper', 'coach', 'captain', 'member'] },
   { id: 'parents', kind: 'group', name: 'Parent updates', sub: '46 households', icon: 'ph-fill ph-house-line', tint: '#3d3527',
     read: ['leader', 'owner', 'scorekeeper', 'coach', 'parent', 'congregation'], post: ['leader', 'owner', 'scorekeeper', 'coach'] },
@@ -271,6 +273,10 @@ const CHAT_SEED: Record<string, ChatMessage[]> = {
     { id: 'l1', day: 'Yesterday', time: '9:41p', from: 'Carla Sandoval', roleLabel: 'Scorekeeper', tint: '#26404d', text: 'Two point requests are sitting in the queue from tonight. Both have photo proof.' },
     { id: 'l2', day: 'Today', time: '7:55a', from: 'Dana Whitfield', roleLabel: 'Coach · Red', tint: '#7f2f2f', text: 'Heads up, I am 15 late tonight. Marcus can run Red warmups until I get there.' },
     { id: 'l3', day: 'Today', time: '8:20a', from: 'Pastor Mike Torres', roleLabel: 'Ministry Leader', tint: '#4c3b6e', text: 'Got it. I moved the run sheet so games start at 7:10.' }
+  ],
+  'team-yellow': [
+    { id: 'y1', day: 'Yesterday', time: '7:12p', from: 'Coach Chris', roleLabel: 'Coach · Yellow', tint: '#a16207', text: 'Pipeline relay Wednesday. Practice your pipe handoffs — spills restart the carry.' },
+    { id: 'y2', day: 'Today', time: '7:58a', from: 'Luke Jarvis', roleLabel: 'Captain', tint: '#a16207', text: 'Yellow wear yellow. Spirit points are free points.' }
   ],
   'team-blue': [
     { id: 'b1', day: 'Yesterday', time: '6:15p', from: 'Isaac Lindsey', roleLabel: 'Captain', tint: '#1e3a8a', text: 'Blue we need bodies at check-in early. Every name is 50 and we lost the week on it last time.' },
@@ -392,10 +398,12 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
       { id: 'n3', kind: 'note', initials: 'IS', name: 'Isaac Smith', meta: 'Coach Mario · Oct 4', flaggedBy: 'Coach Mario', at: now - 19 * DAY, body: 'Working nights to help at home, which is why he misses first half. Told him that is not something to apologize for.' }
     ],
     events: [
-      { id: 'e1', title: 'Week 6 · Capture the Flag', meta: 'Wed 6:45p · Main Gym + field', date: 'Oct 22', color: '#EA580C', roles: ALL_AUDIENCES },
-      { id: 'e2', title: 'Coach huddle + assessments', meta: 'Sun 4:00p · Room 204', date: 'Oct 26', color: '#968ae0', roles: ['coaches', 'scorekeeper', 'leaders', 'admins'] },
-      { id: 'e3', title: 'Fall Retreat deposit due', meta: 'Deadline · $75 per student', date: 'Oct 31', color: '#EAB308', roles: ALL_AUDIENCES },
-      { id: 'e4', title: 'Season finale + trophy night', meta: 'Wed 6:30p · Worship Center', date: 'Nov 19', color: '#0D9488', roles: ALL_AUDIENCES }
+      { id: 'e1', title: 'Week 9 · Pipeline relay', meta: 'Wed 6:45p · Main Gym + field', date: 'Oct 28', iso: '2026-10-28', color: '#EA580C', roles: ALL_AUDIENCES },
+      { id: 'e2', title: 'Coach huddle + assessments', meta: 'Sun 4:00p · Room 204', date: 'Oct 26', iso: '2026-10-26', color: '#968ae0', roles: ['coaches', 'scorekeeper', 'leaders', 'admins'] },
+      { id: 'e3', title: 'Fall Retreat deposit due', meta: 'Deadline · $75 per student', date: 'Oct 31', iso: '2026-10-31', color: '#EAB308', roles: ALL_AUDIENCES },
+      { id: 'e4', title: 'Season finale + trophy night', meta: 'Wed 6:30p · Worship Center', date: 'Nov 19', iso: '2026-11-19', color: '#0D9488', roles: ALL_AUDIENCES },
+      { id: 'p1', title: 'Coaches’ lunch before finale', meta: 'Sun 12:30p · Fellowship hall', date: 'Nov 16', iso: '2026-11-16', color: '#968ae0', roles: ['coaches', 'leaders', 'admins'], status: 'proposed', by: 'Coach Marcus · coach' },
+      { id: 'p2', title: 'Reign bowling night', meta: 'Fri 7:00p · Sunset Lanes', date: 'Nov 7', iso: '2026-11-07', color: '#2563EB', roles: ALL_AUDIENCES, status: 'proposed', by: 'Ava Lin · captain' }
     ],
     challenges: [
       { id: 'c1', kind: 'Team', title: 'Invite night: bring three friends', body: 'Blue has 9 of 12 invites logged. Completing it pushes 1,200 Visitors points into the ledger.', pointsLabel: '1,200 pts', status: 'Ready to push', done: true, team: 'blue', cat: 'visitors', amount: 1200 },

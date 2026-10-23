@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { demoBackend } from '@/lib/data/demo-backend';
+import { emptyMinistry } from '@/lib/data/empty';
 import { demoMinistry } from '@/lib/data/seed';
 import { supabaseBackend } from '@/lib/data/supabase-backend';
 import { createAppStore, type AppState, type AppStore } from '@/lib/store/app-store';
@@ -36,8 +37,10 @@ export function AppProvider({ membership, roles, children }: { membership: Membe
         return store.getState().restoreHeld();
       })
       .catch(() => {
-        store.getState().hydrate(demoMinistry());
-        store.getState().say('Could not reach the ministry’s data. Showing what this phone has.');
+        /* Never show demo data in place of a real ministry's. */
+        const real = store.getState().backend.mode === 'supabase';
+        store.getState().hydrate(real ? emptyMinistry() : demoMinistry());
+        store.getState().say(real ? 'Could not reach your ministry’s data. Check your signal and reopen the app.' : 'Could not load the demo. Starting it fresh.');
       });
 
     const online = () => store.getState().setNetOnline(true);
@@ -70,6 +73,21 @@ export function AppProvider({ membership, roles, children }: { membership: Membe
       } else if (patch.kind === 'game') {
         s.mutate((d) => {
           d.game = patch.game;
+        });
+      } else if (patch.kind === 'chat') {
+        s.mutate((d) => {
+          const list = (d.chatMsgs[patch.threadId] ??= []);
+          const i = list.findIndex((x) => x.id === patch.msg.id);
+          if (i >= 0) list[i] = { ...list[i], ...patch.msg, status: 'sent' };
+          else {
+            list.push(patch.msg);
+            if (!patch.msg.mine) d.chatUnread[patch.threadId] = (d.chatUnread[patch.threadId] ?? 0) + 1;
+          }
+        });
+      } else if (patch.kind === 'rsvp') {
+        s.mutate((d) => {
+          if (!d.rsvps[patch.eventId]?.[patch.name]?.heldAt) (d.rsvps[patch.eventId] ??= {})[patch.name] = patch.rec;
+          if (patch.counts) d.rsvpCounts = patch.counts;
         });
       } else {
         void s.backend.load().then((data) => store.getState().hydrate(data));

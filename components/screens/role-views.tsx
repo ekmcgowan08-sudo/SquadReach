@@ -13,7 +13,7 @@ import { ago } from '@/lib/dates';
 import { autoApproves, canEditRoster, canScore, canSwitchTeamView, isPreviewing } from '@/lib/permissions';
 import { deltaLabel, fmt, studentTotal } from '@/lib/scoring';
 import { bibleStats } from '@/lib/bible';
-import { catOf, eventVisible, myTeamId, teamMetaLabel, teamOf, teamRoster } from '@/lib/selectors';
+import { catOf, eventLabel, myTeamId, teamMetaLabel, teamOf, teamRoster, upcomingEvents } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef } from '@/lib/types/domain';
 import type { MinistryEvent } from '@/lib/types/model';
@@ -41,7 +41,7 @@ function EventRow({ e }: { e: MinistryEvent }) {
         </div>
       </div>
       <div className="flex flex-none flex-col items-end gap-[7px]">
-        <span className="text-[11px] font-medium leading-none text-neutral-300">{e.date}</span>
+        <span className="text-[11px] font-medium leading-none text-neutral-300">{eventLabel(e)}</span>
         <Icon name="ph ph-caret-right" className="text-[12px] text-neutral-600" />
       </div>
     </Link>
@@ -509,7 +509,7 @@ export function ParentViewScreen() {
   const kid = d.roster.find((r) => r.name === watch) ?? d.roster[0];
   const t = teamOf(d, kid?.team);
   const row = rows.find((r) => r.id === kid?.team);
-  const events = d.events.filter((e) => e.roles.includes('parents')).slice(0, 3);
+  const events = upcomingEvents(d, 'parent').slice(0, 3);
   const here = kid ? !!d.tonight.presence[kid.name] : false;
   const badge = d.studentBadges.find((b) => b.name === kid?.name);
   const kidBible = bibleStats(d.practiceLog.filter((r) => r.who === kid?.name), d.config.memoryVerses, d.config.weekNumber);
@@ -615,7 +615,7 @@ export function CongregationViewScreen() {
   const m = useApp((s) => s.membership);
   const rows = useStandings();
   const [invite, setInvite] = useState(false);
-  const events = d.events.filter((e) => eventVisible(e, 'congregation')).slice(0, 3);
+  const events = upcomingEvents(d, 'congregation').slice(0, 3);
   return (
     <Screen label="Congregation view" gap={13}>
       <ScreenHeader title="Congregation view" />

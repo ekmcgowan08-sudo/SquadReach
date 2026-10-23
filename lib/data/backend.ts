@@ -9,7 +9,7 @@
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CareReminder, Category, ChatMessage, HuddleState, LedgerEntry, MinistryConfig,
-  GameState, MediaItem, MinistryData, PracticeRow, PrayerQueued, Rsvp, Student, Team
+  GameState, MediaItem, MinistryData, MinistryEvent, PracticeRow, PrayerQueued, Rsvp, RsvpCount, Student, Team
 } from '@/lib/types/model';
 
 export type SyncEvent =
@@ -38,13 +38,17 @@ export type SyncEvent =
   | { kind: 'doc'; key: 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog'; value: unknown }
   /** A photo or video filed into a week album; the file uploads with it. */
   | { kind: 'media'; item: MediaItem; file: Blob }
-  | { kind: 'mediaRemove'; id: string; path: string | null };
+  | { kind: 'mediaRemove'; id: string; path: string | null }
+  | { kind: 'event'; event: MinistryEvent }
+  | { kind: 'eventRemove'; id: string };
 
 /** A change that arrived from someone else's phone. */
 export type RemotePatch =
   | { kind: 'entries'; entries: LedgerEntry[] }
   | { kind: 'huddle'; huddle: HuddleState }
   | { kind: 'game'; game: GameState }
+  | { kind: 'chat'; threadId: string; msg: ChatMessage }
+  | { kind: 'rsvp'; eventId: string; name: string; rec: Rsvp; counts?: Record<string, RsvpCount> }
   | { kind: 'reload' };
 
 export interface Backend {

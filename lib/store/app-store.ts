@@ -104,6 +104,9 @@ export interface AppState {
   decide(ids: string[], status: ScoreEntryStatus): DoneFlag;
   undoLast(): void;
   flushOutbox(quiet?: boolean): void;
+  /** Chat messages and RSVPs held offline: not points, so not the outbox —
+   *  resent as-is when signal returns, and marked sent when they land. */
+  resendSoftHeld(): void;
   toggleOfflineSim(): void;
   sendStaleHeld(): void;
   discardStaleHeld(): void;
@@ -451,8 +454,45 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           get().sayPosted('Reversal posted. Original entry stays in the ledger.', 'Reversal held until you have signal. The original entry stays in the ledger.');
         },
 
+        resendSoftHeld() {
+          if (get().offline()) return;
+          const { data, backend } = get();
+          for (const [threadId, msgs] of Object.entries(data.chatMsgs)) {
+            for (const msg of msgs) {
+              if (msg.status !== 'pending') continue;
+              backend
+                .sync({ kind: 'chat', threadId, msg: { ...msg, status: 'sent' } })
+                .then(() =>
+                  get().mutate((d) => {
+                    const m = d.chatMsgs[threadId]?.find((x) => x.id === msg.id);
+                    if (m) {
+                      m.status = 'sent';
+                      delete m.heldAt;
+                    }
+                  })
+                )
+                .catch(() => undefined);
+            }
+          }
+          for (const [eventId, answers] of Object.entries(data.rsvps)) {
+            for (const [name, rec] of Object.entries(answers)) {
+              if (!rec.heldAt) continue;
+              backend
+                .sync({ kind: 'rsvp', eventId, name, rec })
+                .then(() =>
+                  get().mutate((d) => {
+                    const r = d.rsvps[eventId]?.[name];
+                    if (r) delete r.heldAt;
+                  })
+                )
+                .catch(() => undefined);
+            }
+          }
+        },
+
         flushOutbox(quiet) {
           const s = get();
+          s.resendSoftHeld();
           /* Guard 1 — one flush at a time, or two overlapping flushes replay
              the same rows twice. */
           if (s.outboxSyncing) return;

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { switchRole } from '@/app/actions';
 import { canScore } from '@/lib/permissions';
+import { chatThreadsFor } from '@/lib/selectors';
 import { useApp, useAppApi, useApprovedRoles } from '@/lib/store/provider';
 import { PERSONAS, type Persona } from '@/lib/types/domain';
 
@@ -42,12 +43,10 @@ export function roleTabFor(p: Persona): TabDef {
 function TabBar() {
   const pathname = usePathname();
   const persona = useApp((s) => s.membership.persona);
-  const threads = useApp((s) => s.data.chatThreads);
-  const unread = useApp((s) => s.data.chatUnread);
-  const chatUnread = useMemo(
-    () => threads.filter((t) => t.read.includes(persona)).reduce((n, t) => n + (unread[t.id] || 0), 0),
-    [threads, unread, persona]
-  );
+  const m = useApp((s) => s.membership);
+  const d = useApp((s) => s.data);
+  const coachTeam = useApp((s) => s.coachTeam);
+  const chatUnread = useMemo(() => chatThreadsFor(d, m, coachTeam).reduce((n, t) => n + (d.chatUnread[t.id] || 0), 0), [d, m, coachTeam]);
   const home: TabDef = { href: '/dashboard', label: 'Home', icon: 'ph-house', match: (x) => x === '/dashboard' };
   const role = roleTabFor(persona);
   const bible: TabDef = { href: '/dashboard/bible', label: 'Bible', icon: 'ph-book-open-text', match: (x) => x.startsWith('/dashboard/bible') };

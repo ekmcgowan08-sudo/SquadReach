@@ -114,13 +114,13 @@ returns uuid language sql stable security definer set search_path = public as $$
 $$;
 
 -- Chat visibility, in one place. 'all' is the announcement thread: everyone
--- reads, LEADER_ROLES post. 'leaders' is the volunteer set. A squad thread
+-- reads, the volunteer set posts. 'leaders' is the volunteer set. A squad thread
 -- is that squad's members plus the volunteer set.
 create or replace function public.chat_can(org uuid, thread text, posting boolean)
 returns boolean language sql stable security definer set search_path = public as $$
   select case
     when thread = 'all' then
-      case when posting then public.has_role(org, array['leader','owner']::public.membership_role[]) else public.is_member(org) end
+      case when posting then public.has_role(org, array['coach','scorekeeper','leader','owner']::public.membership_role[]) else public.is_member(org) end
     when thread = 'leaders' then public.has_role(org, array['coach','scorekeeper','leader','owner']::public.membership_role[])
     when thread like 'team-%' then
       public.has_role(org, array['coach','scorekeeper','leader','owner']::public.membership_role[])

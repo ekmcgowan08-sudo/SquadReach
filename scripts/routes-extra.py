@@ -16,4 +16,6 @@ EXTRA.update({
     'parent-link': ('ParentLinkScreen', 'night', 'board'),
     'recap': ('RecapScreen', 'recap', 'recap'),
     'media': ('MediaScreen', 'media', 'any'),
+    'calendar': ('CalendarScreen', 'calendar', 'any'),
+    'chat': ('ChatScreen', 'chat', 'any'),
 })

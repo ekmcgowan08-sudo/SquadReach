@@ -14,7 +14,7 @@ import { churchRows, churchSocials } from '@/lib/feeds';
 import { groupHeldEntries, heldTotal, wasHeld } from '@/lib/held';
 import { autoApproves, canApprove, canControlEvent, canHuddle } from '@/lib/permissions';
 import { deltaLabel, fmt, pointBase, studentRanks, studentTotal } from '@/lib/scoring';
-import { catOf, computeBadges, computeNotifications, myBible, myTeamId, sheetMinutes, teamOf, teamRoster } from '@/lib/selectors';
+import { catOf, computeBadges, computeNotifications, eventLabel, myBible, myTeamId, sheetMinutes, teamOf, teamRoster, upcomingEvents } from '@/lib/selectors';
 import { usePrefs } from '@/lib/prefs';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
@@ -199,7 +199,7 @@ export function HomeScreen() {
           { label: 'Bible & Memory', meta: myBible(d, m).due + ' verses due', icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
           { label: 'Media', meta: 'Week ' + d.config.weekNumber + ' album', icon: 'ph ph-camera', href: '/dashboard/media' },
           canControlEvent(p) ? { label: 'Game timer', meta: d.config.gameName || 'no game set', icon: 'ph ph-timer', href: '/dashboard/games' } : null,
-          { label: 'Calendar', meta: d.events[0] ? 'Next: ' + d.events[0].date : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },
+          { label: 'Calendar', meta: upcomingEvents(d, p)[0] ? 'Next: ' + eventLabel(upcomingEvents(d, p)[0]) : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },
           { label: 'Prayer request', meta: 'Ask your leaders to pray', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' },
           { label: 'Join a challenge', meta: d.challenges.length ? d.challenges.length + ' running' : 'Nothing running yet', icon: 'ph ph-flag-checkered', href: '/dashboard/races' }
         ]
@@ -327,7 +327,7 @@ function ParentCard() {
   if (!kid) return null;
   const tm = teamOf(d, kid.team);
   const b = d.studentBadges.find((x) => x.name === kid.name);
-  const next = d.events.find((e) => e.roles.includes('parents'));
+  const next = upcomingEvents(d, 'parent')[0];
   return (
     <div className="sr-card px-[15px] py-[14px]">
       <div className="mb-2 text-[10.5px] uppercase leading-none tracking-[.08em] text-neutral-500">Watching</div>

@@ -2,10 +2,11 @@
    two screens can never disagree about the same number. */
 import { uncoveredPosts } from '@/lib/feeds';
 import { fmt, pointBase } from '@/lib/scoring';
-import { canApprove, canHuddle } from '@/lib/permissions';
+import { canApprove, canHuddle, holdsSheet } from '@/lib/permissions';
 import { personaDef, type Persona } from '@/lib/types/domain';
 import { bibleStats } from '@/lib/bible';
-import type { AudienceId, Membership, MinistryData, MinistryEvent, RunSheetItem } from '@/lib/types/model';
+import { isoDay } from '@/lib/dates';
+import type { AudienceId, Membership, MinistryData, MinistryEvent, RsvpCount, RunSheetItem } from '@/lib/types/model';
 
 export const teamOf = (d: MinistryData, id: string | null | undefined) =>
   d.teams.find((t) => t.id === id) ?? { id: id ?? '', name: 'Removed team', color: 'var(--color-neutral-600)', mascotName: '', mascotStory: '', sort: 99 };
@@ -71,6 +72,7 @@ export function audienceOf(p: Persona): AudienceId | null {
 export const ALL_AUDIENCES: AudienceId[] = ['members', 'captains', 'coaches', 'scorekeeper', 'leaders', 'parents', 'admins'];
 
 export function eventVisible(e: MinistryEvent, p: Persona) {
+  if (e.status === 'proposed') return false;
   const a = audienceOf(p);
   if (!a) return e.roles.length === ALL_AUDIENCES.length;
   return e.roles.includes(a);
@@ -218,3 +220,48 @@ export const careNotes = (d: MinistryData) => d.careReminders.filter((r) => r.ki
 export const practiceName = (m: Membership) => m.studentName ?? m.displayName;
 export const myBible = (d: MinistryData, m: Membership, now = new Date()) =>
   bibleStats(d.practiceLog.filter((r) => r.who === practiceName(m)), d.config.memoryVerses, d.config.weekNumber, now);
+
+/* ── calendar ─────────────────────────────────────────────────────────── */
+export const eventLabel = (e: MinistryEvent) =>
+  e.iso ? new Date(e.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : e.date;
+
+/** Approved events this role may see, soonest first; past ones drop off. */
+export function upcomingEvents(d: MinistryData, p: Persona, today = isoDay(new Date())): MinistryEvent[] {
+  return d.events
+    .filter((e) => eventVisible(e, p) && (!e.iso || e.iso >= today))
+    .sort((a, b) => (a.iso ?? '9999').localeCompare(b.iso ?? '9999'));
+}
+
+/** Who may answer: anyone the event is for, while it is open. */
+export const canRsvp = (e: MinistryEvent, p: Persona) => !e.rsvpClosed && eventVisible(e, p) && p !== 'congregation';
+/** Names on an RSVP list are the volunteer set's (rsvp_staff_read). */
+export const canSeeRsvpNames = (p: Persona) => holdsSheet(p);
+
+export function rsvpTally(d: MinistryData, e: MinistryEvent, p: Persona): RsvpCount & { noreply: number } {
+  const counts = d.rsvpCounts?.[e.id];
+  let t: RsvpCount;
+  if (counts && !canSeeRsvpNames(p)) t = counts;
+  else {
+    t = { going: 0, maybe: 0, out: 0, guests: 0 };
+    for (const r of Object.values(d.rsvps[e.id] ?? {})) {
+      t[r.status]++;
+      if (r.status === 'going') t.guests += r.guests;
+    }
+  }
+  /* Invited = the roster when students are in the audience, else the crew. */
+  const invited = e.roles.includes('members') ? d.roster.length : Math.max(t.going + t.maybe + t.out, d.huddle.crew.length);
+  return { ...t, noreply: Math.max(0, invited - t.going - t.maybe - t.out) };
+}
+
+/* ── chat ─────────────────────────────────────────────────────────────── */
+export const chatThreadsFor = (d: MinistryData, m: Membership, coachTeam?: string | null) =>
+  d.chatThreads.filter((t) => t.read.includes(m.persona) && (!t.team || holdsSheet(m.persona) || myTeamId(m, d, coachTeam ?? '') === t.team));
+export function chatStamp(at: number, now = new Date()): { day: string; time: string } {
+  const d = new Date(at);
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  const day = isoDay(d) === isoDay(now) ? 'Today' : isoDay(d) === isoDay(y) ? 'Yesterday' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const h = d.getHours();
+  const time = ((h + 11) % 12) + 1 + ':' + String(d.getMinutes()).padStart(2, '0') + (h < 12 ? 'a' : 'p');
+  return { day, time };
+}
