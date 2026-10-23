@@ -1,0 +1,178 @@
+@import 'tailwindcss';
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Nocturne — the design system the SquadRise designs are built in. Token
+   NAMES are kept verbatim (--color-neutral-500, --radius-lg, --shadow-sm …)
+   so the Tailwind utilities read like the design file: text-neutral-500,
+   rounded-lg, shadow-sm. Retune a value here and the whole app follows.
+   Do not hard-code a colour anywhere else; squad colours are ministry data.
+   ───────────────────────────────────────────────────────────────────────── */
+@theme static {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-bg: #161826;
+  --color-surface: #232532;
+  --color-text: #e9e9ed;
+  --color-accent: #9184d9;
+  --color-accent-2: #a7a1db;
+  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+
+  --color-neutral-100: #f3f5fe;
+  --color-neutral-200: #e4e7f5;
+  --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca;
+  --color-neutral-500: #9397ab;
+  --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c;
+  --color-neutral-800: #3f424d;
+  --color-neutral-900: #292b31;
+
+  --color-accent-100: #f5f4ff;
+  --color-accent-200: #e7e5fe;
+  --color-accent-300: #d2cefd;
+  --color-accent-400: #b5abfc;
+  --color-accent-500: #968ae0;
+  --color-accent-600: #796cbf;
+  --color-accent-700: #5d5294;
+  --color-accent-800: #423a6a;
+  --color-accent-900: #2b2741;
+
+  --color-section: #262a60;
+  --color-section-glow: #353b80;
+  --color-section-ghost: #4c5397;
+
+  /* Two non-token colours the design checked for contrast on surface:
+     "not coming" (5.32:1) and "N min over" (7.86:1). */
+  --color-out: #c98686;
+  --color-over: #e0b268;
+  --color-danger: #f87171;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 0 0 1px #3f424d;
+  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
+
+  --animate-sr-rise: sr-rise 0.3s cubic-bezier(0.22, 0.85, 0.34, 1) both;
+  --animate-sr-flash: sr-flash 1.6s ease-in-out infinite;
+  --animate-sr-pulse: sr-pulse 1.4s ease-in-out infinite;
+  --animate-sr-spin: sr-spin 0.6s linear infinite;
+  --animate-sr-shimmer: sr-shimmer 1.4s linear infinite;
+  --animate-sr-marquee: sr-marquee 22s linear infinite;
+}
+
+@keyframes sr-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes sr-flash { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes sr-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes sr-spin { to { transform: rotate(360deg); } }
+@keyframes sr-shimmer { from { background-position: 180% 0; } to { background-position: -80% 0; } }
+@keyframes sr-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes sr-glow { 0%, 100% { box-shadow: 0 0 0 0 var(--fx-color, var(--color-accent-500)); } 50% { box-shadow: 0 0 55px 12px var(--fx-color, var(--color-accent-500)); } }
+@keyframes sr-sheet { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sr-fade { from { opacity: 0; } to { opacity: 1; } }
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { color-scheme: dark; background: var(--color-bg); }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  a { color: var(--color-accent-300); text-decoration: none; }
+  a:hover { color: var(--color-accent-200); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button, [role='button'] {
+    transition: transform 0.11s cubic-bezier(0.2, 0.75, 0.3, 1), background-color 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+  }
+  button:active:not(:disabled) { transform: scale(0.964); }
+  button:disabled { cursor: default; }
+  :focus { outline: none; }
+  /* Focus rings were verified in the design audit: the global ring reaches
+     every inline-styled button. Add none of your own. */
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  input, select, textarea { font: inherit; }
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+[data-reduce-motion='true'] *, [data-reduce-motion='true'] *::before, [data-reduce-motion='true'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* — Nocturne components, verbatim in behaviour — */
+@layer components {
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-weight: 500; font-size: 14px; line-height: 1.2; color: var(--color-text);
+    background: transparent; border: 1px solid transparent;
+    padding: 5.6px 10.08px; border-radius: var(--radius-md); min-height: 44px;
+    text-decoration: none;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  /* Primary is an accent OUTLINE on transparent — never a filled block. */
+  .btn-primary { color: var(--color-accent); border-color: var(--color-accent); }
+  .btn-primary:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+  .btn-primary:active { background: color-mix(in srgb, var(--color-accent) 22%, transparent); }
+  .btn-secondary { border-color: var(--color-divider); }
+  .btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+  .btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+  .btn-ghost { color: var(--color-accent); padding-inline: 2.8px; }
+  .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+
+  .field > label {
+    display: block; font-size: 12px; margin-bottom: 5px;
+    color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  }
+  .input {
+    width: 100%; min-height: 44px; padding: 6px 10px; font-size: 14px;
+    color: var(--color-text); caret-color: var(--color-accent);
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  }
+  .input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+  .input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+  .input::placeholder { color: var(--color-neutral-500); }
+  textarea.input { min-height: 90px; resize: vertical; }
+  select.input { appearance: auto; }
+
+  .hr {
+    height: 1px; border: 0; margin: 11.2px 0;
+    background: linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent);
+  }
+
+  /* The repeated building blocks of the phone screens. */
+  .sr-card { border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+  .sr-kicker { font-weight: 600; font-size: 10px; line-height: 1; letter-spacing: 0.13em; text-transform: uppercase; }
+  .sr-label { font-weight: 600; font-size: 10.5px; line-height: 1; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-500); }
+  .sr-hover:hover { background: color-mix(in srgb, var(--color-accent) 7%, transparent); }
+  .sr-shimmer {
+    background: linear-gradient(90deg, var(--color-neutral-800) 0%, var(--color-neutral-700) 50%, var(--color-neutral-800) 100%);
+    background-size: 220% 100%;
+    animation: sr-shimmer 1.4s linear infinite;
+  }
+  .text-pretty { text-wrap: pretty; }
+}
