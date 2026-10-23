@@ -22,7 +22,7 @@ EXTRA.update({
     'badges': ('BadgesScreen', 'season', 'any'),
     'awards': ('AwardsScreen', 'awards', 'any'),
     'library': ('LibraryScreen', 'library', 'library'),
-    'walkthrough': ('WalkthroughStart', 'walkthrough', 'any'),
+    'walkthrough': ('WalkthroughScreen', 'walkthrough', 'approve'),
     'prep-week': ('PrepWeekScreen', 'prep-week', 'prep'),
     'night-recap': ('NightRecapScreen', 'night-recap', 'nightRecap'),
     'serving': ('ServingScreen', 'serving', 'serve'),

@@ -10,6 +10,8 @@ import { CycleSection } from '@/components/console/cycle-section';
 import { PeopleTab } from '@/components/console/people-tab';
 import { ReportsTab } from '@/components/console/reports-tab';
 import { ScoringTab } from '@/components/console/scoring-tab';
+import { SeasonTab } from '@/components/console/season-tab';
+import { WalkthroughChapters } from '@/components/walkthrough-chapters';
 import { Btn, Icon } from '@/components/ui';
 import { isoDay, parseLocalISO } from '@/lib/dates';
 import { pointBase, fmt } from '@/lib/scoring';
@@ -19,11 +21,13 @@ import type { Team } from '@/lib/types/model';
 
 const TABS = [
   { id: 'setup', label: 'Setup', icon: 'ph ph-sliders-horizontal' },
+  { id: 'season', label: 'Season builder', icon: 'ph ph-map-trifold' },
   { id: 'teams', label: 'Squads', icon: 'ph ph-shield-check' },
   { id: 'scoring', label: 'Scoring', icon: 'ph ph-trophy' },
   { id: 'people', label: 'People', icon: 'ph ph-users-three' },
   { id: 'huddle', label: 'Huddle sheet', icon: 'ph ph-clipboard-text' },
-  { id: 'reports', label: 'Reports', icon: 'ph ph-file-arrow-down' }
+  { id: 'reports', label: 'Reports', icon: 'ph ph-file-arrow-down' },
+  { id: 'walkthrough', label: 'Walkthrough', icon: 'ph ph-compass' }
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -48,7 +52,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'setup' ? <SetupTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : <ReportsTab />}
+        {tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );
@@ -287,6 +291,14 @@ function TeamsTab() {
           </div>
         ))}
       </div>
+    </Section>
+  );
+}
+
+function WalkthroughTab() {
+  return (
+    <Section title="Walkthrough" sub="Written for your first month, in the order a week actually happens. Every chapter ends somewhere real, so reading it and doing it are one trip.">
+      <WalkthroughChapters />
     </Section>
   );
 }

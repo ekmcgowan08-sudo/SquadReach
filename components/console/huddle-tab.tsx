@@ -7,49 +7,117 @@ import { useHuddleSave } from '@/components/screens/huddle';
 import { Btn, Icon } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
 import { uid } from '@/lib/store/app-store';
-import { useApp } from '@/lib/store/provider';
-import type { CrewMember, RunSheetItem } from '@/lib/types/model';
+import { useApp, useAppApi } from '@/lib/store/provider';
+import { RUN_TEMPLATES, runTemplate } from '@/lib/run-templates';
+import type { CrewMember, HuddleState, RunSheetItem } from '@/lib/types/model';
 
 const cell = 'input !min-h-9 !py-0';
 
 export function HuddleTab() {
   const h = useApp((s) => s.data.huddle);
   const teams = useApp((s) => s.data.teams);
+  const me = useApp((s) => s.membership.displayName);
+  const api = useAppApi();
   const save = useHuddleSave();
-  const patchItem = (id: string, p: Partial<RunSheetItem>) => save((x) => void (x.runSheet = x.runSheet.map((it) => (it.id === id ? { ...it, ...p } : it))));
+  /* Any change to the sheet leaves it unpublished; a new owner hasn't been told. */
+  const edit = (recipe: (x: HuddleState) => void) =>
+    save((x) => {
+      recipe(x);
+      x.sheetDirty = true;
+    });
+  const patchItem = (id: string, p: Partial<RunSheetItem>) => edit((x) => void (x.runSheet = x.runSheet.map((it) => (it.id === id ? { ...it, ...p } : it))));
   const patchCrew = (id: string, p: Partial<CrewMember>) => save((x) => void (x.crew = x.crew.map((c) => (c.id === id ? { ...c, ...p } : c))));
   const move = (i: number, dir: -1 | 1) =>
-    save((x) => {
+    edit((x) => {
       const j = i + dir;
       if (j < 0 || j >= x.runSheet.length) return;
       [x.runSheet[i], x.runSheet[j]] = [x.runSheet[j], x.runSheet[i]];
     });
+  const untold = h.runSheet.filter((it) => it.assignedTo && !it.notifiedAt);
+  const unowned = h.runSheet.filter((it) => !it.assignedTo);
+  const publish = () => {
+    if (!h.sheetDirty && !untold.length) return api().say('Nothing has changed since you last published.');
+    const at = nowMs();
+    const told = untold.map((it) => h.crew.find((c) => c.id === it.assignedTo)?.name).filter(Boolean) as string[];
+    save((x) => {
+      for (const it of x.runSheet) if (it.assignedTo && !it.notifiedAt) it.notifiedAt = at;
+      x.sheetDirty = false;
+    });
+    for (const it of untold) {
+      const who = h.crew.find((c) => c.id === it.assignedTo)?.name;
+      if (who) api().firePush('You own ' + it.time + ' · ' + it.label, who + ', it’s yours tonight. ' + (it.where ? 'Where: ' + it.where + '.' : ''), '/dashboard/huddle');
+    }
+    api().logActivity('Published the run sheet — ' + told.length + ' assignment notice' + (told.length === 1 ? '' : 's') + (told.length ? ' (' + told.join(', ') + ')' : '') + ' · ' + me);
+    api().say(told.length ? told.length + ' told. Everyone serving sees the new sheet.' : 'Sheet published to everyone serving.');
+  };
+  const loadTemplate = (id: string) => {
+    if (h.runSheet.length && !window.confirm('Replace tonight’s run sheet with this template? Owners are cleared.')) return;
+    edit((x) => {
+      x.runSheet = runTemplate(id, uid);
+      x.runIdx = 0;
+      x.runDone = {};
+    });
+    api().logActivity('Loaded run sheet template: ' + RUN_TEMPLATES.find((t) => t.id === id)?.label);
+    api().say('Template loaded — edit it, then publish.');
+  };
 
   return (
     <>
       <Section
         title="Run sheet"
-        sub="Tonight in order. The phone holding the huddle advances it and every other phone follows."
+        sub="Tonight in order. Changes show on the phones as you make them; publishing is what tells each new owner what they run. The phone holding the huddle advances it — it never moves on its own."
         right={
-          <Btn className="px-3" onClick={() => save((x) => void x.runSheet.push({ id: uid(), time: '', label: 'New block', where: '', who: '', detail: '', assignedTo: null, notifiedAt: null }))}>
+          <Btn className="px-3" onClick={() => edit((x) => void x.runSheet.push({ id: uid(), time: '', label: 'New block', where: '', who: '', detail: '', assignedTo: null, notifiedAt: null }))}>
             + Block
           </Btn>
         }
       >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11.5px] text-neutral-500">Start from</span>
+          {RUN_TEMPLATES.map((t) => (
+            <button key={t.id} title={t.hint} onClick={() => loadTemplate(t.id)} className="min-h-9 rounded-full border border-neutral-700 px-3 text-[12px] text-neutral-300">
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {h.sheetDirty || untold.length ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-md border border-accent-600 px-3 py-[10px]" style={{ background: 'color-mix(in srgb, var(--color-accent) 9%, transparent)' }}>
+            <Icon name="ph ph-paper-plane-tilt" className="text-[16px] text-accent-300" />
+            <div className="min-w-0 flex-1 text-[12px] leading-[1.45] text-neutral-200">
+              Changes since you last published.{untold.length ? ' ' + untold.length + (untold.length === 1 ? ' owner hasn’t' : ' owners haven’t') + ' been told yet.' : ''}
+            </div>
+            <Btn className="px-4" onClick={publish}>
+              Publish
+            </Btn>
+          </div>
+        ) : null}
+        {unowned.length ? (
+          <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">
+            {unowned.length} {unowned.length === 1 ? 'item has' : 'items have'} no single owner. Whole-team moments (the huddle, send home) don’t need one; anything that only happens if one person remembers it does.
+          </div>
+        ) : null}
         <div className="flex flex-col gap-2">
           {h.runSheet.map((it, i) => (
-            <div key={it.id} className="grid items-center gap-2 rounded-md border border-neutral-800 p-2 sm:grid-cols-[80px_1fr_140px_120px_auto]">
-              <input className={cell} defaultValue={it.time} placeholder="6:45p" aria-label="Time" onBlur={(e) => patchItem(it.id, { time: e.target.value.trim() })} />
-              <input className={cell} defaultValue={it.label} aria-label="What" onBlur={(e) => patchItem(it.id, { label: e.target.value.trim() })} />
-              <input className={cell} defaultValue={it.where} placeholder="Where" aria-label="Where" onBlur={(e) => patchItem(it.id, { where: e.target.value.trim() })} />
-              <select className={cell} value={it.assignedTo ?? ''} onChange={(e) => patchItem(it.id, { assignedTo: e.target.value || null, who: h.crew.find((c) => c.id === e.target.value)?.name ?? it.who })} aria-label="Who owns it">
-                <option value="">Owner…</option>
-                {h.crew.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+            <div key={it.id} className="grid items-center gap-2 rounded-md border border-neutral-800 p-2 sm:grid-cols-[80px_1fr_140px_150px_auto]">
+              <input className={cell} defaultValue={it.time} placeholder="6:45pm" aria-label="Time" onBlur={(e) => e.target.value.trim() !== it.time && patchItem(it.id, { time: e.target.value.trim() })} />
+              <input className={cell} defaultValue={it.label} aria-label="What" onBlur={(e) => e.target.value.trim() !== it.label && patchItem(it.id, { label: e.target.value.trim() })} />
+              <input className={cell} defaultValue={it.where} placeholder="Where" aria-label="Where" onBlur={(e) => e.target.value.trim() !== it.where && patchItem(it.id, { where: e.target.value.trim() })} />
+              <div className="flex flex-col gap-1">
+                <select
+                  className={cell}
+                  value={it.assignedTo ?? ''}
+                  onChange={(e) => patchItem(it.id, { assignedTo: e.target.value || null, notifiedAt: null, who: h.crew.find((c) => c.id === e.target.value)?.name ?? it.who })}
+                  aria-label="Who owns it"
+                >
+                  <option value="">Everyone serving</option>
+                  {h.crew.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {it.assignedTo && !it.notifiedAt ? <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-accent-300">not told yet</span> : null}
+              </div>
               <div className="flex gap-1">
                 <button aria-label="Move up" onClick={() => move(i, -1)} className="h-9 w-9 rounded-full text-neutral-400">
                   <Icon name="ph ph-arrow-up" className="text-[13px]" />
@@ -57,32 +125,34 @@ export function HuddleTab() {
                 <button aria-label="Move down" onClick={() => move(i, 1)} className="h-9 w-9 rounded-full text-neutral-400">
                   <Icon name="ph ph-arrow-down" className="text-[13px]" />
                 </button>
-                <button aria-label="Delete block" onClick={() => save((x) => void (x.runSheet = x.runSheet.filter((y) => y.id !== it.id)))} className="h-9 w-9 rounded-full text-neutral-500">
+                <button aria-label="Delete block" onClick={() => edit((x) => void (x.runSheet = x.runSheet.filter((y) => y.id !== it.id)))} className="h-9 w-9 rounded-full text-neutral-500">
                   <Icon name="ph ph-trash" className="text-[13px]" />
                 </button>
               </div>
-              <input className={cell + ' sm:col-span-5'} defaultValue={it.detail} placeholder="Notes for whoever runs it" aria-label="Notes" onBlur={(e) => patchItem(it.id, { detail: e.target.value.trim() })} />
+              <input className={cell + ' sm:col-span-5'} defaultValue={it.detail} placeholder="Notes for whoever runs it" aria-label="Notes" onBlur={(e) => e.target.value.trim() !== it.detail && patchItem(it.id, { detail: e.target.value.trim() })} />
             </div>
           ))}
-          {!h.runSheet.length ? <div className="text-[12px] text-neutral-500">No blocks yet. Doors, games, the Word, small groups, send-home.</div> : null}
+          {!h.runSheet.length ? <div className="text-[12px] text-neutral-500">No blocks yet. Start from a template above.</div> : null}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Btn className="px-3" onClick={publish}>
+            Publish to the crew
+          </Btn>
           <Btn
-            variant="secondary"
-            className="px-3"
+            variant="ghost"
+            className="px-3 text-neutral-400"
             onClick={() =>
+              window.confirm('Reset tonight’s progress back to the first block?') &&
               save((x) => {
                 x.runIdx = 0;
                 x.runDone = {};
                 x.nightClosed = false;
                 x.runAdvancedAt = nowMs();
-                for (const it of x.runSheet) it.notifiedAt = it.assignedTo ? nowMs() : null;
               })
             }
           >
-            Publish to the crew
+            Reset tonight’s progress
           </Btn>
-          <span className="self-center text-[11.5px] text-neutral-500">Resets tonight’s progress and tells each owner what they run.</span>
         </div>
       </Section>
 

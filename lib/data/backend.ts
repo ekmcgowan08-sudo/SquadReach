@@ -36,7 +36,7 @@ export type SyncEvent =
   | { kind: 'practice'; row: PracticeRow }
   | { kind: 'game'; game: GameState }
   /** A leader-curated document (small groups, awards, logs) saved whole. */
-  | { kind: 'doc'; key: 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog' | 'libraryPlaced'; value: unknown }
+  | { kind: 'doc'; key: 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog' | 'libraryPlaced' | 'seasons' | 'customReports' | 'deliveries' | 'reportSendLog'; value: unknown }
   | { kind: 'libraryShare'; unit: LibraryUnit }
   /** A photo or video filed into a week album; the file uploads with it. */
   | { kind: 'media'; item: MediaItem; file: Blob }

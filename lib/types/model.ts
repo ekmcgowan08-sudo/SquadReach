@@ -3,6 +3,7 @@
    Supabase tables (supabase/migrations) map onto these one to one; see
    lib/data/supabase-backend.ts for the mapping. */
 import type { MembershipRole, Persona, ScoreEntryStatus } from './domain';
+import type { SavedSeason } from '@/lib/season';
 
 export interface Team {
   id: string;
@@ -179,6 +180,8 @@ export interface MinistryConfig {
   ministryName: string;
   /** The week around the night: times, reminders, serving roles. */
   cycle: CycleConfig;
+  /** The live season's name, from the season interview. */
+  seasonName?: string;
   pointBase: number;
   weekGrowthPct: number;
   goalValue: number;
@@ -279,6 +282,8 @@ export interface HuddleState {
   ready: { id: string; label: string; who: string; done: boolean }[];
   /** "Needs you" rows a leader has cleared for tonight. */
   dismissed: Record<string, boolean>;
+  /** Edited since it was last published — nobody has been told yet. */
+  sheetDirty?: boolean;
 }
 
 export interface VisitorLogRow {
@@ -632,6 +637,50 @@ export interface MinistryData {
   /** `${slipId}|${student}` → who signed and when. */
   slipSigned: Record<string, { by: string; at: number }>;
   parentMsgs: ParentMessage[];
+  /** Season interviews, saved. One is the live season. */
+  seasons: SavedSeason[];
+  /** Reports the pastor built: what it reads, columns, filters, grouping, order. */
+  customReports: CustomReport[];
+  /** The delivery schedule — which report goes to whom, when. */
+  deliveries: Delivery[];
+  /** Deliveries sent by hand ("Send now"), newest first. */
+  reportSendLog: { id: string; delivery: string; period: string; at: number; by: string }[];
+}
+
+/* ── reports ─────────────────────────────────────────────────────────── */
+export type ReportFieldKind = 'text' | 'num' | 'enum';
+
+export interface ReportFilter {
+  field: string;
+  op: string;
+  value: string;
+}
+
+export interface CustomReport {
+  id: string;
+  name: string;
+  source: string;
+  columns: string[];
+  filters: ReportFilter[];
+  groupBy: string | null;
+  sort: { field: string; dir: 'asc' | 'desc' } | null;
+  at: number;
+}
+
+export type DeliveryAudience = 'coaches' | 'captains' | 'squadLeads' | 'leaders' | 'staff';
+
+export interface Delivery {
+  id: string;
+  /** A built-in report id or a custom report's id. */
+  report: string;
+  audience: DeliveryAudience;
+  /** 'own': each squad gets its own copy. 'all': one copy of everything. */
+  scope: 'own' | 'all';
+  cadence: 'weekly' | 'nightAfter' | 'monthly';
+  /** Day of the week (0 = Sunday) for weekly; day of the month for monthly. */
+  day: number;
+  time: string;
+  on: boolean;
 }
 
 /* ── The week around the night ──────────────────────────────────────────

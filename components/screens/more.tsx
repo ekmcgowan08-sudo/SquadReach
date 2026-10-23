@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { InviteSheet } from '@/components/dashboard/invite-sheet';
 import { useCycle } from '@/components/cycle/use-cycle';
+import { CHAPTERS } from '@/lib/walkthrough';
 import { crewAll } from '@/components/screens/huddle';
 import { Icon, Screen } from '@/components/ui';
 import { resetDemo } from '@/lib/data/demo-backend';
@@ -66,7 +67,7 @@ export function MoreScreen() {
         { label: 'Notifications', meta: notifs.length + ' new', icon: 'ph ph-bell', href: '/dashboard/notifications' },
         canApprove(p) ? { label: 'Access requests', meta: pendingAccess + ' waiting', icon: 'ph ph-user-focus', href: '/dashboard/access-requests' } : null,
         { label: 'Badges & Streaks', meta: 'season so far', icon: 'ph ph-medal', href: '/dashboard/badges' },
-        canApprove(p) ? { label: 'Walkthrough', meta: 'nine chapters, in the order a week happens', icon: 'ph ph-compass', href: '/dashboard/walkthrough' } : null,
+        canApprove(p) ? { label: 'Walkthrough', meta: CHAPTERS.length + ' chapters, in the order a week happens', icon: 'ph ph-compass', href: '/dashboard/walkthrough' } : null,
         /* Review affordance: the offline design is unreviewable without it. */
         { label: offlineSim ? 'Restore signal' : 'Simulate no signal', meta: outbox ? outbox + ' held' : 'try the gym case', icon: offlineSim ? 'ph ph-cloud-check' : 'ph ph-cloud-slash', onClick: () => api().toggleOfflineSim() },
         {

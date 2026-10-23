@@ -36,6 +36,8 @@ export interface Prefs {
   tour: { on: boolean; i: number };
   /** Demo only: the moment of the week the night-cycle screens preview. */
   cyclePreview: string | null;
+  /** Walkthrough chapters this person has ticked off. */
+  walkthroughDone: Record<string, boolean>;
 }
 
 const DEFAULTS: Prefs = {
@@ -45,7 +47,8 @@ const DEFAULTS: Prefs = {
   notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true, nightCycle: true },
   tourSeen: false,
   tour: { on: false, i: 0 },
-  cyclePreview: null
+  cyclePreview: null,
+  walkthroughDone: {}
 };
 
 let current: Prefs = DEFAULTS;

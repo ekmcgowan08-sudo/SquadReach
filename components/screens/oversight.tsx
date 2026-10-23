@@ -9,6 +9,7 @@ import { InviteSheet } from '@/components/dashboard/invite-sheet';
 import { WaitingOnYou, usePendingGroups } from '@/components/screens/home';
 import { AccessRow } from '@/components/screens/role-views';
 import { Sheet } from '@/components/sheet';
+import { startTour } from '@/components/shell/tour';
 import { Btn, EmptyNote, Icon, Screen, ScreenHeader } from '@/components/ui';
 import { ago } from '@/lib/dates';
 import { canApprove } from '@/lib/permissions';
@@ -185,7 +186,10 @@ export function SettingsScreen() {
       </div>
 
       <button
-        onClick={() => router.push('/dashboard/walkthrough')}
+        onClick={() => {
+          startTour();
+          router.push('/dashboard');
+        }}
         className="sr-card sr-hover flex min-h-[52px] w-full items-center gap-[11px] px-[15px] text-left"
       >
         <Icon name="ph ph-hand-waving" className="flex-none text-[16px] text-accent-300" />

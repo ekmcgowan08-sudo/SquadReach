@@ -78,6 +78,10 @@ export function emptyMinistry(): MinistryData {
     families: {},
     slips: [],
     slipSigned: {},
-    parentMsgs: []
+    parentMsgs: [],
+    seasons: [],
+    customReports: [],
+    deliveries: [],
+    reportSendLog: []
   };
 }

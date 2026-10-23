@@ -329,6 +329,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
   return {
     config: {
       ministryName: 'Grace Community Students',
+      seasonName: 'Fall 2026',
       cycle: DEFAULT_CYCLE,
       pointBase: 900,
       weekGrowthPct: 8,
@@ -519,7 +520,7 @@ function seedPresenceLog(): Record<string, string[]> {
   return out;
 }
 
-function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 'serving' | 'families' | 'slips' | 'slipSigned' | 'parentMsgs'> {
+function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 'serving' | 'families' | 'slips' | 'slipSigned' | 'parentMsgs' | 'seasons' | 'customReports' | 'deliveries' | 'reportSendLog'> {
   const families: MinistryData['families'] = {};
   for (const r of ROSTER) {
     if (r.guest) continue;
@@ -576,7 +577,25 @@ function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 's
     slipSigned,
     parentMsgs: [
       { id: 'pm1', from: 'Pastor Mike', to: 'all', kids: everyone, text: 'Fall retreat sign-ups are open. The slip is in your family link — $85 covers lodging and meals, and nobody stays home over money.', at: now - 17 * DAY, reads }
-    ]
+    ],
+    seasons: [
+      {
+        id: 'season-fall-2026',
+        name: 'Fall 2026',
+        active: true,
+        savedAt: now - 60 * DAY,
+        answers: { name: 'Fall 2026', start: '2026-09-02', weeks: 9, night: 'Wednesday', carry: 'both', growth: 8, verses: 'weekly', squadCount: 4, squadNames: 'Yellow, Red, Blue, Green', assign: 'pastor', game: 'every', parents: 'yes' }
+      }
+    ],
+    customReports: [],
+    /* The schedule the review comment asked for: each squad's roster to its
+       coaches and captains weekly, every roster to the leaders weekly. */
+    deliveries: [
+      { id: 'dl1', report: 'roster', audience: 'squadLeads', scope: 'own', cadence: 'weekly', day: 4, time: '09:00', on: true },
+      { id: 'dl2', report: 'roster', audience: 'leaders', scope: 'all', cadence: 'weekly', day: 4, time: '09:00', on: true },
+      { id: 'dl3', report: 'visitors', audience: 'leaders', scope: 'all', cadence: 'nightAfter', day: 0, time: '08:00', on: true }
+    ],
+    reportSendLog: []
   };
 }
 
