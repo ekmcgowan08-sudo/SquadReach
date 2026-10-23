@@ -208,10 +208,104 @@ reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
 select pg_temp.check((select count(*) from nights) = 0, 'a student does not read the run sheet');
 
+-- Bible practice: you log your own; the volunteer set and your captain see it.
+reset role;
+update memberships set team_id = :'yellow' where user_id in ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000006');
+select id as m_student from memberships where user_id = '00000000-0000-0000-0000-000000000004' \gset
+select id as m_captain from memberships where user_id = '00000000-0000-0000-0000-000000000006' \gset
+select id as m_coach from memberships where user_id = '00000000-0000-0000-0000-000000000002' \gset
+select set_config('t.org', :'org', false), set_config('t.m_captain', :'m_captain', false), set_config('t.m_student', :'m_student', false);
+select id as red from teams where org_id = :'org' and name = 'Red' \gset
+select set_config('t.yellow', :'yellow', false), set_config('t.red', :'red', false);
+select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
+insert into practice_log (org_id, membership_id, who, team_id, day, ref, mode) values (:'org', :'m_student', 'Ellison Reid', :'yellow', '2026-10-23', 'Joshua 1:9', 'flashcard');
+select pg_temp.check((select count(*) from practice_log) = 1, 'a student logs their own practice');
+do $$ begin
+  insert into practice_log (org_id, membership_id, who, day, ref) values (current_setting('t.org')::uuid, current_setting('t.m_captain')::uuid, 'Luke Jarvis', '2026-10-23', 'Joshua 1:9');
+  raise exception 'FAILED: logged practice for someone else';
+exception when others then
+  if sqlerrm like 'FAILED%' then raise; end if;
+  raise notice 'ok - nobody logs practice for someone else';
+end $$;
+do $$ begin
+  insert into practice_log (org_id, membership_id, who, day, ref) values (current_setting('t.org')::uuid, current_setting('t.m_student')::uuid, 'Ellison Reid', '2026-10-23', 'Joshua 1:9');
+  raise exception 'FAILED: two practices on one day';
+exception when unique_violation then
+  raise notice 'ok - one practice per person per day';
+end $$;
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000006');
+select pg_temp.check((select count(*) from practice_log) = 1, 'a captain sees their own squad''s practice');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000003');
+select pg_temp.check((select count(*) from practice_log) = 1, 'the scorekeeper sees practice');
+
+-- Chat: announcements are read by all and posted by leaders; a squad thread
+-- is that squad plus the volunteer set.
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
+select pg_temp.check(public.chat_can(:'org', 'all', false) and not public.chat_can(:'org', 'all', true), 'a student reads announcements but cannot post them');
+select pg_temp.check(not public.chat_can(:'org', 'leaders', false), 'a student cannot read the leaders thread');
+insert into chat_messages (id, org_id, thread_id, author, author_name, body) values (gen_random_uuid(), :'org', 'team-' || :'yellow', :'m_student', 'Ellison Reid', 'we got this');
+select pg_temp.check((select count(*) from chat_messages) = 1, 'a student posts in their own squad thread');
+do $$ begin
+  insert into chat_messages (id, org_id, thread_id, author, author_name, body) values (gen_random_uuid(), current_setting('t.org')::uuid, 'team-' || current_setting('t.red'), current_setting('t.m_student')::uuid, 'Ellison Reid', 'hi red');
+  raise exception 'FAILED: posted in another squad''s thread';
+exception when others then
+  if sqlerrm like 'FAILED%' then raise; end if;
+  raise notice 'ok - a student cannot post in another squad''s thread';
+end $$;
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000002');
+insert into chat_messages (id, org_id, thread_id, author, author_name, body) values (gen_random_uuid(), :'org', 'leaders', :'m_coach', 'Coach Chris', 'Ty is out tonight');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000006');
+select pg_temp.check((select count(*) from chat_messages) = 1, 'a captain sees the squad thread, not the leaders thread');
+
+-- Events: a coach proposes, never publishes; RSVP counts are public, names are not.
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000002');
+insert into events (org_id, title, status) values (:'org', 'Coaches'' lunch', 'proposed');
+do $$ begin
+  insert into events (org_id, title, status) values (current_setting('t.org')::uuid, 'Sneaky', 'approved');
+  raise exception 'FAILED: a coach published an event';
+exception when others then
+  if sqlerrm like 'FAILED%' then raise; end if;
+  raise notice 'ok - a coach can only propose';
+end $$;
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
+insert into events (org_id, title) values (:'org', 'Fall retreat') returning id as ev \gset
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
+insert into rsvps (event_id, org_id, membership_id, name, status, guests) values (:'ev', :'org', :'m_student', 'Ellison Reid', 'going', 1);
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000006');
+insert into rsvps (event_id, org_id, membership_id, name, status) values (:'ev', :'org', :'m_captain', 'Luke Jarvis', 'maybe');
+select pg_temp.check((select count(*) from rsvps) = 1, 'a captain sees only their own RSVP');
+select pg_temp.check((select going = 1 and maybe = 1 and guests = 1 from public.rsvp_counts(:'org') where event_id = :'ev'), 'but everyone sees the head count');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
+update events set rsvp_closed = true where id = :'ev';
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
+do $$ begin
+  update rsvps set status = 'out' where membership_id = current_setting('t.m_student')::uuid;
+  raise exception 'FAILED: changed an answer after RSVPs closed';
+exception when others then
+  if sqlerrm like 'FAILED%' then raise; end if;
+  raise notice 'ok - closed RSVPs cannot be changed';
+end $$;
+
+-- Albums: a member files their own photo.
+insert into media_items (org_id, week, kind, label, created_by) values (:'org', 9, 'photo', 'Game night', :'m_student');
+select pg_temp.check((select count(*) from media_items) = 1, 'a member files a photo into the album');
+
 -- Someone outside the ministry reads nothing at all.
 reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000005');
-select pg_temp.check((select count(*) from organizations) = 0 and (select count(*) from score_entries) = 0 and (select count(*) from students) = 0, 'an outsider reads nothing');
+select pg_temp.check((select count(*) from organizations) = 0 and (select count(*) from score_entries) = 0 and (select count(*) from students) = 0
+  and (select count(*) from chat_messages) = 0 and (select count(*) from media_items) = 0 and (select count(*) from practice_log) = 0, 'an outsider reads nothing');
 
 reset role;
 \echo 'ALL RLS TESTS PASSED'

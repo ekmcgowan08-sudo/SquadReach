@@ -113,6 +113,22 @@ returns uuid language sql stable security definer set search_path = public as $$
   limit 1;
 $$;
 
+-- Chat visibility, in one place. 'all' is the announcement thread: everyone
+-- reads, LEADER_ROLES post. 'leaders' is the volunteer set. A squad thread
+-- is that squad's members plus the volunteer set.
+create or replace function public.chat_can(org uuid, thread text, posting boolean)
+returns boolean language sql stable security definer set search_path = public as $$
+  select case
+    when thread = 'all' then
+      case when posting then public.has_role(org, array['leader','owner']::public.membership_role[]) else public.is_member(org) end
+    when thread = 'leaders' then public.has_role(org, array['coach','scorekeeper','leader','owner']::public.membership_role[])
+    when thread like 'team-%' then
+      public.has_role(org, array['coach','scorekeeper','leader','owner']::public.membership_role[])
+      or exists (select 1 from public.memberships m where m.user_id = auth.uid() and m.org_id = org and m.team_id::text = substr(thread, 6))
+    else false
+  end;
+$$;
+
 -- ── the ledger ───────────────────────────────────────────────────────────
 -- Append-only. Nothing edits or deletes a past entry: an undo writes its
 -- opposite, and both stay. `id` is generated ON THE PHONE and is the
@@ -251,8 +267,42 @@ create table public.events (
   date_label text not null default '',
   color text not null default '#968ae0',
   audiences text[] not null default array['members','captains','coaches','scorekeeper','leaders','parents','admins'],
+  day date,
+  time_label text not null default '',
+  place text not null default '',
+  -- coaches, captains and scorekeepers propose; LEADER_ROLES approve
+  status text not null default 'approved' check (status in ('proposed', 'approved')),
+  proposed_by text not null default '',
+  rsvp_closed boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+-- One answer per person per event. Counts are public to the ministry
+-- (rsvp_counts); names only to the volunteer set.
+create table public.rsvps (
+  event_id uuid not null references public.events(id) on delete cascade,
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  membership_id uuid not null references public.memberships(id) on delete cascade,
+  name text not null,
+  status text not null check (status in ('going', 'maybe', 'out')),
+  guests int not null default 0 check (guests between 0 and 20),
+  updated_at timestamptz not null default now(),
+  primary key (event_id, membership_id)
+);
+
+-- Chat. Thread ids are 'all' (announcements), 'leaders', 'team-<team uuid>'.
+-- Who may read or post is decided in one function, chat_can().
+create table public.chat_messages (
+  id uuid primary key,
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  thread_id text not null,
+  author uuid references public.memberships(id) on delete set null,
+  author_name text not null default '',
+  role_label text not null default '',
+  body text not null check (length(body) between 1 and 2000),
+  created_at timestamptz not null default now()
+);
+create index on public.chat_messages (org_id, thread_id, created_at desc);
 
 create table public.challenges (
   id uuid primary key default gen_random_uuid(),
@@ -358,6 +408,8 @@ alter table public.activity_log enable row level security;
 alter table public.ministry_docs enable row level security;
 alter table public.practice_log enable row level security;
 alter table public.media_items enable row level security;
+alter table public.rsvps enable row level security;
+alter table public.chat_messages enable row level security;
 
 -- organizations: members read; LEADER_ROLES edit the setup.
 create policy org_read on public.organizations for select using (public.is_member(id));
@@ -453,6 +505,28 @@ create policy events_read on public.events for select using (public.is_member(or
 create policy events_write on public.events for all
   using (public.has_role(org_id, array['leader','owner']::public.membership_role[]))
   with check (public.has_role(org_id, array['leader','owner']::public.membership_role[]));
+create policy events_propose on public.events for insert
+  with check (public.has_role(org_id, array['coach','captain','scorekeeper']::public.membership_role[]) and status = 'proposed' and rsvp_closed = false);
+
+-- rsvps: answer for yourself while the event is open; the volunteer set
+-- sees names, everyone else sees counts through rsvp_counts().
+create policy rsvp_own_read on public.rsvps for select
+  using (membership_id in (select m.id from public.memberships m where m.user_id = auth.uid()));
+create policy rsvp_staff_read on public.rsvps for select
+  using (public.has_role(org_id, array['coach','scorekeeper','leader','owner']::public.membership_role[]));
+create policy rsvp_answer on public.rsvps for insert
+  with check (membership_id in (select m.id from public.memberships m where m.user_id = auth.uid() and m.org_id = rsvps.org_id)
+    and exists (select 1 from public.events e where e.id = event_id and e.org_id = rsvps.org_id and not e.rsvp_closed and e.status = 'approved'));
+create policy rsvp_change on public.rsvps for update
+  using (membership_id in (select m.id from public.memberships m where m.user_id = auth.uid()))
+  with check (exists (select 1 from public.events e where e.id = event_id and not e.rsvp_closed));
+
+-- chat: one rule for reading and posting, by thread.
+create policy chat_read on public.chat_messages for select using (public.chat_can(org_id, thread_id, false));
+create policy chat_post on public.chat_messages for insert
+  with check (public.chat_can(org_id, thread_id, true)
+    and author in (select m.id from public.memberships m where m.user_id = auth.uid() and m.org_id = chat_messages.org_id));
+
 create policy challenges_read on public.challenges for select using (public.is_member(org_id));
 create policy challenges_write on public.challenges for all
   using (public.has_role(org_id, array['leader','owner']::public.membership_role[]))
@@ -608,12 +682,28 @@ grant execute on function public.create_ministry(text, text) to authenticated;
 grant execute on function public.request_access(text, public.membership_role, text, text) to authenticated;
 grant execute on function public.decide_access(uuid, boolean) to authenticated;
 grant execute on function public.set_praying(uuid, boolean) to authenticated;
+grant execute on function public.chat_can(uuid, text, boolean) to authenticated;
+
+-- Head counts for every event, for anyone in the ministry — no names.
+create or replace function public.rsvp_counts(p_org uuid)
+returns table (event_id uuid, going int, maybe int, out_count int, guests int)
+language sql stable security definer set search_path = public as $$
+  select r.event_id,
+         count(*) filter (where r.status = 'going')::int,
+         count(*) filter (where r.status = 'maybe')::int,
+         count(*) filter (where r.status = 'out')::int,
+         coalesce(sum(r.guests) filter (where r.status = 'going'), 0)::int
+  from public.rsvps r
+  where r.org_id = p_org and public.is_member(p_org)
+  group by r.event_id
+$$;
+grant execute on function public.rsvp_counts(uuid) to authenticated;
 
 -- Live standings and the shared run sheet travel over realtime.
 do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    alter publication supabase_realtime add table public.score_entries, public.nights;
+    alter publication supabase_realtime add table public.score_entries, public.nights, public.chat_messages, public.rsvps;
   end if;
 end $$;
 
