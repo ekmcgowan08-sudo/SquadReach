@@ -9,7 +9,7 @@
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CareReminder, Category, ChatMessage, HuddleState, LedgerEntry, MinistryConfig,
-  GameState, MediaItem, MinistryData, MinistryEvent, PracticeRow, PrayerQueued, Rsvp, RsvpCount, Student, Team
+  GameState, LibraryUnit, MediaItem, MinistryData, MinistryEvent, PracticeRow, PrayerQueued, Rsvp, RsvpCount, Student, Team
 } from '@/lib/types/model';
 
 export type SyncEvent =
@@ -35,10 +35,13 @@ export type SyncEvent =
   | { kind: 'practice'; row: PracticeRow }
   | { kind: 'game'; game: GameState }
   /** A leader-curated document (small groups, awards, logs) saved whole. */
-  | { kind: 'doc'; key: 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog'; value: unknown }
+  | { kind: 'doc'; key: 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog' | 'libraryPlaced'; value: unknown }
+  | { kind: 'libraryShare'; unit: LibraryUnit }
   /** A photo or video filed into a week album; the file uploads with it. */
   | { kind: 'media'; item: MediaItem; file: Blob }
   | { kind: 'mediaRemove'; id: string; path: string | null }
+  | { kind: 'vote'; awardId: string; period: string; choice: string }
+  | { kind: 'nominee'; awardId: string; id: string; name: string }
   | { kind: 'event'; event: MinistryEvent }
   | { kind: 'eventRemove'; id: string };
 

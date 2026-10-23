@@ -9,7 +9,7 @@
 import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
 import { bibleStats } from '@/lib/bible';
-import { isoDay, tonightDate, weekOf } from '@/lib/dates';
+import { isoDay, periodKey, tonightDate, weekOf } from '@/lib/dates';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { chatStamp } from '@/lib/selectors';
 import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
@@ -263,6 +263,30 @@ export function supabaseBackend(membership: Membership): Backend {
       }
       d.rsvpCounts = countsFrom(counts.data);
 
+      /* The library: everything shared by any ministry, plus our own. */
+      const lib = await db.from('library_units').select('*').order('created_at', { ascending: false }).limit(300);
+      d.library = ((lib.data ?? []) as { id: string; org_id: string; kind: string; title: string; church_name: string; span: string; theme: string; summary: string; includes: string[]; pts: [string, number][]; created_at: string }[]).map((u) => ({
+        id: u.id, kind: u.kind, title: u.title, church: u.org_id === org ? null : u.church_name || 'Another ministry', span: u.span, theme: u.theme, summary: u.summary, includes: u.includes ?? [], pts: u.pts ?? [],
+        used: u.org_id === org ? 'Shared by you' : 'Shared ' + new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      }));
+
+      /* Awards: my votes, the tally (leaders), and nominations anyone added. */
+      const [votes, noms] = await Promise.all([
+        db.from('award_votes').select('award_id, period, membership_id, choice').eq('org_id', org),
+        db.from('award_nominees').select('id, award_id, name').eq('org_id', org).order('created_at')
+      ]);
+      const tallies: Record<string, Record<string, number>> = {};
+      for (const v of (votes.data ?? []) as { award_id: string; period: string; membership_id: string; choice: string }[]) {
+        if (v.membership_id === membership.membershipId) (d.awardVotes[v.award_id] ??= {})[v.period] = v.choice;
+        const a = d.awards.find((x) => x.id === v.award_id);
+        if (a && v.period === periodKey(a.voteFrequency)) (tallies[v.award_id] ??= {})[v.choice] = (tallies[v.award_id]?.[v.choice] ?? 0) + 1;
+      }
+      d.awardTallies = tallies;
+      for (const n of (noms.data ?? []) as { id: string; award_id: string; name: string }[]) {
+        const a = d.awards.find((x) => x.id === n.award_id);
+        if (a && !(a.nominees ?? []).some((x) => x.id === n.id)) a.nominees = [...(a.nominees ?? []), { id: n.id, name: n.name }];
+      }
+
       /* Chat: the announcement thread, the volunteer thread, and one thread per
          squad — RLS (chat_can) decides which of them return any rows. */
       d.chatThreads = chatThreads(d.teams, d.roster.length, membership);
@@ -416,6 +440,25 @@ export function supabaseBackend(membership: Membership): Backend {
           if (r.error) throw r.error;
           return;
         }
+        case 'vote': {
+          if (!membership.membershipId) return;
+          const r = await db.from('award_votes').insert({ org_id: org, award_id: e.awardId, period: e.period, membership_id: membership.membershipId, choice: e.choice });
+          if (r.error && r.error.code !== '23505') throw r.error;
+          return;
+        }
+        case 'nominee': {
+          const r = await db.from('award_nominees').upsert({ id: e.id, org_id: org, award_id: e.awardId, name: e.name, nominated_by: membership.membershipId }, { onConflict: 'id', ignoreDuplicates: true });
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'libraryShare': {
+          const u = e.unit;
+          const r = await db.from('library_units').upsert({
+            id: u.id, org_id: org, kind: u.kind, title: u.title, church_name: u.church ?? '', span: u.span, theme: u.theme, summary: u.summary, includes: u.includes, pts: u.pts, shared: true
+          });
+          if (r.error) throw r.error;
+          return;
+        }
         case 'eventRemove':
           await db.from('events').delete().eq('id', e.id);
           return;
@@ -467,4 +510,4 @@ export function supabaseBackend(membership: Membership): Backend {
 }
 
 /** Leader-curated documents that live in ministry_docs, by MinistryData key. */
-export const DOC_KEYS = ['smallGroups', 'awards', 'visitorLog', 'verseLog'] as const;
+export const DOC_KEYS = ['smallGroups', 'awards', 'visitorLog', 'verseLog', 'libraryPlaced'] as const;

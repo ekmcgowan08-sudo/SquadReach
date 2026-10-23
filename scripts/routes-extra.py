@@ -20,4 +20,7 @@ EXTRA.update({
     'chat': ('ChatScreen', 'chat', 'any'),
     'season-plan': ('SeasonScreen', 'season', 'any'),
     'badges': ('BadgesScreen', 'season', 'any'),
+    'awards': ('AwardsScreen', 'awards', 'any'),
+    'library': ('LibraryScreen', 'library', 'library'),
+    'walkthrough': ('WalkthroughStart', 'walkthrough', 'any'),
 })

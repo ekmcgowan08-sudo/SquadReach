@@ -301,6 +301,44 @@ end $$;
 insert into media_items (org_id, week, kind, label, created_by) values (:'org', 9, 'photo', 'Game night', :'m_student');
 select pg_temp.check((select count(*) from media_items) = 1, 'a member files a photo into the album');
 
+-- Awards: one vote per person per period; only leaders read the tally.
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
+insert into award_votes (org_id, award_id, period, membership_id, choice) values (:'org', 'mvp', 'season', :'m_student', 'n1');
+do $$ begin
+  insert into award_votes (org_id, award_id, period, membership_id, choice) values (current_setting('t.org')::uuid, 'mvp', 'season', current_setting('t.m_student')::uuid, 'n2');
+  raise exception 'FAILED: voted twice in one period';
+exception when unique_violation then
+  raise notice 'ok - one vote per person per period';
+end $$;
+insert into award_nominees (id, org_id, award_id, name, nominated_by) values (gen_random_uuid(), :'org', 'mvp', 'Wyatt Price', :'m_student');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000006');
+insert into award_votes (org_id, award_id, period, membership_id, choice) values (:'org', 'mvp', 'season', :'m_captain', 'n1');
+select pg_temp.check((select count(*) from award_votes) = 1, 'a voter sees only their own vote');
+select pg_temp.check((select count(*) from award_nominees) = 1, 'everyone sees the nominees');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
+select pg_temp.check((select count(*) from award_votes where choice = 'n1') = 2, 'a leader reads the tally');
+
+-- Library: leaders publish; a shared unit is readable by any signed-in ministry.
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
+do $$ begin
+  insert into library_units (id, org_id, kind, title) values (gen_random_uuid(), current_setting('t.org')::uuid, 'game', 'Sneaky');
+  raise exception 'FAILED: a student published to the library';
+exception when others then
+  if sqlerrm like 'FAILED%' then raise; end if;
+  raise notice 'ok - a student cannot publish to the library';
+end $$;
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
+insert into library_units (id, org_id, kind, title, church_name, shared) values (gen_random_uuid(), :'org', 'game', 'Pipeline Relay', 'Grace Community Students', true);
+insert into library_units (id, org_id, kind, title, shared) values (gen_random_uuid(), :'org', 'lesson', 'Draft notes', false);
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000005');
+select pg_temp.check((select count(*) from library_units) = 1, 'another ministry reads the shared unit, not the private one');
+
 -- Someone outside the ministry reads nothing at all.
 reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000005');

@@ -55,6 +55,8 @@ export function emptyMinistry(): MinistryData {
     deepSubs: [],
     awards: [],
     awardVotes: {},
+    library: [],
+    libraryPlaced: [],
     media: [],
     clips: [],
     filmMarks: [],

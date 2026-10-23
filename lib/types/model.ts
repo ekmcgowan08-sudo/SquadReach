@@ -387,6 +387,33 @@ export interface SmallGroup {
   };
 }
 
+/** A unit in the shared library. `church` is null for this ministry's own. */
+export interface LibraryUnit {
+  id: string;
+  kind: string;
+  title: string;
+  church: string | null;
+  span: string;
+  theme: string;
+  summary: string;
+  includes: string[];
+  /** Suggested point values, as [category, amount]. */
+  pts: [string, number][];
+  used: string;
+}
+
+/** A library unit placed onto a week of this season. */
+export interface LibraryPlacement {
+  id: string;
+  unit: string;
+  title: string;
+  kind: string;
+  week: number;
+  /** Whose point values the week uses — confirmed, never rescaled. */
+  pts: 'theirs' | 'ours';
+  at: number;
+}
+
 export interface Award {
   id: string;
   name: string;
@@ -566,7 +593,12 @@ export interface MinistryData {
   smallGroups: SmallGroup[];
   deepSubs: DeepSubmission[];
   awards: Award[];
-  awardVotes: Record<string, string>;
+  library: LibraryUnit[];
+  libraryPlaced: LibraryPlacement[];
+  /** My votes: award → period ('season' | day | week) → choice. */
+  awardVotes: Record<string, Record<string, string>>;
+  /** Leaders: this period's tally per award → choice → votes. */
+  awardTallies?: Record<string, Record<string, number>>;
   media: MediaItem[];
   clips: Clip[];
   filmMarks: FilmMark[];

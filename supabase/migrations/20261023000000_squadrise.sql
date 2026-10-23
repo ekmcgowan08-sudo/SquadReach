@@ -376,6 +376,45 @@ create table public.media_items (
 );
 create index on public.media_items (org_id, week);
 
+-- Awards. The awards themselves are a curated document (ministry_docs
+-- 'awards'); votes and nominations are rows so anyone can add their own.
+-- period is 'season', a day (YYYY-MM-DD) or a week (YYYY-Www).
+create table public.award_votes (
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  award_id text not null,
+  period text not null,
+  membership_id uuid not null references public.memberships(id) on delete cascade,
+  choice text not null,
+  created_at timestamptz not null default now(),
+  primary key (org_id, award_id, period, membership_id)
+);
+create table public.award_nominees (
+  id uuid primary key,
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  award_id text not null,
+  name text not null check (length(name) between 1 and 80),
+  nominated_by uuid references public.memberships(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+-- The library. Units a ministry publishes for others to lift into their own
+-- season: content and suggested point values only — there is no column a
+-- student's name could go in. Shared units are readable by anyone signed in.
+create table public.library_units (
+  id uuid primary key,
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  kind text not null check (kind in ('week', 'lesson', 'game', 'guide', 'series', 'event', 'season')),
+  title text not null,
+  church_name text not null default '',
+  span text not null default '',
+  theme text not null default '',
+  summary text not null default '',
+  includes text[] not null default '{}',
+  pts jsonb not null default '[]'::jsonb,
+  shared boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 -- The long tail a leader curates — small-group guides, award races, media
 -- album metadata, saved reports. One document per key per ministry.
 -- Nothing about students is written here by students.
@@ -410,6 +449,9 @@ alter table public.practice_log enable row level security;
 alter table public.media_items enable row level security;
 alter table public.rsvps enable row level security;
 alter table public.chat_messages enable row level security;
+alter table public.award_votes enable row level security;
+alter table public.library_units enable row level security;
+alter table public.award_nominees enable row level security;
 
 -- organizations: members read; LEADER_ROLES edit the setup.
 create policy org_read on public.organizations for select using (public.is_member(id));
@@ -567,6 +609,26 @@ create policy media_add on public.media_items for insert
 create policy media_remove on public.media_items for delete
   using (public.has_role(org_id, array['leader','owner']::public.membership_role[])
     or created_by in (select m.id from public.memberships m where m.user_id = auth.uid()));
+
+-- awards: vote once per period as yourself; LEADER_ROLES read the tally.
+create policy vote_own_read on public.award_votes for select
+  using (membership_id in (select m.id from public.memberships m where m.user_id = auth.uid()));
+create policy vote_tally on public.award_votes for select
+  using (public.has_role(org_id, array['leader','owner']::public.membership_role[]));
+create policy vote_cast on public.award_votes for insert
+  with check (membership_id in (select m.id from public.memberships m where m.user_id = auth.uid() and m.org_id = award_votes.org_id));
+create policy nominee_read on public.award_nominees for select using (public.is_member(org_id));
+create policy nominee_add on public.award_nominees for insert
+  with check (nominated_by in (select m.id from public.memberships m where m.user_id = auth.uid() and m.org_id = award_nominees.org_id));
+create policy nominee_remove on public.award_nominees for delete
+  using (public.has_role(org_id, array['leader','owner']::public.membership_role[]));
+
+-- library: shared units for anyone signed in, your own always; LEADER_ROLES publish.
+create policy library_read on public.library_units for select
+  using ((shared and auth.uid() is not null) or public.is_member(org_id));
+create policy library_publish on public.library_units for all
+  using (public.has_role(org_id, array['leader','owner']::public.membership_role[]))
+  with check (public.has_role(org_id, array['leader','owner']::public.membership_role[]));
 
 -- curated documents: members read; LEADER_ROLES write.
 create policy docs_read on public.ministry_docs for select using (public.is_member(org_id));

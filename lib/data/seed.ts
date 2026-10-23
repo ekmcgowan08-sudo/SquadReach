@@ -5,6 +5,7 @@
    own setup; nothing here is read in Supabase mode.
    ───────────────────────────────────────────────────────────────────────── */
 import { DEFAULT_MEMORY_VERSES } from '@/lib/bible';
+import { DEMO_LIBRARY } from '@/lib/library';
 import { DEFAULT_PENALTIES, emptyGame } from '@/lib/game';
 import { isoDay } from '@/lib/dates';
 import type {
@@ -465,6 +466,8 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
       { id: 'aw6', name: 'Never Miss', description: 'Longest attendance streak this season — awarded automatically.', decidedBy: 'streak', metric: 'attendance' }
     ],
     awardVotes: {},
+    library: DEMO_LIBRARY,
+    libraryPlaced: [],
     media: [
       ...['Dodgeball final', 'Sideline crowd', 'Blue huddle', 'Yellow win', 'Bracket board', 'Worship set'].map((label, i) => ({ id: 'm9-' + i, week: 9, kind: 'photo' as const, label, url: null, at: now - i * MIN })),
       { id: 'm4-0', week: 4, kind: 'video' as const, label: 'Red commercial', url: null, at: now - 35 * DAY },

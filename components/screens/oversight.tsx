@@ -185,10 +185,7 @@ export function SettingsScreen() {
       </div>
 
       <button
-        onClick={() => {
-          setPrefs({ tourSeen: false });
-          router.push('/dashboard/walkthrough');
-        }}
+        onClick={() => router.push('/dashboard/walkthrough')}
         className="sr-card sr-hover flex min-h-[52px] w-full items-center gap-[11px] px-[15px] text-left"
       >
         <Icon name="ph ph-hand-waving" className="flex-none text-[16px] text-accent-300" />

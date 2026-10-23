@@ -31,6 +31,8 @@ export interface Prefs {
   homeSections: Record<HomeSection, boolean>;
   notifTriggers: Record<NotifTrigger, boolean>;
   tourSeen: boolean;
+  /** The walkthrough: on, and which step. Survives navigation and reloads. */
+  tour: { on: boolean; i: number };
 }
 
 const DEFAULTS: Prefs = {
@@ -38,7 +40,8 @@ const DEFAULTS: Prefs = {
   reduceMotion: false,
   homeSections: { standings: true, feed: true, badges: true, church: true },
   notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true },
-  tourSeen: false
+  tourSeen: false,
+  tour: { on: false, i: 0 }
 };
 
 let current: Prefs = DEFAULTS;

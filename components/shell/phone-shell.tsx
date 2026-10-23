@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { switchRole } from '@/app/actions';
 import { canScore } from '@/lib/permissions';
+import { TourCard } from '@/components/shell/tour';
 import { chatThreadsFor } from '@/lib/selectors';
 import { useApp, useAppApi, useApprovedRoles } from '@/lib/store/provider';
 import { PERSONAS, type Persona } from '@/lib/types/domain';
@@ -324,6 +325,7 @@ export function PhoneShell({ children }: { children: ReactNode }) {
           <Ready>{children}</Ready>
         </div>
         <Toast />
+        <TourCard />
         <TabBar />
         {/* Bottom sheets and overlays portal here so they cover the phone,
             not the scrolling screen under them. */}

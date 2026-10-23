@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { ytEmbedUrl } from '@/components/screens/games';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf, tint } from '@/components/ui';
+import { kindOf } from '@/lib/library';
 import { canApprove, canScore } from '@/lib/permissions';
 import { TIER_COLOR, catOf, computeBadges, eventLabel, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
@@ -79,6 +80,7 @@ function Weeks() {
     const v = c.memoryVerses.find((x) => x.week === w);
     if (v) items.push({ icon: 'ph ph-book-open-text', color: catOf(d, 'bible').color, label: v.ref, kind: 'Memory verse' });
     for (const g of d.smallGroups.filter((x) => x.weekNumber === w)) items.push({ icon: 'ph ph-users-four', color: 'var(--color-accent-400)', label: g.title, kind: 'Small group' });
+    for (const p of d.libraryPlaced.filter((x) => x.week === w)) items.push({ icon: kindOf(p.kind).icon, color: 'var(--color-accent-300)', label: p.title, kind: 'From the library' });
     if (w === c.weekNumber) for (const ch of d.challenges) items.push({ icon: 'ph ph-target', color: catOf(d, 'visitors').color, label: ch.title, kind: ch.kind + ' challenge' });
     if (iso) for (const e of d.events.filter((x) => x.status !== 'proposed' && x.iso && x.iso > iso && (!next || x.iso < next))) items.push({ icon: 'ph ph-calendar-dots', color: e.color, label: e.title + ' · ' + eventLabel(e), kind: 'Event' });
     const date = iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';

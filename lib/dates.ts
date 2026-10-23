@@ -51,3 +51,17 @@ export function ago(ts: number, now = Date.now()): string {
 /** The clock, for event handlers. (Render code reads time through useNow so
  *  a render stays a pure function of state.) */
 export const nowMs = () => Date.now();
+
+/** Which voting period a moment falls in: the season, the day, or the ISO week. */
+export function periodKey(freq: string | undefined, now = new Date()): string {
+  if (freq === 'daily') return isoDay(now);
+  if (freq === 'weekly') {
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const day = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+    return d.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
+  }
+  return 'season';
+}
