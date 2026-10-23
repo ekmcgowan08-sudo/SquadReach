@@ -2,6 +2,7 @@
 /* Reports: the season as spreadsheets. Each one is built from the same rows
    the app reads — nothing here is a stored total. */
 import { Section } from '@/components/console/kit';
+import { DeliveriesSection, ReportBuilderSection } from '@/components/console/report-builder';
 import { Btn, Icon } from '@/components/ui';
 import { downloadCsv, toCsv } from '@/lib/csv';
 import { bibleStats } from '@/lib/bible';
@@ -121,7 +122,10 @@ export function ReportsTab() {
   ];
 
   return (
-    <Section title="Reports" sub="Download any of these as a spreadsheet. They open in Excel, Numbers or Google Sheets.">
+    <>
+    <ReportBuilderSection />
+    <DeliveriesSection />
+    <Section title="Quick downloads" sub="The season as spreadsheets. They open in Excel, Numbers or Google Sheets.">
       <div className="grid gap-3 sm:grid-cols-2">
         {reports.map((r) => (
           <div key={r.id} className="flex flex-col gap-2 rounded-lg border border-neutral-800 p-4">
@@ -136,7 +140,8 @@ export function ReportsTab() {
             </Btn>
           </div>
         ))}
-      </div>
+            </div>
     </Section>
+    </>
   );
 }

@@ -29,4 +29,5 @@ EXTRA.update({
     'parents': ('ParentsScreen', 'parents', 'parents'),
     'door': ('DoorKioskScreen', 'door', 'door'),
     'here': ('HereScreen', 'door', 'member'),
+    'report': ('ReportViewScreen', 'report-view', 'member'),
 })

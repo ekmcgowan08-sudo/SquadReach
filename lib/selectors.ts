@@ -7,7 +7,8 @@ import { cycleNeeds, reminders, selfName, type CycleNeed } from '@/lib/cycle';
 import { personaDef, type Persona } from '@/lib/types/domain';
 import { bibleStats } from '@/lib/bible';
 import { isoDay } from '@/lib/dates';
-import type { AudienceId, Membership, MinistryData, MinistryEvent, RsvpCount, RunSheetItem } from '@/lib/types/model';
+import type { AudienceId, Delivery, Membership, MinistryData, MinistryEvent, RsvpCount, RunSheetItem } from '@/lib/types/model';
+import { deliveriesDueToday, deliveryRecipientGroups, deliverySent, deliverySentence, reportSpec } from '@/lib/report-builder';
 
 export const teamOf = (d: MinistryData, id: string | null | undefined) =>
   d.teams.find((t) => t.id === id) ?? { id: id ?? '', name: 'Removed team', color: 'var(--color-neutral-600)', mascotName: '', mascotStory: '', sort: 99 };
@@ -127,6 +128,15 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
         list.push({ icon: 'ph ph-swap', label: 'Your swap for ' + s.role.toLowerCase() + ' was ' + s.status, meta: s.status === 'approved' ? (s.to ?? 'Someone') + ' takes it' : 'You are still on', href: '/dashboard/serving', trigger: 'nightCycle' });
     }
     for (const n of myCycleNeeds(d, m, now)) list.push({ icon: 'ph ' + n.icon, label: n.title, meta: n.meta, href: n.href, trigger: 'nightCycle' });
+  }
+  /* Reports: what went out to me, and (for leaders) what goes out today. */
+  {
+    const now = Date.now();
+    for (const x of myDeliveries(d, m, now)) {
+      const rep = reportSpec(d, x.delivery.report);
+      if (rep) list.push({ icon: 'ph ph-file-text', label: rep.label + (x.team ? ' · ' + x.label : ''), meta: 'Your scheduled report is in', href: '/dashboard/report?d=' + x.delivery.id + (x.team ? '&team=' + x.team : ''), trigger: 'reportDelivery' });
+    }
+    if (canApprove(p)) for (const dl of deliveriesDueToday(d, now)) list.push({ icon: 'ph ph-paper-plane-tilt', label: 'Going out today: ' + deliverySentence(d, dl), meta: 'Change or pause it in Console · Reports', href: '/console?tab=reports', trigger: 'reportDelivery' });
   }
   const bible = myBible(d, m);
   /* Staff who have never practiced aren't nagged about a streak they never started. */
@@ -296,3 +306,16 @@ export function myCycleNeeds(d: MinistryData, m: Membership, now: number): Cycle
  *  name — the database checks swaps and availability against it. The demo
  *  matches "Coach Chris" to crew "Chris Alder". */
 export const servingName = (d: MinistryData, m: Membership) => (m.mode === 'supabase' ? m.displayName : selfName(d, m.displayName));
+
+/** Deliveries that have reached this person in their current period, with
+ *  the copy that is theirs (their squad's, or the whole ministry's). */
+export function myDeliveries(d: MinistryData, m: Membership, now: number) {
+  const me = servingName(d, m);
+  const mine = new Set([me, m.displayName, ...(m.studentName ? [m.studentName + ' (captain)'] : [])]);
+  const out: { delivery: Delivery; team: string | null; label: string }[] = [];
+  for (const dl of d.deliveries ?? []) {
+    if (!deliverySent(d, dl, now)) continue;
+    for (const g of deliveryRecipientGroups(d, dl)) if (g.names.some((n) => mine.has(n))) out.push({ delivery: dl, team: g.team, label: g.label });
+  }
+  return out;
+}

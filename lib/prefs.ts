@@ -14,7 +14,8 @@ export const NOTIF_TRIGGERS = [
   { key: 'runSheet', label: 'Run sheet assignments', hint: 'When the huddle sheet is published' },
   { key: 'streakBreak', label: 'Streak about to break', hint: 'Nudge before it resets' },
   { key: 'bibleReminder', label: 'Bible reading reminder', hint: 'When review is due' },
-  { key: 'nightCycle', label: 'The week around the night', hint: 'Prep reminders, swaps, the door, follow-ups' }
+  { key: 'nightCycle', label: 'The week around the night', hint: 'Prep reminders, swaps, the door, follow-ups' },
+  { key: 'reportDelivery', label: 'Scheduled reports', hint: 'When one reaches you, and what goes out today' }
 ] as const;
 export type NotifTrigger = (typeof NOTIF_TRIGGERS)[number]['key'];
 
@@ -44,7 +45,7 @@ const DEFAULTS: Prefs = {
   theme: 'dark',
   reduceMotion: false,
   homeSections: { standings: true, feed: true, badges: true, church: true },
-  notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true, nightCycle: true },
+  notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true, nightCycle: true, reportDelivery: true },
   tourSeen: false,
   tour: { on: false, i: 0 },
   cyclePreview: null,
