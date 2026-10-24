@@ -112,10 +112,10 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
         <div className="sr-card flex flex-wrap items-center gap-4 px-5 py-4">
           <div className="min-w-[260px] flex-1">
             <div className="text-[14px] font-medium text-neutral-100">Seven years, nothing in them yet</div>
-            <div className="mt-1 text-[12.5px] leading-[1.5] text-neutral-400 text-pretty">Check the basics first — the August that starts year one, your gathering night, the grade students enter at and the weeks you don’t meet. Then add to any cell below, or start from suggestions drawn from the gaps.</div>
+            <div className="mt-1 text-[12.5px] leading-[1.5] text-neutral-400 text-pretty">Six short steps set the range, your groups, the night you meet and the breaks you take. Then add to any cell below, or start from suggestions drawn from the gaps.</div>
           </div>
-          <Btn variant="secondary" className="px-4 text-[12px]" href="/planner/settings">
-            Plan settings
+          <Btn className="px-4 text-[12px]" href="/planner/setup">
+            Set up the plan
           </Btn>
           <Btn variant="ghost" className="px-4 text-[12px]" href="/planner/roadmap?view=suggestions">
             See suggestions

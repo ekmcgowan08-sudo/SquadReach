@@ -3,12 +3,13 @@
    its lanes, the blocks a night is built from, how the year is cut into
    seasons, the debrief questions and the volunteer roles. Changes apply for
    everyone on staff; each is one undo step and lands in Recent changes. */
+import Link from 'next/link';
 import { useState } from 'react';
 import { useSaveConfig } from '@/components/console/kit';
 import { PageHead, Panel, Toggle, UndoButtons, usePlanSave } from '@/components/planner/kit';
 import { Btn, Icon, cx } from '@/components/ui';
 import { advent1, addDays, easter } from '@/lib/liturgical';
-import { BLOCK_DEFAULTS, DEBRIEF_DEFAULTS, HUES, LANE_DEFAULTS, SEASON_DEFAULTS, laneColor, nightsOf, seasonsOf, yearLabel, type SeasonAnchor } from '@/lib/plan';
+import { BLOCK_DEFAULTS, DEBRIEF_DEFAULTS, HUES, LANE_DEFAULTS, SEASON_DEFAULTS, laneColor, nightsOf, seasonsOf, yearLabel, type SeasonAnchor, TRANSLATIONS } from '@/lib/plan';
 import { uid } from '@/lib/store/app-store';
 import { useApp } from '@/lib/store/provider';
 
@@ -69,7 +70,15 @@ function Basics() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   return (
-    <Panel title="Plan basics" meta={yearLabel(st.startYear, 0) + ' – ' + yearLabel(st.startYear, 6)}>
+    <Panel
+      title="Plan basics"
+      meta={yearLabel(st.startYear, 0) + ' – ' + yearLabel(st.startYear, 6)}
+      right={
+        <Link href="/planner/setup" className="text-[12px] text-accent-300">
+          {st.setupAt ? 'Run setup again' : 'Guided setup'}
+        </Link>
+      }
+    >
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="field">
           <span className="sr-label">Plan name</span>
@@ -100,7 +109,7 @@ function Basics() {
         <label className="field">
           <span className="sr-label">Bible translation</span>
           <select className="input" value={st.translation} onChange={(e) => set({ translation: e.target.value }, 'Translation is now ' + e.target.value)}>
-            {['KJV', 'ASV', 'RVR1909', 'NIV', 'ESV', 'CSB', 'NLT'].map((x) => (
+            {TRANSLATIONS.map((x) => (
               <option key={x}>{x}</option>
             ))}
           </select>

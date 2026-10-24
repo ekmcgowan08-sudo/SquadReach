@@ -3,6 +3,7 @@
    adults and students who hold a role in the app. */
 import Link from 'next/link';
 import { useState } from 'react';
+import { RolesMatrix } from '@/components/console/roles-matrix';
 import { Section } from '@/components/console/kit';
 import { Btn, Icon } from '@/components/ui';
 import { DEMO_PEOPLE } from '@/lib/data/seed';
@@ -189,6 +190,7 @@ export function PeopleTab() {
           <PeopleList people={d.people ?? []} />
         )}
       </Section>
+      <RolesMatrix />
     </>
   );
 }

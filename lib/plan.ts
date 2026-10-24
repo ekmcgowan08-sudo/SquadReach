@@ -124,6 +124,16 @@ export interface PlanSettings {
   blackouts: [string, string][];
   liturgical: boolean;
   translation: string;
+  /** From the setup: the groups the ministry runs, by grade. */
+  groups?: { name: string; low: number; high: number }[];
+  church?: string;
+  denomination?: string;
+  tradition?: string;
+  doctrine?: string;
+  values?: string;
+  /** What should be true of a graduate; coverage is read against these. */
+  outcomes?: string[];
+  setupAt?: number;
 }
 
 export interface Plan {
@@ -159,6 +169,9 @@ export const LANE_DEFAULTS: PlanLane[] = [
   { id: 'admin', name: 'Admin deadlines', short: 'Admin', hue: 240, on: true },
   { id: 'goals', name: 'Goals & evaluation', short: 'Goals', hue: 62, on: true }
 ];
+
+export const TRANSLATIONS = ['KJV', 'ASV', 'RVR1909', 'NIV', 'ESV', 'CSB', 'NLT', 'NRSVue', 'NASB', 'NKJV'];
+export const TRADITIONS = ['Not specified', 'Evangelical', 'Reformed', 'Wesleyan / Methodist', 'Baptist', 'Anglican', 'Lutheran', 'Pentecostal / Charismatic', 'Catholic', 'Orthodox', 'Restorationist', 'Other'];
 
 export const HUES = [292, 330, 208, 258, 168, 138, 42, 96, 18, 312, 240, 62];
 export const laneColor = (hue: number) => 'oklch(0.63 0.085 ' + hue + ')';

@@ -33,7 +33,13 @@ Things worth trying first:
 | Centre **Score** tab | The score pad. Coaches’ entries wait for approval; scorekeepers’ post at once |
 | More → **Walkthrough** (as a leader) | A guided tour of a week, in nine chapters |
 | `/dashboard/games` → `/projector` | Start a heat on the phone and watch it on the room screen |
-| `/console` (as a leader) | The desktop console: setup, squads, scoring, people, the huddle sheet, reports |
+| More → **Prep week**, **Night recap**, **Serving & swaps**, **Message parents**, **Door kiosk** | The week around the night. In demo mode, the “Preview as of” chips move the clock through the week |
+| `/f/demo-reid-family` | A parent’s private family link: tonight’s card, permission slips to sign, messages. No account |
+| `/console` (as a leader) | The desktop console: setup, the season interview, squads, scoring, people (with a who-can-do-what table read off the real permission checks), the huddle sheet, reports and their delivery schedule, the walkthrough |
+| `/planner` (as a leader) | The desk planner: tonight, prep and recap, people, the seven-year roadmap, the ministry year, season and night, coverage, the liturgical year, settings. ⌘K jumps anywhere |
+| `/planner/setup` | The plan’s guided setup: the seven-year range, groups, the night you meet and its breaks, church identity, lanes and goals |
+| `/planner/live?tab=run` → **Open the room screen** | Live ministry time. Open an activity and a pretend room answers; the room screen in the other window follows |
+| More → **Live** | The same, on the phone: the leader’s console, or the answer pad for everyone else |
 | `/b/SR-9K42` | The public parent board, with no sign-in (More → Parent Board Link shows and rotates it) |
 
 To reset the demo, clear the site’s storage for localhost.
@@ -46,8 +52,8 @@ To reset the demo, clear the site’s storage for localhost.
 | `npm run build` / `npm start` | Production build and server |
 | `npm run lint` | ESLint, including the React Compiler rules |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Vitest unit tests (scoring, feeds, outbox, game clock, CSV) |
-| `npm run db:test` | Applies the migration to a throwaway Postgres and runs the RLS tests. Needs Postgres 15+ binaries on `PATH` or under `/usr/lib/postgresql/*/bin` |
+| `npm test` | Vitest unit tests (scoring, feeds, outbox, game clock, the night cycle, seasons, reports, plan dates and insights, live ministry time) |
+| `npm run db:test` | Applies every migration to a throwaway Postgres and runs the RLS tests in `supabase/tests/*.test.sql`. Needs Postgres 15+ binaries on `PATH` or under `/usr/lib/postgresql/*/bin` |
 
 ## Running against Supabase
 
@@ -58,15 +64,16 @@ To reset the demo, clear the site’s storage for localhost.
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
    ```
 3. Apply the schema. With the Supabase CLI linked to your project, run
-   `supabase db push`. You can also paste
-   `supabase/migrations/20261023000000_squadrise.sql` into the SQL editor.
-   The migration:
-   - creates every table, with RLS on each one;
-   - creates the RPCs (`create_ministry`, `request_access`, `decide_access`,
-     `public_board`, `rotate_invite_code`, `rsvp_counts`, and others);
-   - adds `score_entries`, `nights`, `chat_messages` and `rsvps` to the
-     `supabase_realtime` publication;
-   - creates the private `media` storage bucket and its policies.
+   `supabase db push`. You can also paste each file in
+   `supabase/migrations/` into the SQL editor, in order:
+
+   | Migration | What it adds |
+   | --- | --- |
+   | `20261023000000_squadrise.sql` | Every core table with RLS; the RPCs (`create_ministry`, `request_access`, `decide_access`, `public_board`, `rotate_invite_code`, `rsvp_counts` and others); realtime on `score_entries`, `nights`, `chat_messages`, `rsvps`; the private `media` bucket |
+   | `20261023120000_night_cycle.sql` | The week around the night: reminders, follow-ups, notes, pickup, door flags, serving schedule, availability, swaps, volunteer invites, families and their private links, permission slips, parent messages; `self_check_in`, `family_view`, `family_sign`, `family_read` |
+   | `20261023130000_roles_and_messages.sql` | Only an owner makes an owner; direct messages and the chat directory |
+   | `20261023140000_live_ministry_time.sql` | `live_rooms` and `live_answers` for live ministry time (both on realtime); the plan and season-interview documents become leader-only |
+
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
    - add `<origin>/auth/callback` to the redirect URLs.
@@ -83,15 +90,26 @@ Set both variables or neither. With only one set, the app stays in demo mode.
 
 ```
 app/                 Routes (App Router). /dashboard/* is the phone app,
-                     /console the desktop console, /projector the room screen,
-                     /b/<code> the public board, /login /welcome /join auth.
-components/screens/  One file per area (night, games, bible, calendar, chat…)
-components/shell/    Phone shell, tab bar, sheets, the walkthrough
+                     /console the desktop console, /planner the desk planner,
+                     /projector and /live/room the room screens, /b/<code> the
+                     public board, /f/<token> a family's private link,
+                     /login /welcome /join auth.
+components/screens/  One file per phone area (night, games, bible, calendar, chat…)
+components/console/  The console's tabs
+components/planner/  The planner's screens and its shell (nav, ⌘K, undo/redo)
+components/live/     Live ministry time: console, room screen, student pad, setup
+components/shell/    Phone shell, tab bar, the walkthrough
 lib/types/domain.ts  Roles and the role lists every gate reads
 lib/permissions.ts   Every gate as a named question (canScore, canApprove…)
 lib/scoring.ts       Standings, category totals, student ranks — all derived
 lib/feeds.ts         Automatic points (attendance, Bible practice, challenges)
 lib/game.ts          Game clock, heats, penalties, placement awards
+lib/cycle.ts         The week around the night: times, reminders, follow-ups, serving, families
+lib/plan.ts          The seven-year plan: years, seasons, nights, teaching, service order
+lib/plan-insights.ts Coverage, checks, suggestions and the publish diff — derived, never stored
+lib/liturgical.ts    Easter (Meeus), Advent and the church year
+lib/live.ts          Live ministry time: tallies, scoring, what the room may see
+lib/report-builder.ts Reports from an allow-list of fields, and their delivery schedule
 lib/store/           Zustand store: award(), the offline outbox, actions
 lib/data/            Backend interface, with demo (localStorage) and Supabase versions
 supabase/            Migration and RLS tests
@@ -115,27 +133,62 @@ Rules the code holds to:
   connection says so and isn’t faked. The service worker is network-first
   and caches no pages: a stale score during a live event is worse than no
   offline support.
+- **Derived, not stored.** Standings, coverage, plan checks, suggestions and
+  what a publish would change are all computed when read. Three statuses
+  only — healthy, attention needed, gap — each with its reason, and no
+  composite score anywhere.
+- **Suggest, never act.** Plan suggestions are rule-based drafts with their
+  reason and passage references. Adding one makes a dashed draft; confirming
+  it, publishing, and messaging always take a leader’s tap.
 - **Per-device preferences** (theme, reduced motion, home sections,
-  notification triggers) live in `localStorage` and apply before first
-  paint.
+  notification triggers, one-pager paper) live in `localStorage` and apply
+  before first paint.
+
+## Decisions made along the way
+
+Where the prototype left a call open, the build took the safer default:
+
+- **Only an owner makes an owner.** Leaders manage everyone else
+  (`members_manage_owner`, `members_manage_leader`).
+- **Direct messages.** Adults can message each other privately. Any thread
+  with a student in it is an open door: leaders can read it but not post in
+  it. Students can’t message each other.
+- **Library placements are copies.** Placing a shared unit copies it into
+  your ministry with credit to where it came from, so the original can
+  change or disappear without breaking your season.
+- **Parents get a private link, not an account.** `/f/<token>` shows one
+  student’s card, the slips to sign and messages to read, through
+  security-definer RPCs that check the token. Rotating it ends the old link.
+- **Reports come from an allow-list.** The builder can only reach the fields
+  in `REPORT_SOURCES`. A delivery works out its recipients when it sends, so
+  a trade or a new captain never leaves a stale mailing list. A send is
+  idempotent on (delivery, period).
+- **The plan is the leaders’ document.** It holds debrief notes and trivia
+  answers, so only leaders read it (the season interview too). Everyone
+  else sees what the app publishes from it.
+- **Live ministry time.** Answers can only be written while an activity is
+  open (with three seconds’ grace after its timer). The database stamps
+  each answer’s time and the first name shown, so speed and names can’t be
+  faked. The right answer stays off every phone until the reveal, and
+  cloud words wait for a leader. Points rank the room for the night; they
+  don’t post to the squad board.
 
 ## Not built yet / open decisions
 
-These came up while building from the prototype and need a product call:
-
-- **Parents and congregation members** are demo personas only. The database
-  has roles from `member` to `owner`. Parents get the public board
-  (`/b/<code>`) instead of an account.
-- **Direct messages** work in demo mode only. In Supabase mode, chat is the
-  squad and staff threads.
+- **Congregation members** are a demo persona only. Parents have the family
+  link and the public board.
+- **Report delivery by email.** Deliveries arrive in the app as
+  notifications. Sending them by email needs a scheduled job and an email
+  provider on the server.
 - **Game film clips** stay on the device that recorded them (IndexedDB).
   Photos upload to the `media` bucket. Clips would need a size and retention
   policy before they upload too.
 - **Library sharing** goes out to other ministries with no review step.
-- **Who can grant owner.** The `members_manage` policy lets any leader add,
-  change or remove memberships, including making someone an owner. The join
-  flow can’t request owner, but if only owners should grant it, the policy
-  needs to be tightened.
-- **Prototype screens not built**: the year-planning boards (seven-year plan,
-  ministry year board), prep week, the post-night recap flow, serving
-  rotations and parent messaging.
+- **The plan saves whole.** It is one document, so two leaders editing it at
+  the same moment means the last save wins. Fine for a staff of a few;
+  a bigger team would want it split into rows.
+- **Suggestions are rule-based.** A model-backed version would go through the
+  same review gate; it isn’t wired.
+- **Live ministry time on the projector** is the `/live/room` page on the
+  computer that drives it, or the leader’s phone mirrored with AirPlay or
+  Cast. There is no casting built in.
