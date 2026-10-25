@@ -89,6 +89,12 @@ To reset the demo, clear the site’s storage for localhost.
 
 Set both variables or neither. With only one set, the app stays in demo mode.
 
+### Ideas from Claude (optional)
+
+Set `ANTHROPIC_API_KEY` on the server. Leaders then get “Ask Claude for
+ideas” on Planner › Roadmap › Suggestions (`/api/planner/suggest`, one ask per
+leader every 30 seconds). The demo is off unless `PLANNER_AI_IN_DEMO=1`.
+
 ### Report emails (optional)
 
 The console's delivery schedule always lands in people's notifications. To
@@ -130,6 +136,7 @@ lib/game.ts          Game clock, heats, penalties, placement awards
 lib/cycle.ts         The week around the night: times, reminders, follow-ups, serving, families
 lib/plan.ts          The seven-year plan: years, seasons, nights, teaching, service order
 lib/plan-insights.ts Coverage, checks, suggestions and the publish diff — derived, never stored
+lib/plan-ai.ts       What Claude is told about the plan, and the checks every idea passes
 lib/merge3.ts        Three-way merge for documents leaders edit together (lib/data/doc-sync.ts saves them)
 lib/liturgical.ts    Easter (Meeus), Advent and the church year
 lib/live.ts          Live ministry time: tallies, scoring, what the room may see
@@ -162,8 +169,8 @@ Rules the code holds to:
   what a publish would change are all computed when read. Three statuses
   only — healthy, attention needed, gap — each with its reason, and no
   composite score anywhere.
-- **Suggest, never act.** Plan suggestions are rule-based drafts with their
-  reason and passage references. Adding one makes a dashed draft; confirming
+- **Suggest, never act.** Plan suggestions — rule-based, or from Claude on
+  request — are drafts with their reason and passage references. Adding one makes a dashed draft; confirming
   it, publishing, and messaging always take a leader’s tap.
 - **Per-device preferences** (theme, reduced motion, home sections,
   notification triggers, one-pager paper) live in `localStorage` and apply
@@ -191,6 +198,16 @@ Where the prototype left a call open, the build took the safer default:
 - **The plan is the leaders’ document.** It holds debrief notes and trivia
   answers, so only leaders read it (the season interview too). Everyone
   else sees what the app publishes from it.
+- **Ideas from Claude go through the same gate as every suggestion.** With
+  `ANTHROPIC_API_KEY` set, Suggestions has an “Ask Claude for ideas” button.
+  The server reads the plan as the signed-in leader (no student names),
+  asks for series that fill its gaps in the church's tradition and
+  translation, and checks every answer before showing it: passages must be
+  real references, no quotations, known coverage tags only, no repeats of
+  the plan. Anything that fails is dropped, not repaired. An idea becomes a
+  dashed draft only when a leader taps it. If the model declines, a
+  fallback model is tried server-side; if that declines too, the leader is
+  told so.
 - **Leaders edit together without overwriting each other.** The plan,
   reports and other ministry documents carry a revision. A save only lands
   over the revision the phone last saw; otherwise it merges onto what's
@@ -213,8 +230,6 @@ Where the prototype left a call open, the build took the safer default:
   Photos upload to the `media` bucket. Clips would need a size and retention
   policy before they upload too.
 - **Library sharing** goes out to other ministries with no review step.
-- **Suggestions are rule-based.** A model-backed version would go through the
-  same review gate; it isn’t wired.
 - **Live ministry time on the projector** is the `/live/room` page on the
   computer that drives it, or the leader’s phone mirrored with AirPlay or
   Cast. There is no casting built in.

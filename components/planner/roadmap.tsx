@@ -9,6 +9,7 @@ import { ItemPanel, KINDS } from '@/components/planner/item-panel';
 import { DismissBox, HEALTH, PageHead, Panel, UndoButtons, usePlanSave } from '@/components/planner/kit';
 import { Btn, Icon, cx } from '@/components/ui';
 import { advent1, easter } from '@/lib/liturgical';
+import type { AiSuggestion } from '@/lib/plan-ai';
 import { planChecks, publishDiff, signature, suggestions, type Health } from '@/lib/plan-insights';
 import { MONTHS_FROM_AUG, laneColor, monthIndex, nightsOf, teachingOf, yearLabel, yearOf, type PlanItem } from '@/lib/plan';
 import { isoDay, nowMs } from '@/lib/dates';
@@ -337,8 +338,10 @@ function Suggestions({ onShow }: { onShow: (y: number) => void }) {
           </div>
         ))}
       </div>
-      <Panel title="Set aside" meta={set.length ? set.length + '' : ''}>
-        {!set.length ? <div className="text-[12px] text-neutral-500">Nothing set aside.</div> : null}
+      <div className="flex flex-col gap-5">
+        <ClaudeIdeas onShow={onShow} />
+        <Panel title="Set aside" meta={set.length ? set.length + '' : ''}>
+          {!set.length ? <div className="text-[12px] text-neutral-500">Nothing set aside.</div> : null}
         {set.map((d) => (
           <div key={d.id} className="flex items-start gap-2 border-t border-divider pt-2 text-[12px] first:border-t-0 first:pt-0">
             <div className="min-w-0 flex-1">
@@ -352,8 +355,70 @@ function Suggestions({ onShow }: { onShow: (y: number) => void }) {
             </button>
           </div>
         ))}
-      </Panel>
+        </Panel>
+      </div>
     </div>
+  );
+}
+
+/* Ideas from Claude, on request: checked on the server (lib/plan-ai), shown
+   here, never stored until a leader adds one as a dashed draft. */
+function ClaudeIdeas({ onShow }: { onShow: (y: number) => void }) {
+  const p = useApp((s) => s.data.plan);
+  const mode = useApp((s) => s.membership.mode);
+  const save = usePlanSave();
+  const [state, setState] = useState<{ busy: boolean; error: string | null; ideas: AiSuggestion[] | null; dropped: number }>({ busy: false, error: null, ideas: null, dropped: 0 });
+  const sy = p.settings.startYear;
+  const ask = async () => {
+    setState((x) => ({ ...x, busy: true, error: null }));
+    try {
+      const r = await fetch('/api/planner/suggest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mode === 'demo' ? { plan: p } : {}) });
+      const out = (await r.json().catch(() => ({}))) as { ideas?: AiSuggestion[]; dropped?: number; error?: string };
+      if (!r.ok || !out.ideas) setState({ busy: false, error: out.error ?? 'Something went wrong (' + r.status + ').', ideas: null, dropped: 0 });
+      else setState({ busy: false, error: null, ideas: out.ideas, dropped: out.dropped ?? 0 });
+    } catch {
+      setState({ busy: false, error: 'Couldn’t reach the server.', ideas: null, dropped: 0 });
+    }
+  };
+  const ideas = (state.ideas ?? []).filter((s) => !p.dismissed.some((d) => d.id === s.id) && !p.items.some((i) => i.title.trim().toLowerCase() === s.title.toLowerCase()));
+  return (
+    <Panel title="Ideas from Claude" meta={state.ideas ? ideas.length + ' to review' : ''}>
+      <div className="text-[12px] leading-[1.5] text-neutral-500 text-pretty">Claude reads this plan — your tradition, translation, each year’s teaching and the coverage gaps — and suggests series to fill them. Passages are references only; nothing is added until you tap it.</div>
+      <Btn variant="secondary" className="self-start px-3 text-[12px]" disabled={state.busy} onClick={() => void ask()}>
+        <Icon name={state.busy ? 'ph ph-circle-notch animate-spin' : 'ph ph-sparkle'} className="mr-[6px] text-[13px]" />
+        {state.busy ? 'Reading the plan…' : state.ideas ? 'Ask again' : 'Ask Claude for ideas'}
+      </Btn>
+      {state.error ? <div className="text-[12px] leading-[1.5] text-[oklch(0.8_0.09_24)]">{state.error}</div> : null}
+      {state.ideas && !ideas.length ? <div className="text-[12px] text-neutral-500">Nothing new to suggest this time.</div> : null}
+      {state.dropped ? <div className="text-[11px] text-neutral-500">{state.dropped} more {state.dropped === 1 ? 'idea was' : 'ideas were'} left out for not citing real passages, quoting text, or repeating the plan.</div> : null}
+      {ideas.map((s) => (
+        <div key={s.id} className="flex flex-col gap-2 rounded-md border border-dashed border-accent-700 px-3 py-3">
+          <div className="text-[10.5px] font-semibold uppercase tracking-[.1em] text-accent-300">Suggested by Claude · review before adding</div>
+          <div className="flex items-baseline gap-2">
+            <span className="flex-1 text-[13.5px] font-medium text-neutral-100">{s.title}</span>
+            <span className="text-[11px] text-neutral-500">
+              {yearLabel(sy, s.year)} · {s.size} weeks{s.month !== undefined ? ' · from ' + MONTHS_FROM_AUG[s.month] : ''}
+            </span>
+          </div>
+          <div className="text-[12.5px] leading-[1.5] text-neutral-200">{s.bigIdea}</div>
+          <div className="text-[12px] leading-[1.5] text-neutral-400 text-pretty">{s.reason}</div>
+          <div className="text-[11px] text-neutral-500">Passages: {s.cites.join('; ')}</div>
+          <div className="flex flex-wrap gap-2">
+            <Btn
+              variant="secondary"
+              className="px-3 text-[12px]"
+              onClick={() => save((x) => void x.items.push({ id: uid(), lane: 'teach', year: s.year, title: s.title, kind: 'series', size: s.size, status: 'draft', notes: '', tags: s.tags, month: s.month, refs: s.cites.join('; '), bigIdea: s.bigIdea, suggested: { reason: s.reason, rule: 'claude', cites: s.cites } }), 'Add Claude’s idea: ' + s.title)}
+            >
+              Add as a draft
+            </Btn>
+            <Btn variant="ghost" className="px-3 text-[12px]" onClick={() => onShow(s.year)}>
+              Show on board
+            </Btn>
+          </div>
+          <DismissBox id={s.id} />
+        </div>
+      ))}
+    </Panel>
   );
 }
 

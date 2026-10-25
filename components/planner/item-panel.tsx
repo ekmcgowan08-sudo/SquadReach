@@ -10,6 +10,8 @@ import { MONTHS_FROM_AUG, laneColor, yearLabel, type ItemKind, type PlanItem } f
 import { uid } from '@/lib/store/app-store';
 import { useApp } from '@/lib/store/provider';
 
+const RULES: Record<string, string> = { 'teaching-gap': 'a teaching gap', 'yearly-rhythm': 'a yearly rhythm', claude: 'by Claude' };
+
 export const KINDS: Record<ItemKind, { label: string; size: string; ref: string; icon: string }> = {
   series: { label: 'Teaching series', size: 'Weeks', ref: 'Rescheduling moves the series, not its lessons — content, assignments, attendance and debriefs stay put.', icon: 'ph-book-open-text' },
   event: { label: 'Event', size: 'Days', ref: 'Where an event sits in the plan. Registration and RSVPs live on the calendar event.', icon: 'ph-calendar-star' },
@@ -57,7 +59,7 @@ export function ItemPanel({ id, onClose, onShow }: { id: string; onClose: () => 
         <input className="input text-[16px] font-medium" value={it.title} onChange={(e) => set({ title: e.target.value }, 'Rename ' + it.title, 'title:' + id)} aria-label="Title" />
         {it.suggested ? (
           <div className="rounded-md border border-dashed border-accent-600 px-3 py-[10px] text-[12px] leading-[1.5] text-neutral-300">
-            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[.1em] text-accent-300">Suggested · {it.suggested.rule}</div>
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[.1em] text-accent-300">Suggested · {RULES[it.suggested.rule] ?? it.suggested.rule}</div>
             {it.suggested.reason}
             {it.suggested.cites.length ? <div className="mt-1 text-neutral-500">Passages: {it.suggested.cites.join('; ')}</div> : null}
           </div>
