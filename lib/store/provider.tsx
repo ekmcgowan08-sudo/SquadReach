@@ -57,6 +57,14 @@ export function AppProvider({ membership, roles, children }: { membership: Membe
     window.addEventListener('pagehide', lastTick);
     document.addEventListener('visibilitychange', onVis);
 
+    st.backend.bind?.({
+      read: (key) => store.getState().data[key],
+      write: (key, value) =>
+        store.getState().mutate((d) => {
+          (d as unknown as Record<string, unknown>)[key] = value;
+        })
+    });
+
     const unsub = st.backend.subscribe((patch) => {
       const s = store.getState();
       if (patch.kind === 'entries') {

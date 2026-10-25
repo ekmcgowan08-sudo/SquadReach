@@ -6,7 +6,8 @@
    Score entries are the exception to "write as it happens": they go through
    the outbox, and pushEntries() is idempotent on the client-generated id, so
    a replay over a flaky connection can never double-post. */
-import type { Backend, RemotePatch, SyncEvent } from '@/lib/data/backend';
+import type { Backend, DocIO, DocKey, RemotePatch, SyncEvent } from '@/lib/data/backend';
+import { docSync } from '@/lib/data/doc-sync';
 import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
 import { logsFromLedger } from '@/lib/logs';
 import { supabaseLive } from '@/lib/data/supabase-live';
@@ -116,6 +117,14 @@ export function supabaseBackend(membership: Membership): Backend {
 
   let tonight = '';
 
+  /* Ministry documents several leaders edit: saved over the revision this
+     client last saw, merged when someone got there first (lib/data/doc-sync). */
+  const docs = docSync(async (key, value, rev) => {
+    const r = await db.rpc('save_doc', { p_org: org, p_key: key, p_value: value, p_rev: rev });
+    if (r.error) throw new Error(r.error.message);
+    return r.data as { ok: boolean; rev: number; value?: unknown };
+  });
+
   const must = <T,>(res: { data: T | null; error: { message: string } | null }): T => {
     if (res.error) throw new Error(res.error.message);
     return res.data as T;
@@ -161,7 +170,7 @@ export function supabaseBackend(membership: Membership): Backend {
           await db.from('organizations').update({ name: e.config.ministryName, config: e.config }).eq('id', org);
           return;
         case 'doc':
-          await db.from('ministry_docs').upsert({ org_id: org, key: e.key, value: e.value, updated_at: new Date().toISOString() });
+          await docs.save(e.key, e.value);
           return;
         case 'media': {
           const path = e.item.path ?? org + '/' + e.item.week + '/' + e.item.id;
@@ -383,7 +392,7 @@ export function supabaseBackend(membership: Membership): Backend {
         db.from('challenges').select('*').eq('org_id', org).order('created_at'),
         db.from('access_requests').select('*').eq('org_id', org).eq('status', 'pending').order('created_at'),
         db.from('activity_log').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(200),
-        db.from('ministry_docs').select('key, value').eq('org_id', org),
+        db.from('ministry_docs').select('key, value, rev').eq('org_id', org),
         db.from('practice_log').select('*').eq('org_id', org).gte('day', isoDay(since)).order('day', { ascending: false }).limit(5000),
         db.from('media_items').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(1000)
       ]);
@@ -453,8 +462,10 @@ export function supabaseBackend(membership: Membership): Backend {
       }));
       d.activityLog = ((log.data ?? []) as { id: string; line: string; created_at: string }[]).map((l) => ({ id: l.id, line: l.line, at: new Date(l.created_at).getTime() }));
 
-      for (const doc of (docs.data ?? []) as { key: string; value: unknown }[]) {
-        if (doc.key in d) (d as unknown as Record<string, unknown>)[doc.key] = doc.value;
+      for (const doc of (docs.data ?? []) as { key: string; value: unknown; rev: number }[]) {
+        if (!(doc.key in d)) continue;
+        (d as unknown as Record<string, unknown>)[doc.key] = doc.value;
+        docs.seed(doc.key as DocKey, doc.rev ?? 0, doc.value);
       }
       /* Who brought whom and who recited what live on the ledger's own rows. */
       Object.assign(d, logsFromLedger(d.ledger, config.meetingDates));
@@ -697,6 +708,10 @@ export function supabaseBackend(membership: Membership): Backend {
           const rec: Rsvp = { status: row.status, guests: row.guests ?? 0 };
           void db.rpc('rsvp_counts', { p_org: org }).then((c: { data: unknown }) => onRemote({ kind: 'rsvp', eventId: row.event_id!, name: row.name!, rec, counts: countsFrom(c.data) }));
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ministry_docs', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
+          const row = payload.new as { key?: DocKey; value?: unknown; rev?: number } | undefined;
+          if (row?.key && typeof row.rev === 'number') docs.absorb(row.key, row.rev, row.value);
+        })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'nights', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
           const row = payload.new as { meeting_date?: string; huddle?: MinistryData['huddle']; game?: MinistryData['game'] } | undefined;
           if (!row || row.meeting_date !== tonight) return;
@@ -709,7 +724,11 @@ export function supabaseBackend(membership: Membership): Backend {
       };
     },
 
-    live: supabaseLive(db, org, membership)
+    live: supabaseLive(db, org, membership),
+
+    bind(io: DocIO) {
+      docs.bind(io);
+    }
   };
   return backend;
 }

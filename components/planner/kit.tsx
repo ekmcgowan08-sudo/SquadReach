@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import { PushBanner, Ready, Toast } from '@/components/shell/phone-shell';
 import { Btn, Icon, cx } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
+import { merge3 } from '@/lib/merge3';
 import type { Health } from '@/lib/plan-insights';
 import type { Plan } from '@/lib/plan';
 import { uid } from '@/lib/store/app-store';
@@ -47,7 +48,11 @@ const ACTIONS = [
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /* ── undo / redo for the plan ─────────────────────────────────────────── */
-const hist = { undo: [] as { plan: Plan; label: string }[], redo: [] as { plan: Plan; label: string }[], v: 0 };
+/* A step remembers the plan before and after it. Undo is a three-way merge
+   back to `before`, so it reverts only what that step changed — never an
+   edit another leader made since. */
+type Step = { before: Plan; after: Plan; label: string };
+const hist = { undo: [] as Step[], redo: [] as Step[], v: 0 };
 const subs = new Set<() => void>();
 const bump = () => {
   hist.v++;
@@ -67,15 +72,17 @@ export function usePlanSave() {
   const api = useAppApi();
   return (recipe: (p: Plan) => void, label: string, opts?: { merge?: string; log?: boolean }) => {
     const before = api().data.plan;
-    const top = hist.undo[hist.undo.length - 1];
-    if (!(opts?.merge && top && top.label === opts.merge)) hist.undo.push({ plan: structuredClone(before), label: opts?.merge ?? label });
-    if (hist.undo.length > 80) hist.undo.shift();
-    hist.redo = [];
     api().mutate((x) => {
       recipe(x.plan);
       if (opts?.log) x.plan.changes = [{ id: uid(), at: nowMs(), by: api().membership.displayName, line: label }, ...x.plan.changes].slice(0, 40);
     });
-    api().emit({ kind: 'doc', key: 'plan', value: api().data.plan });
+    const after = api().data.plan;
+    const top = hist.undo[hist.undo.length - 1];
+    if (opts?.merge && top && top.label === opts.merge) top.after = after;
+    else hist.undo.push({ before, after, label: opts?.merge ?? label });
+    if (hist.undo.length > 80) hist.undo.shift();
+    hist.redo = [];
+    api().emit({ kind: 'doc', key: 'plan', value: after });
     bump();
   };
 }
@@ -83,11 +90,13 @@ export function usePlanSave() {
 export function usePlanUndo() {
   const api = useAppApi();
   usePlanHistory();
-  const swap = (from: typeof hist.undo, to: typeof hist.undo, verb: string) => {
+  const swap = (from: Step[], to: Step[], verb: string) => {
     const step = from.pop();
     if (!step) return;
-    to.push({ plan: structuredClone(api().data.plan), label: step.label });
-    api().mutate((x) => void (x.plan = step.plan));
+    to.push(step);
+    const back = verb === 'Undone';
+    const now = api().data.plan;
+    api().mutate((x) => void (x.plan = back ? merge3(step.after, step.before, now) : merge3(step.before, step.after, now)));
     api().emit({ kind: 'doc', key: 'plan', value: api().data.plan });
     api().say(verb + ': ' + lowerFirst(step.label));
     bump();

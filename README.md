@@ -73,6 +73,7 @@ To reset the demo, clear the site’s storage for localhost.
    | `20261023120000_night_cycle.sql` | The week around the night: reminders, follow-ups, notes, pickup, door flags, serving schedule, availability, swaps, volunteer invites, families and their private links, permission slips, parent messages; `self_check_in`, `family_view`, `family_sign`, `family_read` |
    | `20261023130000_roles_and_messages.sql` | Only an owner makes an owner; direct messages and the chat directory |
    | `20261023140000_live_ministry_time.sql` | `live_rooms` and `live_answers` for live ministry time (both on realtime); the plan and season-interview documents become leader-only |
+   | `20261025090000_doc_revisions.sql` | A revision on every ministry document, `save_doc` (writes only over the revision you saw), and realtime on `ministry_docs` |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -107,6 +108,7 @@ lib/game.ts          Game clock, heats, penalties, placement awards
 lib/cycle.ts         The week around the night: times, reminders, follow-ups, serving, families
 lib/plan.ts          The seven-year plan: years, seasons, nights, teaching, service order
 lib/plan-insights.ts Coverage, checks, suggestions and the publish diff — derived, never stored
+lib/merge3.ts        Three-way merge for documents leaders edit together (lib/data/doc-sync.ts saves them)
 lib/liturgical.ts    Easter (Meeus), Advent and the church year
 lib/live.ts          Live ministry time: tallies, scoring, what the room may see
 lib/report-builder.ts Reports from an allow-list of fields, and their delivery schedule
@@ -166,6 +168,13 @@ Where the prototype left a call open, the build took the safer default:
 - **The plan is the leaders’ document.** It holds debrief notes and trivia
   answers, so only leaders read it (the season interview too). Everyone
   else sees what the app publishes from it.
+- **Leaders edit together without overwriting each other.** The plan,
+  reports and other ministry documents carry a revision. A save only lands
+  over the revision the phone last saw; otherwise it merges onto what's
+  there (`lib/merge3.ts`: each side's changes kept, removals honoured unless
+  the other side edited the thing, mine wins only when both changed the same
+  value) and goes again. Other leaders' saves arrive over realtime and merge
+  into unsaved local edits. Undo reverts only its own step.
 - **Live ministry time.** Answers can only be written while an activity is
   open (with three seconds’ grace after its timer). The database stamps
   each answer’s time and the first name shown, so speed and names can’t be
@@ -184,9 +193,6 @@ Where the prototype left a call open, the build took the safer default:
   Photos upload to the `media` bucket. Clips would need a size and retention
   policy before they upload too.
 - **Library sharing** goes out to other ministries with no review step.
-- **The plan saves whole.** It is one document, so two leaders editing it at
-  the same moment means the last save wins. Fine for a staff of a few;
-  a bigger team would want it split into rows.
 - **Suggestions are rule-based.** A model-backed version would go through the
   same review gate; it isn’t wired.
 - **Live ministry time on the projector** is the `/live/room` page on the

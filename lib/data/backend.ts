@@ -14,6 +14,16 @@ import type {
   PrayerQueued, Rsvp, RsvpCount, Student, SwapRequest, Team, VolunteerInvite
 } from '@/lib/types/model';
 
+/** Leader-curated documents saved whole, by MinistryData key. */
+export type DocKey = 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog' | 'libraryPlaced' | 'seasons' | 'customReports' | 'deliveries' | 'reportSendLog' | 'plan';
+
+/** How the backend reaches the store's copy of a document: the latest local
+ *  value to save, and a way to fold someone else's save into it. */
+export interface DocIO {
+  read(key: DocKey): unknown;
+  write(key: DocKey, value: unknown): void;
+}
+
 export type SyncEvent =
   | { kind: 'activity'; line: ActivityLine }
   | { kind: 'prayerSubmit'; item: PrayerQueued; anonymous: boolean }
@@ -37,7 +47,7 @@ export type SyncEvent =
   | { kind: 'practice'; row: PracticeRow }
   | { kind: 'game'; game: GameState }
   /** A leader-curated document (small groups, awards, logs) saved whole. */
-  | { kind: 'doc'; key: 'smallGroups' | 'awards' | 'visitorLog' | 'verseLog' | 'libraryPlaced' | 'seasons' | 'customReports' | 'deliveries' | 'reportSendLog' | 'plan'; value: unknown }
+  | { kind: 'doc'; key: DocKey; value: unknown }
   | { kind: 'libraryShare'; unit: LibraryUnit }
   /** A photo or video filed into a week album; the file uploads with it. */
   | { kind: 'media'; item: MediaItem; file: Blob }
@@ -93,6 +103,9 @@ export interface Backend {
   /** Live ministry time, one night at a time. The room is what everyone may
    *  see; answers come back to leaders only (their own, for anyone else). */
   live: LiveChannel;
+  /** Supabase: lets document saves read the newest local copy and merge
+   *  other leaders' saves into it. Demo has nobody else to merge with. */
+  bind?(io: DocIO): void;
 }
 
 export interface LiveChannel {
