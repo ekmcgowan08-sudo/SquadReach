@@ -38,15 +38,22 @@ test('the plan setup walks through to a saved plan', async ({ page }) => {
 test('live ministry time: open, answer, reveal — and the room screen follows', async ({ page, context }) => {
   await page.goto('/planner/live?tab=run');
   await ready(page);
-  const room = await context.newPage();
-  await room.goto('/live/room');
+  const [room] = await Promise.all([context.waitForEvent('page'), page.getByRole('button', { name: 'Open the room screen' }).click()]);
   await room.waitForLoadState('networkidle');
-  await page.getByRole('button', { name: /^Open/ }).first().click();
+  expect(new URL(room.url()).pathname).toBe('/live/room');
+  /* The demo's room lives on this device, so there is no cast link to make. */
+  await expect(page.getByRole('button', { name: 'Cast to a TV' })).toHaveCount(0);
+  await page.getByRole('button', { name: /^Open · / }).click();
   await page.getByRole('button', { name: /Paul/ }).last().click();
   await expect(page.getByText('Your answer')).toBeVisible();
   await expect(room.getByText('Who wrote the letter to the Ephesians?')).toBeVisible();
   await page.getByRole('button', { name: 'Reveal' }).click();
   await expect(page.getByText('Correct')).toBeVisible();
+});
+
+test('a cast link in the demo says where the room screen is instead', async ({ page }) => {
+  await page.goto('/c/' + 'a'.repeat(64));
+  await expect(page.getByText('Casting needs the live app')).toBeVisible();
 });
 
 test('coverage explains a cell, and a check can be set aside with a reason', async ({ page }) => {

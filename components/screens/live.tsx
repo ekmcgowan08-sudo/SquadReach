@@ -43,7 +43,7 @@ function LeaderLive({ night }: { night: string }) {
           </button>
         ))}
       </div>
-      {tab === 'run' ? <LiveConsole c={c} roomHref={'/live/room?night=' + night} /> : null}
+      {tab === 'run' ? <LiveConsole c={c} night={night} /> : null}
       {tab === 'room' ? (
         <div className="flex flex-col gap-2">
           <div className="overflow-hidden rounded-lg border border-neutral-800">

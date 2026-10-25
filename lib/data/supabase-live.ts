@@ -43,6 +43,15 @@ export function supabaseLive(db: Db, org: string, membership: Membership): LiveC
     async clear(night) {
       await db.from('live_answers').delete().eq('org_id', org).eq('meeting_date', night);
     },
+    async cast(night) {
+      const r = await db.rpc('live_cast_start', { p_org: org, p_date: night });
+      if (r.error) throw new Error(r.error.message);
+      return location.origin + '/c/' + (r.data as string);
+    },
+    async uncast(night) {
+      const r = await db.rpc('live_cast_stop', { p_org: org, p_date: night });
+      if (r.error) throw new Error(r.error.message);
+    },
     subscribe(night, on) {
       const ch = db
         .channel('live-' + org + '-' + night)

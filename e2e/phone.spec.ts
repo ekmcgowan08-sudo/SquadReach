@@ -23,7 +23,7 @@ test('a leader opens live ministry time; a student sees nothing until it starts'
   await page.goto('/dashboard/live');
   await ready(page);
   await expect(page.getByRole('tab', { name: 'Run' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Open/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Open · / })).toBeVisible();
 
   await as(context, 'member', baseURL!);
   await page.goto('/dashboard/live');

@@ -5,6 +5,7 @@
    sees what the settings allow. */
 import { useState } from 'react';
 import type { useLiveConsole } from '@/components/live/use-live';
+import { ShowRoom } from '@/components/live/show-room';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, cx } from '@/components/ui';
 import { liveType, summaryLine, timerOf, type LiveActivity, type LiveResults, type RoomView } from '@/lib/live';
@@ -18,7 +19,7 @@ const VIEWS: { id: RoomView; label: string; note: string; icon: string }[] = [
   { id: 'blank', label: 'Nothing', note: 'A quiet screen while you talk.', icon: 'ph-monitor' }
 ];
 
-export function LiveConsole({ c, roomHref }: { c: Console; roomHref: string }) {
+export function LiveConsole({ c, night }: { c: Console; night: string }) {
   const [picker, setPicker] = useState(false);
   const { room, cur, acts } = c;
   if (!acts.length)
@@ -109,10 +110,7 @@ export function LiveConsole({ c, roomHref }: { c: Console; roomHref: string }) {
         <Icon name="ph ph-caret-up-down" className="text-[14px] text-neutral-500" />
       </button>
       <div className="flex flex-wrap gap-2">
-        <a href={roomHref} target="_blank" rel="noreferrer" className="flex min-h-10 items-center rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-200">
-          <Icon name="ph ph-arrow-square-out" className="mr-[6px] text-[13px]" />
-          Open the room screen
-        </a>
+        <ShowRoom night={night} />
         {room.started && !room.ended ? (
           <Btn variant="ghost" className="px-3 text-[12px]" onClick={c.end}>
             End ministry time

@@ -77,6 +77,7 @@ To reset the demo, clear the site’s storage for localhost.
    | `20261025090000_doc_revisions.sql` | A revision on every ministry document, `save_doc` (writes only over the revision you saw), and realtime on `ministry_docs` |
    | `20261025100000_report_email.sql` | `report_sends` (each delivery's period claimed once) and `delivery_emails`, which only the server may call |
    | `20261025110000_library_names.sql` | Shared library units can't name a student, guardian or account holder |
+   | `20261025120000_live_cast.sql` | Cast links: the room screen on a TV or cast device, for one evening, with no sign-in |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -242,6 +243,12 @@ Where the prototype left a call open, the build took the safer default:
   faked. The right answer stays off every phone until the reveal, and
   cloud words wait for a leader. Points rank the room for the night; they
   don’t post to the squad board.
+- **The room screen goes where the room is.** On a computer with a second
+  display, the room window opens on it. A TV or cast device can't sign in,
+  so **Cast to a TV** makes a cast link (`/c/…`) that reads only the room
+  snapshot — what the room is shown anyway, never answers — for twelve
+  hours or until a leader stops it. Chrome offers its cast picker for it;
+  any other screen can open the link in its browser.
 
 ## Not built yet / open decisions
 
@@ -251,6 +258,5 @@ Where the prototype left a call open, the build took the safer default:
   exactly what will go before sharing, and a unit that names anyone the
   ministry knows can't be shared (see above), but nobody outside the
   ministry checks a unit before others can read it.
-- **Live ministry time on the projector** is the `/live/room` page on the
-  computer that drives it, or the leader’s phone mirrored with AirPlay or
-  Cast. There is no casting built in.
+- **Casting from the demo.** The demo's room lives on one device, so it
+  has no cast link; open the room screen in another window instead.

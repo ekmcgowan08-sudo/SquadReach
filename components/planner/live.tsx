@@ -73,7 +73,7 @@ function Run({ night }: { night: string }) {
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[380px_minmax(0,1fr)_340px]">
       <Panel title="Your phone" meta="the console">
-        <LiveConsole c={c} roomHref={'/live/room?night=' + night} />
+        <LiveConsole c={c} night={night} />
       </Panel>
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex items-center gap-2 text-[12px] text-neutral-500">

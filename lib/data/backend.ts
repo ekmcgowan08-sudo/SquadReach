@@ -114,5 +114,11 @@ export interface LiveChannel {
   answer(night: string, a: LiveAnswer): Promise<void>;
   clear(night: string): Promise<void>;
   subscribe(night: string, on: (p: { room?: LiveRoom; answer?: LiveAnswer; cleared?: boolean }) => void): () => void;
+  /** Supabase: a link that shows tonight's room on a screen signed in as
+   *  nobody — a TV, a cast device, the projector's own browser. Demo has
+   *  no such link: its room lives on this device. */
+  cast?(night: string): Promise<string>;
+  /** Ends every cast link for the night. */
+  uncast?(night: string): Promise<void>;
 }
 
