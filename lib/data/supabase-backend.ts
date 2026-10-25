@@ -17,8 +17,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { chatStamp } from '@/lib/selectors';
 import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
-  AccessRequest, Category, ChatMessage, ChatThread, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData, MinistryEvent, Rsvp, RsvpCount,
-  Student, Team
+  AccessRequest, Category, ChatMessage, ChatThread, LibraryFlag, LibraryFlagReason, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData,
+  MinistryEvent, Rsvp, RsvpCount, Student, Team
 } from '@/lib/types/model';
 
 interface EntryRow {
@@ -347,6 +347,17 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           if (r.error) throw new Error(r.error.message);
           return;
         }
+        case 'libraryReport': {
+          const r = await db.from('library_reports').insert({ unit_id: e.unitId, org_id: org, reason: e.reason, note: e.note });
+          /* Already reported by this ministry: that's the outcome asked for. */
+          if (r.error && r.error.code !== '23505') throw new Error(r.error.message);
+          return;
+        }
+        case 'libraryUnshare': {
+          const r = await db.from('library_units').delete().eq('id', e.id).eq('org_id', org);
+          if (r.error) throw new Error(r.error.message);
+          return;
+        }
         case 'person': {
           const r = await db.from('memberships').update({ role: e.person.role, team_id: e.person.teamId, student_name: e.person.studentName, display_name: e.person.name }).eq('id', e.person.id);
           if (r.error) throw r.error;
@@ -556,11 +567,18 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         }));
       }
 
-      /* The library: everything shared by any ministry, plus our own. */
-      const lib = await db.from('library_units').select('*').order('created_at', { ascending: false }).limit(300);
-      d.library = ((lib.data ?? []) as { id: string; org_id: string; kind: string; title: string; church_name: string; span: string; theme: string; summary: string; includes: string[]; pts: [string, number][]; created_at: string }[]).map((u) => ({
+      /* The library: everything shared by any ministry, plus our own — and,
+         for leaders, why other ministries reported any of ours. */
+      const [lib, flagRows] = await Promise.all([
+        db.from('library_units').select('*').order('created_at', { ascending: false }).limit(300),
+        membership.role === 'leader' || membership.role === 'owner' ? db.rpc('library_flags', { p_org: org }) : Promise.resolve({ data: [] })
+      ]);
+      const libFlags: Record<string, LibraryFlag[]> = {};
+      for (const f of (flagRows.data ?? []) as { unit_id: string; reason: LibraryFlagReason; note: string; created_at: string }[]) (libFlags[f.unit_id] ??= []).push({ reason: f.reason, note: f.note, at: Date.parse(f.created_at) });
+      d.library = ((lib.data ?? []) as { id: string; org_id: string; kind: string; title: string; church_name: string; span: string; theme: string; summary: string; includes: string[]; pts: [string, number][]; shared: boolean; created_at: string }[]).map((u) => ({
         id: u.id, kind: u.kind, title: u.title, church: u.org_id === org ? null : u.church_name || 'Another ministry', span: u.span, theme: u.theme, summary: u.summary, includes: u.includes ?? [], pts: u.pts ?? [],
-        used: u.org_id === org ? 'Shared by you' : 'Shared ' + new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        used: u.org_id === org ? (u.shared ? 'Shared by you' : 'Ours') : 'Shared ' + new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        ...(u.org_id === org ? { shared: u.shared, flags: libFlags[u.id] ?? [] } : {})
       }));
 
       /* Awards: my votes, the tally (leaders), and nominations anyone added. */

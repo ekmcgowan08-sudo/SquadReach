@@ -10,7 +10,7 @@ import type { LiveAnswer, LiveRoom } from '@/lib/live';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CareReminder, Category, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
-  GameState, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, PracticeRow,
+  GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, PracticeRow,
   PrayerQueued, Rsvp, RsvpCount, Student, SwapRequest, Team, VolunteerInvite
 } from '@/lib/types/model';
 
@@ -49,6 +49,8 @@ export type SyncEvent =
   /** A leader-curated document (small groups, awards, logs) saved whole. */
   | { kind: 'doc'; key: DocKey; value: unknown }
   | { kind: 'libraryShare'; unit: LibraryUnit }
+  | { kind: 'libraryReport'; unitId: string; reason: LibraryFlagReason; note: string }
+  | { kind: 'libraryUnshare'; id: string }
   /** A photo or video filed into a week album; the file uploads with it. */
   | { kind: 'media'; item: MediaItem; file: Blob }
   | { kind: 'mediaRemove'; id: string; path: string | null }

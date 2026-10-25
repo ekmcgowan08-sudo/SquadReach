@@ -2,19 +2,20 @@
 /* LIBRARY — lift a week, a game, a guide or a whole season into your own
    plan. A shared unit is credited to the ministry that wrote it, and its
    point values are theirs until you say otherwise: nothing is rescaled. */
+import type { SyncEvent } from '@/lib/data/backend';
 import { shareBlockers } from '@/lib/library-share';
 import { useState } from 'react';
 import { sgMinutes } from '@/components/screens/season';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
-import { LIB_KINDS, kindOf } from '@/lib/library';
+import { LIBRARY_FLAGS, LIB_KINDS, flagLabel, hiddenByFlags, kindOf } from '@/lib/library';
 import { canApprove } from '@/lib/permissions';
 import { fmt } from '@/lib/scoring';
 import { catOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
-import type { LibraryPlacement, LibraryUnit } from '@/lib/types/model';
+import type { LibraryFlagReason, LibraryPlacement, LibraryUnit } from '@/lib/types/model';
 
 const chip = (on: boolean) => ({
   border: '1px solid ' + (on ? 'var(--color-accent-600)' : 'var(--color-neutral-800)'),
@@ -133,6 +134,12 @@ export function LibraryScreen() {
                 <div className="mt-[11.2px] flex flex-wrap items-center gap-[10px]">
                   <span className="text-[11px] leading-[1.3] text-neutral-500">{u.theme}</span>
                   <span className="text-[11px] leading-[1.3] text-neutral-500">· {u.used}</span>
+                  {leader && u.flags?.length ? (
+                    <span className="flex items-center gap-1 text-[10.5px] font-semibold leading-none text-[oklch(0.8_0.12_70)]">
+                      <Icon name="ph ph-flag" className="text-[11px]" />
+                      {hiddenByFlags(u.flags) ? 'Hidden by reports' : 'Reported'}
+                    </span>
+                  ) : null}
                   {placed ? <span className="ml-auto text-[10.5px] font-semibold leading-none text-accent-200">On week {placed.week}</span> : null}
                 </div>
               </button>
@@ -250,9 +257,111 @@ function UnitSheet({ unit, onClose, onPlace }: { unit: LibraryUnit; onClose: () 
           <Btn className="min-h-12 justify-center" onClick={place}>
             {week ? 'Place on Week ' + week : 'Place on the plan'}
           </Btn>
+          {unit.church ? <ReportUnit unit={unit} onDone={onClose} /> : unit.shared ? <OurSharedUnit unit={unit} onDone={onClose} /> : null}
         </>
       ) : null}
     </Sheet>
+  );
+}
+
+/* Supabase: wait for the database before saying it happened. */
+async function syncFirst(api: ReturnType<typeof useAppApi>, e: SyncEvent) {
+  if (api().backend.mode !== 'supabase') return true;
+  try {
+    await api().backend.sync(e);
+    return true;
+  } catch {
+    api().say('That didn’t go through — check your signal and try again.');
+    return false;
+  }
+}
+
+/** Someone else's unit: report it. It leaves this ministry's library now,
+ *  and every other ministry's once a second one reports it too. */
+function ReportUnit({ unit, onDone }: { unit: LibraryUnit; onDone: () => void }) {
+  const api = useAppApi();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<LibraryFlagReason | null>(null);
+  const [note, setNote] = useState('');
+  if (!open)
+    return (
+      <button onClick={() => setOpen(true)} className="mx-auto flex min-h-11 items-center gap-[6px] px-3 text-[12px] leading-none text-neutral-500">
+        <Icon name="ph ph-flag" className="text-[13px]" />
+        Report this unit
+      </button>
+    );
+  const send = async () => {
+    if (!reason) return api().say('Pick what’s wrong with it.');
+    if (!(await syncFirst(api, { kind: 'libraryReport', unitId: unit.id, reason, note: note.trim() }))) return;
+    api().mutate((x) => void (x.library = x.library.filter((u) => u.id !== unit.id)));
+    api().logActivity('Reported “' + unit.title + '” from ' + unit.church + ' to the library — ' + flagLabel(reason).toLowerCase());
+    api().say('Reported. It’s out of your library.');
+    onDone();
+  };
+  return (
+    <div className="flex flex-col gap-[10px] rounded-md border border-neutral-800 p-[13px]">
+      <div className="text-[12.5px] font-medium leading-[1.45] text-neutral-100">What’s wrong with it?</div>
+      <div role="radiogroup" aria-label="What’s wrong with it" className="flex flex-wrap gap-[6px]">
+        {LIBRARY_FLAGS.map((f) => (
+          <button key={f.id} role="radio" aria-checked={reason === f.id} onClick={() => setReason(f.id)} className="min-h-11 flex-none rounded-full px-[13px] text-[12px] font-medium leading-none" style={chip(reason === f.id)}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <label className="field !m-0">
+        <span className="sr-label">A note for {unit.church} (optional)</span>
+        <textarea value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} className="input !min-h-[72px]" placeholder="What they’d need to know to fix it" />
+      </label>
+      <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">
+        It leaves your library now. If another ministry reports it too, it leaves everyone’s until {unit.church} changes it. They see your reason and note, never who sent them.
+      </div>
+      <div className="flex gap-2">
+        <Btn className="flex-1 justify-center" disabled={!reason} onClick={() => void send()}>
+          Report it
+        </Btn>
+        <Btn variant="ghost" className="px-4" onClick={() => setOpen(false)}>
+          Cancel
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+/** Ours, out in the library: what other ministries reported, and a way to
+ *  take it back. */
+function OurSharedUnit({ unit, onDone }: { unit: LibraryUnit; onDone: () => void }) {
+  const api = useAppApi();
+  const flags = unit.flags ?? [];
+  const stop = async () => {
+    if (!window.confirm('Stop sharing “' + unit.title + '”? Ministries that already placed it keep their copy.')) return;
+    if (!(await syncFirst(api, { kind: 'libraryUnshare', id: unit.id }))) return;
+    api().mutate((x) => void (x.library = x.library.filter((u) => u.id !== unit.id)));
+    api().logActivity('Stopped sharing “' + unit.title + '” in the library');
+    api().say('No longer shared.');
+    onDone();
+  };
+  return (
+    <div className="flex flex-col gap-[10px]">
+      {flags.length ? (
+        <div className="flex flex-col gap-2 rounded-md border border-[oklch(0.72_0.105_66)] px-[13px] py-[11px]">
+          <div className="flex items-center gap-2 text-[12.5px] font-medium leading-[1.4] text-neutral-100">
+            <Icon name="ph ph-flag" className="text-[14px] text-[oklch(0.8_0.12_70)]" />
+            {hiddenByFlags(flags) ? flags.length + ' ministries reported it — hidden from everyone else' : 'A ministry reported it — one more report hides it from everyone else'}
+          </div>
+          {flags.map((f, i) => (
+            <div key={i} className="text-[12px] leading-[1.5] text-neutral-300 text-pretty">
+              <span className="text-neutral-100">{flagLabel(f.reason)}</span>
+              {f.note ? ' — “' + f.note + '”' : ''}
+            </div>
+          ))}
+          <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">Stop sharing it, or change it and share it again — a changed unit starts over with no reports.</div>
+        </div>
+      ) : null}
+      <button onClick={() => void stop()} className="mx-auto flex min-h-11 items-center gap-[6px] px-3 text-[12px] leading-none text-neutral-500">
+        <Icon name="ph ph-eye-slash" className="text-[13px]" />
+        Stop sharing
+      </button>
+    </div>
   );
 }
 
@@ -277,7 +386,8 @@ function ShareSheet({ onClose }: { onClose: () => void }) {
       summary: g.notes || 'A small group guide from ' + d.config.ministryName + '.',
       includes: [g.screens.length + ' screens', 'About ' + sgMinutes(g.screens) + ' min', ...(g.deepDive ? ['Five-day go-deeper track'] : [])],
       pts: [],
-      used: 'Shared by you'
+      used: 'Shared by you',
+      shared: true
     };
   };
   const unit = pick ? unitFor(pick) : null;

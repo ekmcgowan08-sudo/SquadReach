@@ -78,6 +78,7 @@ To reset the demo, clear the site’s storage for localhost.
    | `20261025100000_report_email.sql` | `report_sends` (each delivery's period claimed once) and `delivery_emails`, which only the server may call |
    | `20261025110000_library_names.sql` | Shared library units can't name a student, guardian or account holder |
    | `20261025120000_live_cast.sql` | Cast links: the room screen on a TV or cast device, for one evening, with no sign-in |
+   | `20261025130000_library_reports.sql` | Reports on shared library units: hidden from a ministry that reports one, and from everyone once two do |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -230,6 +231,14 @@ Where the prototype left a call open, the build took the safer default:
   on the phone (`lib/library-share.ts`) and by the database
   (`library_units_names`), whichever comes first. Single words aren't
   checked; too many names are also ordinary words.
+- **The ministries reading the library are its review.** Nobody checks a
+  unit before others can read it. Instead a leader can report another
+  ministry's unit (it names a person, isn't right for students, has
+  something wrong in it, or something else, with an optional note). It
+  leaves that ministry's library at once; once two ministries have reported
+  it, it leaves every library but the sharer's. The sharing ministry's
+  leaders see each reason and note — never who sent it — and can stop
+  sharing the unit; a unit that changes starts over with no reports.
 - **Game film is off the server by default.** A clip stays on the phone
   that filmed it. A leader can allow clips in the week album (Console ›
   Setup › Game film), with a size limit per clip (80 MB unless changed) and
@@ -254,9 +263,5 @@ Where the prototype left a call open, the build took the safer default:
 
 - **Congregation members** are a demo persona only. Parents have the family
   link and the public board.
-- **Library sharing has no human review across ministries.** A leader sees
-  exactly what will go before sharing, and a unit that names anyone the
-  ministry knows can't be shared (see above), but nobody outside the
-  ministry checks a unit before others can read it.
 - **Casting from the demo.** The demo's room lives on one device, so it
   has no cast link; open the room screen in another window instead.

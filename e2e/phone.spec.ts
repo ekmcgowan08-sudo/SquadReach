@@ -54,3 +54,19 @@ test('the public board shows standings by parent code', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   await expect(page.getByText(/Yellow/).first()).toBeVisible();
 });
+
+test('a leader reports another ministry’s library unit, and sees why theirs was reported', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/library');
+  await ready(page);
+  await page.getByRole('button', { name: /Invite Night/ }).click();
+  await page.getByRole('button', { name: 'Report this unit' }).click();
+  await page.getByRole('radio', { name: 'Not right for students' }).click();
+  await page.getByRole('button', { name: 'Report it' }).click();
+  await expect(page.getByText('Reported. It’s out of your library.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Invite Night/ })).toHaveCount(0);
+
+  await page.getByRole('button', { name: /Who do you text at 2am/ }).click();
+  await expect(page.getByText(/one more report hides it/)).toBeVisible();
+  await expect(page.getByText(/not for our sixth graders/)).toBeVisible();
+});

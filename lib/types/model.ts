@@ -425,6 +425,17 @@ export interface LibraryUnit {
   /** Suggested point values, as [category, amount]. */
   pts: [string, number][];
   used: string;
+  /** Ours, and out in the library for other ministries to read. */
+  shared?: boolean;
+  /** Ours: why other ministries reported it — never which ones. */
+  flags?: LibraryFlag[];
+}
+
+export type LibraryFlagReason = 'names' | 'unsuitable' | 'wrong' | 'other';
+export interface LibraryFlag {
+  reason: LibraryFlagReason;
+  note: string;
+  at: number;
 }
 
 /** A library unit placed onto a week of this season. */
