@@ -166,7 +166,11 @@ Rules the code holds to:
 - **Offline is honest.** Points and approval decisions made without signal
   wait in the outbox and send once, by id, when you’re back online. Chat
   messages and RSVPs are held the same way. Anything else that needs a
-  connection says so and isn’t faked. The service worker is network-first
+  connection says so and isn’t faked. Ministry documents (the plan,
+  reports, small groups) edited without signal stay on the phone and save
+  themselves — merged with anyone else’s — when you’re back; a save that
+  fails with signal is tried again after 15 seconds. The planner says “Not
+  saved yet” until it lands. The service worker is network-first
   and caches no pages: a stale score during a live event is worse than no
   offline support.
 - **Derived, not stored.** Standings, coverage, plan checks, suggestions and

@@ -18,7 +18,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 import { createStore } from 'zustand/vanilla';
 import { immer } from 'zustand/middleware/immer';
-import type { Backend, SyncEvent } from '@/lib/data/backend';
+import type { Backend, DocKey, SyncEvent } from '@/lib/data/backend';
 import {
   classifyRestored, heldEmpty, heldSince, heldTotal, mergeHeld, mergeOutbox, promoteFlag, replayOrder, wasHeld,
   withoutSent, type DoneFlag, type HeldPayload
@@ -70,6 +70,8 @@ export interface AppState {
   outboxError: string;
   staleHeld: HeldPayload | null;
   netOnline: boolean;
+  /** Documents edited here whose save hasn't gone through yet. */
+  unsavedDocs: DocKey[];
   offlineSim: boolean;
   /** When this phone last had confirmed signal — the "as of last signal" pill. */
   lastOnlineAt: number;
@@ -96,6 +98,8 @@ export interface AppState {
   firePush(title: string, body: string, href?: string): void;
   logActivity(line: string): void;
   emit(e: SyncEvent): void;
+  /** Save again any document whose save couldn't go (offline or failed). */
+  saveUnsavedDocs(): void;
   mutate(recipe: (d: MinistryData) => void): void;
 
   /* scoring */
@@ -137,6 +141,7 @@ let pushT: ReturnType<typeof setTimeout> | null = null;
 let heldSinceMemo: number | null = null;
 
 export function createAppStore(backend: Backend, membership: Membership, initial: MinistryData) {
+  let docRetry: ReturnType<typeof setTimeout> | null = null;
   return createStore<AppState>()(
     immer((set, get) => {
       const leaderId = () => {
@@ -234,6 +239,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
         outboxError: '',
         staleHeld: null,
         netOnline: true,
+        unsavedDocs: [],
         offlineSim: false,
         lastOnlineAt: Date.now(),
         toast: null,
@@ -261,7 +267,10 @@ export function createAppStore(backend: Backend, membership: Membership, initial
             s.netOnline = on;
             if (on) s.lastOnlineAt = Date.now();
           });
-          if (was && !get().offline()) get().flushOutbox();
+          if (was && !get().offline()) {
+            get().flushOutbox();
+            get().saveUnsavedDocs();
+          }
         },
 
         async restoreHeld() {
@@ -332,11 +341,27 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           get().emit({ kind: 'activity', line: entry });
         },
         emit(e) {
-          if (get().offline()) return;
+          /* Documents (the plan, reports, small groups…) are the exception:
+             a save that can't go now is remembered and made again — from
+             the newest copy, merged with anyone else's — when it can. */
+          const hold = (key: DocKey) => set((s) => void (s.unsavedDocs = [...new Set([...s.unsavedDocs, key])]));
+          if (get().offline()) {
+            if (e.kind === 'doc') hold(e.key);
+            return;
+          }
           get().backend.sync(e).catch(() => {
-            /* Non-score writes are not queued: the screens that make them say
-               they need a connection rather than pretending to hold them. */
+            /* Other non-score writes are not queued: the screens that make
+               them say they need a connection rather than pretending to. */
+            if (e.kind !== 'doc') return;
+            hold(e.key);
+            if (!docRetry) docRetry = setTimeout(() => ((docRetry = null), get().saveUnsavedDocs()), 15_000);
           });
+        },
+        saveUnsavedDocs() {
+          const keys = get().unsavedDocs;
+          if (get().offline() || !keys.length) return;
+          set((s) => void (s.unsavedDocs = []));
+          for (const key of keys) get().emit({ kind: 'doc', key, value: get().data[key] });
         },
         mutate(recipe) {
           set((s) => {
@@ -574,7 +599,10 @@ export function createAppStore(backend: Backend, membership: Membership, initial
             if (goingOffline) s.outboxError = '';
           });
           if (goingOffline) get().say('No signal. Points you award are held on this phone.');
-          else get().flushOutbox();
+          else {
+            get().flushOutbox();
+            get().saveUnsavedDocs();
+          }
         },
 
         sendStaleHeld() {

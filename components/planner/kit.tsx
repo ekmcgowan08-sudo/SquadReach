@@ -144,6 +144,7 @@ export function UndoButtons() {
 /* ── the shell ───────────────────────────────────────────────────────── */
 export function PlannerShell({ children }: { children: ReactNode }) {
   const name = useApp((s) => s.data.config.ministryName);
+  const unsaved = useApp((s) => s.unsavedDocs.includes('plan'));
   const path = usePathname();
   const router = useRouter();
   const [palette, setPalette] = useState(false);
@@ -207,6 +208,11 @@ export function PlannerShell({ children }: { children: ReactNode }) {
             Jump to…
             <span className="rounded border border-neutral-700 px-1 text-[10.5px]">⌘K</span>
           </button>
+          {unsaved ? (
+            <span role="status" className="flex-none rounded-full border border-[oklch(0.72_0.105_66)] px-3 py-[5px] text-[11.5px] text-neutral-200" title="Kept on this screen; it saves itself, merged with anyone else’s changes, when the connection is back.">
+              Not saved yet — saves when you’re back online
+            </span>
+          ) : null}
           <div className="hidden max-w-[220px] flex-none truncate text-[12px] text-neutral-500 lg:block">{name}</div>
           <Link href="/console" className="flex min-h-9 flex-none items-center gap-[6px] rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-300">
             <Icon name="ph ph-gauge" className="text-[13px]" />
