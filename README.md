@@ -76,6 +76,7 @@ To reset the demo, clear the site’s storage for localhost.
    | `20261023140000_live_ministry_time.sql` | `live_rooms` and `live_answers` for live ministry time (both on realtime); the plan and season-interview documents become leader-only |
    | `20261025090000_doc_revisions.sql` | A revision on every ministry document, `save_doc` (writes only over the revision you saw), and realtime on `ministry_docs` |
    | `20261025100000_report_email.sql` | `report_sends` (each delivery's period claimed once) and `delivery_emails`, which only the server may call |
+   | `20261025110000_library_names.sql` | Shared library units can't name a student, guardian or account holder |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -218,6 +219,12 @@ Where the prototype left a call open, the build took the safer default:
   the other side edited the thing, mine wins only when both changed the same
   value) and goes again. Other leaders' saves arrive over realtime and merge
   into unsaved local edits. Undo reverts only its own step.
+- **A shared library unit can't name anyone.** Other ministries read the
+  library, so sharing shows exactly what will go, and a unit naming a
+  student, a guardian or anyone with an account in the ministry is refused —
+  on the phone (`lib/library-share.ts`) and by the database
+  (`library_units_names`), whichever comes first. Single words aren't
+  checked; too many names are also ordinary words.
 - **Game film is off the server by default.** A clip stays on the phone
   that filmed it. A leader can allow clips in the week album (Console ›
   Setup › Game film), with a size limit per clip (80 MB unless changed) and
@@ -236,7 +243,10 @@ Where the prototype left a call open, the build took the safer default:
 
 - **Congregation members** are a demo persona only. Parents have the family
   link and the public board.
-- **Library sharing** goes out to other ministries with no review step.
+- **Library sharing has no human review across ministries.** A leader sees
+  exactly what will go before sharing, and a unit that names anyone the
+  ministry knows can't be shared (see above), but nobody outside the
+  ministry checks a unit before others can read it.
 - **Live ministry time on the projector** is the `/live/room` page on the
   computer that drives it, or the leader’s phone mirrored with AirPlay or
   Cast. There is no casting built in.

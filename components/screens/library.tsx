@@ -2,6 +2,7 @@
 /* LIBRARY — lift a week, a game, a guide or a whole season into your own
    plan. A shared unit is credited to the ministry that wrote it, and its
    point values are theirs until you say otherwise: nothing is rescaled. */
+import { shareBlockers } from '@/lib/library-share';
 import { useState } from 'react';
 import { sgMinutes } from '@/components/screens/season';
 import { Sheet } from '@/components/sheet';
@@ -255,15 +256,18 @@ function UnitSheet({ unit, onClose, onPlace }: { unit: LibraryUnit; onClose: () 
   );
 }
 
-/** Leaders publish one of their small-group guides for other ministries. */
+/** Leaders publish one of their small-group guides for other ministries:
+ *  pick one, see exactly what leaves the ministry, then confirm. A unit that
+ *  names anyone the ministry knows doesn't go (lib/library-share). */
 function ShareSheet({ onClose }: { onClose: () => void }) {
   const d = useApp((s) => s.data);
   const api = useAppApi();
+  const [pick, setPick] = useState<string | null>(null);
   const shared = new Set(d.library.filter((u) => !u.church).map((u) => u.title));
-  const publish = (gId: string) => {
+  const unitFor = (gId: string): LibraryUnit | null => {
     const g = d.smallGroups.find((x) => x.id === gId);
-    if (!g) return;
-    const u: LibraryUnit = {
+    if (!g) return null;
+    return {
       id: uid(),
       kind: 'guide',
       title: g.title.replace(/^Week \d+ · /, ''),
@@ -275,27 +279,68 @@ function ShareSheet({ onClose }: { onClose: () => void }) {
       pts: [],
       used: 'Shared by you'
     };
-    api().mutate((x) => void x.library.unshift(u));
-    api().emit({ kind: 'libraryShare', unit: u });
-    api().logActivity('Shared the guide “' + u.title + '” to the library');
+  };
+  const unit = pick ? unitFor(pick) : null;
+  const names = unit ? shareBlockers(unit, d) : [];
+  const publish = async () => {
+    if (!unit || names.length) return;
+    /* Supabase: wait for the database's own check before saying it's shared. */
+    if (api().backend.mode === 'supabase') {
+      try {
+        await api().backend.sync({ kind: 'libraryShare', unit });
+      } catch (e) {
+        api().say(e instanceof Error && /names/.test(e.message) ? e.message : 'It didn’t share — check your signal and try again.');
+        return;
+      }
+    }
+    api().mutate((x) => void x.library.unshift(unit));
+    api().logActivity('Shared the guide “' + unit.title + '” to the library');
     api().say('Shared. Other ministries see it credited to ' + d.config.ministryName + '.');
     onClose();
   };
   return (
     <Sheet open onClose={onClose} label="Share to the library">
       <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">Share to the library</div>
-      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Pick a small group guide. Other ministries get the screens and your notes, credited to {d.config.ministryName} — never a student’s name or anything they wrote.</div>
-      {d.smallGroups.map((g) => {
-        const done = shared.has(g.title.replace(/^Week \d+ · /, ''));
-        return (
-          <button key={g.id} disabled={done} onClick={() => publish(g.id)} className="flex min-h-12 items-center gap-[10px] rounded-md border border-neutral-800 px-3 text-left disabled:opacity-50">
-            <Icon name="ph ph-users-three" className="text-[15px] text-accent-400" />
-            <span className="flex-1 text-[12.5px] font-medium leading-[1.3] text-neutral-200">{g.title}</span>
-            <span className="text-[10.5px] leading-none text-neutral-500">{done ? 'Shared' : g.screens.length + ' screens'}</span>
-          </button>
-        );
-      })}
-      {!d.smallGroups.length ? <div className="text-[12px] text-neutral-500">No small groups yet — build one on Season › Small groups.</div> : null}
+      {!unit ? (
+        <>
+          <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Pick a small group guide. Other ministries get the screens and your notes, credited to {d.config.ministryName} — you’ll see exactly what goes before it goes.</div>
+          {d.smallGroups.map((g) => {
+            const done = shared.has(g.title.replace(/^Week \d+ · /, ''));
+            return (
+              <button key={g.id} disabled={done} onClick={() => setPick(g.id)} className="flex min-h-12 items-center gap-[10px] rounded-md border border-neutral-800 px-3 text-left disabled:opacity-50">
+                <Icon name="ph ph-users-three" className="text-[15px] text-accent-400" />
+                <span className="flex-1 text-[12.5px] font-medium leading-[1.3] text-neutral-200">{g.title}</span>
+                <span className="text-[10.5px] leading-none text-neutral-500">{done ? 'Shared' : g.screens.length + ' screens'}</span>
+              </button>
+            );
+          })}
+          {!d.smallGroups.length ? <div className="text-[12px] text-neutral-500">No small groups yet — build one on Season › Small groups.</div> : null}
+        </>
+      ) : (
+        <>
+          <div className="text-[11.5px] leading-[1.5] text-neutral-500">This is everything other ministries will see:</div>
+          <div className="flex flex-col gap-1 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-3">
+            <div className="text-[14px] font-medium text-neutral-100">{unit.title}</div>
+            <div className="text-[11px] text-neutral-500">
+              {unit.theme} · {unit.includes.join(' · ')} · from {d.config.ministryName}
+            </div>
+            <div className="mt-1 whitespace-pre-wrap text-[12.5px] leading-[1.5] text-neutral-300">{unit.summary}</div>
+          </div>
+          {names.length ? (
+            <div role="alert" className="rounded-md border border-[oklch(0.66_0.11_24)] px-3 py-2 text-[12px] leading-[1.5] text-neutral-200">
+              It names {names.join(', ')}. Take {names.length === 1 ? 'that name' : 'those names'} out of the guide’s notes before sharing it — other ministries can read the library.
+            </div>
+          ) : null}
+          <div className="flex gap-2">
+            <Btn className="flex-1 justify-center" disabled={!!names.length} onClick={() => void publish()}>
+              Share with other ministries
+            </Btn>
+            <Btn variant="ghost" className="px-4" onClick={() => setPick(null)}>
+              Back
+            </Btn>
+          </div>
+        </>
+      )}
     </Sheet>
   );
 }

@@ -343,7 +343,8 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           const r = await db.from('library_units').upsert({
             id: u.id, org_id: org, kind: u.kind, title: u.title, church_name: u.church ?? '', span: u.span, theme: u.theme, summary: u.summary, includes: u.includes, pts: u.pts, shared: true
           });
-          if (r.error) throw r.error;
+          /* The database refuses a unit that names someone (library_units_names). */
+          if (r.error) throw new Error(r.error.message);
           return;
         }
         case 'person': {
