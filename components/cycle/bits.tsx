@@ -36,7 +36,7 @@ export function PreviewClock({ t, stages, current, mode }: { t: NightTimes; stag
           );
         })}
       </div>
-      <div className="mt-[6px] text-[10.5px] leading-[1.4] text-neutral-600">Demo clock. A real ministry runs on real time.</div>
+      <div className="mt-[6px] text-[10.5px] leading-[1.4] text-neutral-500">Demo clock. A real ministry runs on real time.</div>
     </div>
   );
 }

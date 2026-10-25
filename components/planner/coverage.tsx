@@ -8,7 +8,7 @@ import { DismissBox, HEALTH, PageHead, Panel, usePlanSave } from '@/components/p
 import { Icon, cx } from '@/components/ui';
 import { isoDay } from '@/lib/dates';
 import { COVERAGE_CATS, COVERAGE_GROUPS, assessCoverage, cohortYears, cohorts, type CoverageCell } from '@/lib/plan-insights';
-import { laneColor, teachingOf, yearLabel, yearOf } from '@/lib/plan';
+import { teachingOf, yearLabel, yearOf } from '@/lib/plan';
 import { useApp } from '@/lib/store/provider';
 
 const STATE = { received: 'Received', current: 'This year', planned: 'Planned' } as const;
@@ -81,7 +81,7 @@ export function Coverage() {
                 return [
                   <tr key={g.id}>
                     <td colSpan={cs.length + 1} className="border-t border-neutral-800 bg-neutral-900/40 px-3 py-[7px]">
-                      <span className="text-[11.5px] font-semibold uppercase tracking-[.1em]" style={{ color: laneColor(g.hue) }}>
+                      <span className="text-[11.5px] font-semibold uppercase tracking-[.1em]" style={{ color: 'oklch(0.8 0.09 ' + g.hue + ')' }}>
                         {g.name}
                       </span>
                       <span className="ml-2 text-[11px] text-neutral-500">
@@ -166,7 +166,7 @@ export function Coverage() {
 function CellButton({ c, on, onClick }: { c: CoverageCell; on: boolean; onClick: () => void }) {
   const h = HEALTH[c.dismissed ? 'dismissed' : c.status];
   return (
-    <button onClick={onClick} aria-pressed={on} aria-label={c.cat.name + ', class of ' + c.cohort + ': ' + h.label} title={c.reason} className={cx('flex h-[30px] w-full items-center justify-center rounded text-[11px] font-medium', on && 'ring-2 ring-accent-400')} style={{ background: 'color-mix(in srgb, ' + h.color + (c.status === 'healthy' && !c.dismissed ? ' 26%' : ' 40%') + ', transparent)', color: 'var(--color-neutral-100)' }}>
+    <button onClick={onClick} aria-pressed={on} aria-label={c.total + '/' + c.target + ', ' + c.cat.name + ', class of ' + c.cohort + ': ' + h.label} title={c.reason} className={cx('flex h-[30px] w-full items-center justify-center rounded text-[11px] font-medium', on && 'ring-2 ring-accent-400')} style={{ background: 'color-mix(in srgb, ' + h.color + (c.status === 'healthy' && !c.dismissed ? ' 26%' : ' 40%') + ', transparent)', color: 'var(--color-neutral-100)' }}>
       {c.total}/{c.target}
     </button>
   );
@@ -202,7 +202,7 @@ function Journey({ c, nowYear, onPick }: { c: number; nowYear: number; onPick: (
               </div>
               <div className="min-w-0 flex-1 text-[12px] leading-[1.5]">
                 {!y.inPlan ? (
-                  <span className="text-neutral-600">{y.year < sy ? 'Before this plan' : 'After this plan'}</span>
+                  <span className="text-neutral-500">{y.year < sy ? 'Before this plan' : 'After this plan'}</span>
                 ) : series.length ? (
                   series.map((s) => (
                     <div key={s.id} className={cx('text-neutral-300', s.status === 'draft' && 'italic text-neutral-400')}>

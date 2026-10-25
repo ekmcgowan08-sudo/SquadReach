@@ -25,7 +25,7 @@ export function FamilyTonightCard({ v, onSign, onRead }: { v: FamilyView; onSign
           </div>
           <div className="flex-1 rounded-md bg-neutral-900 px-[11px] py-[10px]">
             <div className="text-[9.5px] uppercase leading-none tracking-[.08em] text-neutral-500">Last {v.hist.length || 6} weeks</div>
-            <div className="mt-2 flex gap-1" aria-label={v.hist.filter(Boolean).length + ' of ' + v.hist.length + ' weeks'}>
+            <div className="mt-2 flex gap-1" role="img" aria-label={'Here ' + v.hist.filter(Boolean).length + ' of the last ' + v.hist.length + ' weeks'}>
               {v.hist.map((h, i) => (
                 <span key={i} className="h-[14px] flex-1 rounded-[3px] border" style={{ background: h ? 'var(--color-accent-500)' : 'transparent', borderColor: h ? 'var(--color-accent-500)' : 'var(--color-neutral-700)' }} />
               ))}

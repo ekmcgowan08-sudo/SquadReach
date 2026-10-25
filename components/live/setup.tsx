@@ -49,7 +49,7 @@ export function LiveSetup({ night }: { night: string }) {
                 <div key={b.id} className={cx('flex items-center gap-2 rounded-md px-2 py-[6px] text-[12.5px]', here ? 'bg-[color-mix(in_srgb,var(--color-accent)_14%,transparent)] text-accent-100' : 'text-neutral-400')}>
                   <span className="flex-1">{b.title ? b.kind + ': ' + b.title : b.kind}</span>
                   {here ? <span className="text-[11px]">{acts.length} live</span> : null}
-                  <span className="tabular-nums text-neutral-500">{b.mins}m</span>
+                  <span className="tabular-nums text-neutral-400">{b.mins}m</span>
                 </div>
               );
             })}

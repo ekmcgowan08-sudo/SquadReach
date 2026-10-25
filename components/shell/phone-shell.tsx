@@ -61,7 +61,6 @@ function TabBar() {
       <Link
         key={t.href}
         href={t.href}
-        aria-label={badge ? t.label + ', ' + badge + ' unread' : t.label}
         aria-current={on ? 'page' : undefined}
         className="relative flex min-h-12 min-w-[58px] flex-col items-center justify-center gap-1"
         style={{ color: on ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}
@@ -69,9 +68,12 @@ function TabBar() {
         <i aria-hidden="true" className={(on ? 'ph-fill ' : 'ph ') + t.icon} style={{ fontSize: 20 }} />
         <span className="text-[10px] font-medium leading-none">{t.label}</span>
         {badge ? (
-          <span className="absolute right-2 top-0 h-4 min-w-4 rounded-full bg-accent-700 px-1 text-center text-[9.5px] font-semibold leading-4 text-accent-100">
-            {badge > 9 ? '9+' : badge}
-          </span>
+          <>
+            <span aria-hidden="true" className="absolute right-2 top-0 h-4 min-w-4 rounded-full bg-accent-700 px-1 text-center text-[9.5px] font-semibold leading-4 text-accent-100">
+              {badge > 9 ? '9+' : badge}
+            </span>
+            <span className="sr-only">, {badge} unread</span>
+          </>
         ) : null}
       </Link>
     );

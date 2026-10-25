@@ -74,7 +74,7 @@ export function HomeScreen() {
             ) : null}
           </Link>
           <button
-            aria-label={'Signed in as ' + m.displayName + '. Switch role'}
+            aria-label={m.initials + ' — signed in as ' + m.displayName + '. Switch role'}
             onClick={() => api().setRoleSheet(true)}
             className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-accent-800 text-[14px] font-semibold text-accent-200"
             style={{ boxShadow: '0 0 0 1px var(--color-accent-600), 0 0 22px -6px var(--color-accent-600)' }}

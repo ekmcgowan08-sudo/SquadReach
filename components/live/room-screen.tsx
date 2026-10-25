@@ -42,7 +42,7 @@ export function RoomScreen({ room, joinUrl, ministry, now }: { room: LiveRoom | 
   if (!room || room.view === 'blank')
     return (
       <Canvas>
-        <div className="flex h-full items-center justify-center text-[22px] font-medium tracking-[.2em] text-neutral-700">{ministry.toUpperCase()}</div>
+        <div className="flex h-full items-center justify-center text-[22px] font-medium tracking-[.2em] text-neutral-500">{ministry.toUpperCase()}</div>
       </Canvas>
     );
   if (room.view === 'join' || !room.act) return <JoinView room={room} joinUrl={joinUrl} ministry={ministry} />;

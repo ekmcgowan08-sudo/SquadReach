@@ -204,7 +204,7 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                         <Icon name={'ph ' + KINDS[it.kind].icon} className="mt-[1px] flex-none text-[11px] text-neutral-400" />
                         <span className="min-w-0 flex-1">
                           {it.title}
-                          {it.kind === 'series' ? <span className="text-neutral-500"> · {it.size}w</span> : null}
+                          {it.kind === 'series' ? <span className="text-neutral-300"> · {it.size}w</span> : null}
                           {it.suggested ? <span className="text-accent-300"> · suggested</span> : null}
                         </span>
                       </button>
