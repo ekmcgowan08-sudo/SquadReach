@@ -120,9 +120,9 @@ function SetupTab() {
 
       <Section title="Game film" sub="Clips are filmed on a phone and stay there unless someone adds one to the week album. Turn this on to allow that. Uploaded film takes storage space, so it has a size limit and leaves the album after a set time; the copy on the phone that filmed it isn’t touched.">
         <div className="grid items-end gap-3 sm:grid-cols-3">
-          <div className="field" role="group" aria-label="Clips in the album">
+          <div className="field">
             <span className="sr-label" aria-hidden="true">Clips in the album</span>
-            <Switch2 value={film.on ? 'on' : 'off'} options={[{ id: 'off', label: 'Off' }, { id: 'on', label: 'Allowed' }]} onChange={(v) => save({ filmUpload: { ...film, on: v === 'on' } }, v === 'on' ? 'Allowed game film in the album' : 'Stopped new game film in the album')} />
+            <Switch2 label="Clips in the album" value={film.on ? 'on' : 'off'} options={[{ id: 'off', label: 'Off' }, { id: 'on', label: 'Allowed' }]} onChange={(v) => save({ filmUpload: { ...film, on: v === 'on' } }, v === 'on' ? 'Allowed game film in the album' : 'Stopped new game film in the album')} />
           </div>
           <Field label="Largest clip (MB)" type="number" value={film.maxMb} onSave={(v) => save({ filmUpload: { ...film, maxMb: Math.max(5, Math.min(500, Number(v) || FILM_DEFAULTS.maxMb)) } })} />
           <Field label="Keep for (days)" type="number" value={film.keepDays} onSave={(v) => save({ filmUpload: { ...film, keepDays: Math.max(1, Math.min(365, Number(v) || FILM_DEFAULTS.keepDays)) } })} hint="Then it leaves the album for good." />

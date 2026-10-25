@@ -112,16 +112,18 @@ export function Btn({
 }
 
 /** One screen, one switch — the merged screens' two-way toggle. */
-export function Switch2<T extends string>({ value, options, onChange }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void }) {
+/** One of a few options, side by side — a radio group, not tabs: nothing
+ *  here switches between panels. */
+export function Switch2<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label?: string }) {
   return (
-    <div className="flex gap-2" role="tablist">
+    <div className="flex gap-2" role="radiogroup" aria-label={label}>
       {options.map((o) => {
         const on = o.id === value;
         return (
           <button
             key={o.id}
-            role="tab"
-            aria-selected={on}
+            role="radio"
+            aria-checked={on}
             onClick={() => onChange(o.id)}
             className={cx(
               'min-h-11 flex-1 rounded-md border text-[13px] font-medium',

@@ -27,7 +27,7 @@ export function PeopleDesk() {
         sub={tab === 'parents' ? 'Messages, slips, pickup and each family’s private link.' : 'Volunteers ask for swaps from the app; you approve them here. Changes show on the phones within a second.'}
         right={
           <div className="w-[280px]">
-            <Switch2 value={tab} options={[{ id: 'volunteers', label: 'Volunteers' }, { id: 'parents', label: 'Parents' }]} onChange={(v) => router.replace('/planner/people' + (v === 'parents' ? '?tab=parents' : ''))} />
+            <Switch2 label="Show" value={tab} options={[{ id: 'volunteers', label: 'Volunteers' }, { id: 'parents', label: 'Parents' }]} onChange={(v) => router.replace('/planner/people' + (v === 'parents' ? '?tab=parents' : ''))} />
           </div>
         }
       />

@@ -21,6 +21,7 @@ export function RacesScreen() {
     <Screen label={tab === 'teams' ? 'Races · squad pushes' : 'Races · individuals'}>
       <ScreenHeader title="Races" />
       <Switch2
+        label="Show"
         value={tab}
         onChange={setTab}
         options={[
