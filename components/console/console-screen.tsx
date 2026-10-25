@@ -2,6 +2,7 @@
 /* CONSOLE — the desktop shape of the ministry. Every save goes through the
    same store and sync events as the phone, so a change here lands on every
    phone the same way. */
+import { DEFAULT_ZONE, ZONES } from '@/lib/time-zone';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { HuddleTab } from '@/components/console/huddle-tab';
@@ -101,6 +102,17 @@ function SetupTab() {
           <Field label="Ministry name" value={c.ministryName} onSave={(v) => v.trim() && save({ ministryName: v.trim() }, 'Renamed the ministry to ' + v.trim())} />
           <Field label="This season’s game" value={c.gameName} placeholder="Pipeline relay" onSave={(v) => save({ gameName: v.trim() })} />
           <Field label="Home venue" value={c.venueAddress} placeholder="Church name · street address" onSave={(v) => save({ venueAddress: v.trim() })} />
+          <label className="field">
+            <span className="sr-label">Time zone</span>
+            <select className="input" value={c.timeZone ?? DEFAULT_ZONE} onChange={(e) => save({ timeZone: e.target.value }, 'Time zone is now ' + e.target.value)}>
+              {[...new Set([c.timeZone ?? DEFAULT_ZONE, ...ZONES])].map((z) => (
+                <option key={z} value={z}>
+                  {z.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+            <span className="text-[11px] text-neutral-500">Scheduled report emails go out by this clock.</span>
+          </label>
         </div>
       </Section>
 

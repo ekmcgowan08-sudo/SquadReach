@@ -14,7 +14,7 @@ import {
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { useNow } from '@/lib/use-now';
-import type { CustomReport, Delivery } from '@/lib/types/model';
+import type { CustomReport, Delivery, MinistryData } from '@/lib/types/model';
 
 const blank = (): CustomReport => ({ id: uid(), name: 'New report', source: 'students', columns: ['name', 'squad', 'points'], filters: [], groupBy: null, sort: null, at: nowMs() });
 
@@ -270,6 +270,16 @@ function Builder({ report, setReport, onSave, onDelete }: { report: CustomReport
   );
 }
 
+type EmailRec = NonNullable<MinistryData['reportEmails']>[number];
+const lastEmail = (d: MinistryData, id: string) => d.reportEmails?.find((x) => x.delivery === id);
+/** What the last email send did, in a line. */
+function emailLine(r: EmailRec) {
+  const when = new Date(r.at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  if (r.status === 'skipped' || r.status === 'failed') return 'Email didn’t go out (' + when + '): ' + (r.error ?? 'unknown reason') + (r.status === 'skipped' ? ' It still went to notifications.' : '');
+  if (r.status === 'sending') return 'Emailing since ' + when + '…';
+  return 'Emailed ' + r.sent + (r.sent === 1 ? ' person' : ' people') + ' · ' + when + (r.by !== 'Schedule' ? ' · by ' + r.by : '') + (r.missing.length ? ' · no email on file for ' + r.missing.join(', ') : '');
+}
+
 export function DeliveriesSection() {
   const d = useApp((s) => s.data);
   const m = useApp((s) => s.membership);
@@ -282,7 +292,24 @@ export function DeliveriesSection() {
   };
   const patch = (id: string, p: Partial<Delivery>) => saveAll(d.deliveries.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const reports = [...REPORT_KINDS.map((k) => ({ id: k.id, label: k.label })), ...d.customReports.map((c) => ({ id: c.id, label: c.name }))];
+  const [busy, setBusy] = useState<string | null>(null);
+  /** Supabase: the server emails it too, through the same once-per-period path. */
+  const email = async (dl: Delivery) => {
+    setBusy(dl.id);
+    try {
+      const r = await fetch('/api/deliveries/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: dl.id }) });
+      const out = (await r.json().catch(() => ({}))) as { status?: string; sent?: number; missing?: string[]; error?: string };
+      const rec = { delivery: dl.id, period: 'manual', at: nowMs(), status: (out.status === 'already' ? 'sent' : out.status ?? 'failed') as 'sent' | 'failed' | 'skipped', sent: out.sent ?? 0, missing: out.missing ?? [], error: out.error ?? (r.ok ? null : 'The server said ' + r.status), by: m.displayName };
+      api().mutate((x) => void (x.reportEmails = [rec, ...(x.reportEmails ?? [])].slice(0, 60)));
+      api().say(emailLine(rec));
+    } catch {
+      api().say('Couldn’t reach the server to email it. It still went to notifications.');
+    } finally {
+      setBusy(null);
+    }
+  };
   const sendNow = (dl: Delivery) => {
+    if (m.mode === 'supabase') void email(dl);
     const due = deliveryDue(d, dl, nowMs());
     const period = due?.period ?? 'manual:' + isoDay(new Date());
     const rec = { id: uid(), delivery: dl.id, period, at: nowMs(), by: m.displayName };
@@ -292,7 +319,7 @@ export function DeliveriesSection() {
     const groups = deliveryRecipientGroups(d, dl);
     api().logActivity('Sent now: ' + deliverySentence(d, dl) + ' — ' + groups.reduce((n, g) => n + g.names.length, 0) + ' people');
     api().firePush(reportSpec(d, dl.report)?.label ?? 'Report', 'Sent to ' + groups.map((g) => g.label).join(', '), '/dashboard/notifications');
-    api().say('Sent. It’s in each person’s notifications with a download.');
+    if (m.mode !== 'supabase') api().say('Sent. It’s in each person’s notifications with a download.');
   };
 
   return (
@@ -364,8 +391,8 @@ export function DeliveriesSection() {
               <button onClick={() => setOpenId(open ? null : dl.id)} aria-expanded={open} className="text-[12px] font-medium text-accent-300">
                 {open ? 'Hide the list' : 'Who gets it'}
               </button>
-              <Btn variant="secondary" className="px-3 text-[12px]" disabled={!dl.on} onClick={() => sendNow(dl)}>
-                Send now
+              <Btn variant="secondary" className="px-3 text-[12px]" disabled={!dl.on || busy === dl.id} onClick={() => sendNow(dl)}>
+                {busy === dl.id ? 'Sending…' : 'Send now'}
               </Btn>
               <Btn variant="ghost" className="px-3 text-[12px]" onClick={() => patch(dl.id, { on: !dl.on })}>
                 {dl.on ? 'Pause' : 'Turn on'}
@@ -374,6 +401,7 @@ export function DeliveriesSection() {
                 <Icon name="ph ph-trash" className="text-[13px]" />
               </button>
             </div>
+            {lastEmail(d, dl.id) ? <div className="text-[11.5px] leading-[1.5] text-neutral-500">{emailLine(lastEmail(d, dl.id)!)}</div> : null}
             {open ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 {groups.map((g) => (

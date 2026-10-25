@@ -5,10 +5,10 @@
    student hears only their own answers while a leader hears the room's. */
 import type { LiveChannel } from '@/lib/data/backend';
 import type { LiveAnswer, LiveRoom, LiveValue } from '@/lib/live';
-import type { supabaseBrowser } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Membership } from '@/lib/types/model';
 
-type Db = ReturnType<typeof supabaseBrowser>;
+type Db = SupabaseClient;
 interface AnswerRow {
   meeting_date: string;
   activity_id: string;

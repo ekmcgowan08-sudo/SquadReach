@@ -74,6 +74,7 @@ To reset the demo, clear the site’s storage for localhost.
    | `20261023130000_roles_and_messages.sql` | Only an owner makes an owner; direct messages and the chat directory |
    | `20261023140000_live_ministry_time.sql` | `live_rooms` and `live_answers` for live ministry time (both on realtime); the plan and season-interview documents become leader-only |
    | `20261025090000_doc_revisions.sql` | A revision on every ministry document, `save_doc` (writes only over the revision you saw), and realtime on `ministry_docs` |
+   | `20261025100000_report_email.sql` | `report_sends` (each delivery's period claimed once) and `delivery_emails`, which only the server may call |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -86,6 +87,26 @@ To reset the demo, clear the site’s storage for localhost.
      approves the request under **Access requests**.
 
 Set both variables or neither. With only one set, the app stays in demo mode.
+
+### Report emails (optional)
+
+The console's delivery schedule always lands in people's notifications. To
+email it as well:
+
+1. Set `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `EMAIL_FROM` and
+   `CRON_SECRET` on the server (see `.env.example`).
+2. Call `GET /api/cron/deliveries` every 15 minutes or so with
+   `Authorization: Bearer $CRON_SECRET`. On Vercel, `vercel.json` already
+   schedules it (sub-daily cron jobs need a paid Vercel plan; elsewhere, any
+   scheduler that can make an HTTP request will do).
+3. Set the ministry's time zone in Console › Setup. Deliveries go out by that
+   clock.
+
+Each (delivery, period) is claimed in `report_sends` before anything is sent,
+so the job running twice never sends twice, and a period more than a day
+overdue is skipped rather than sent late. Recipients are matched to the
+email on their account by name. The console shows who had no email on file.
+“Send now” emails through the same path.
 
 ## How it’s put together
 
@@ -112,6 +133,7 @@ lib/merge3.ts        Three-way merge for documents leaders edit together (lib/da
 lib/liturgical.ts    Easter (Meeus), Advent and the church year
 lib/live.ts          Live ministry time: tallies, scoring, what the room may see
 lib/report-builder.ts Reports from an allow-list of fields, and their delivery schedule
+lib/server/          Server-only: the scheduled report emails (app/api/cron/deliveries)
 lib/store/           Zustand store: award(), the offline outbox, actions
 lib/data/            Backend interface, with demo (localStorage) and Supabase versions
 supabase/            Migration and RLS tests
@@ -186,9 +208,6 @@ Where the prototype left a call open, the build took the safer default:
 
 - **Congregation members** are a demo persona only. Parents have the family
   link and the public board.
-- **Report delivery by email.** Deliveries arrive in the app as
-  notifications. Sending them by email needs a scheduled job and an email
-  provider on the server.
 - **Game film clips** stay on the device that recorded them (IndexedDB).
   Photos upload to the `media` bucket. Clips would need a size and retention
   policy before they upload too.

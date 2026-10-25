@@ -1,4 +1,3 @@
-'use client';
 /* SUPABASE MODE — the ministry lives in the database. Each change is written
    as it happens; row-level security (supabase/migrations) decides what any
    role can read or write, from the same constants the UI reads.
@@ -14,7 +13,7 @@ import { supabaseLive } from '@/lib/data/supabase-live';
 import { dmThread } from '@/lib/chat-dm';
 import { bibleStats } from '@/lib/bible';
 import { isoDay, periodKey, tonightDate, weekOf } from '@/lib/dates';
-import { supabaseBrowser } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { chatStamp } from '@/lib/selectors';
 import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
@@ -99,8 +98,9 @@ function chatThreads(teams: Team[], rosterSize: number, m: Membership): ChatThre
   return out;
 }
 
-export function supabaseBackend(membership: Membership): Backend {
-  const db = supabaseBrowser();
+/** `db` is the browser client in the app; the server passes its own (the
+ *  report job reads a ministry with the service role). */
+export function supabaseBackend(membership: Membership, db: SupabaseClient): Backend {
   const org = membership.orgId!;
   /* name ↔ id for the roster: the app finds students by name on the floor. */
   let studentIds = new Map<string, string>();
@@ -119,7 +119,7 @@ export function supabaseBackend(membership: Membership): Backend {
 
   /* Ministry documents several leaders edit: saved over the revision this
      client last saw, merged when someone got there first (lib/data/doc-sync). */
-  const docs = docSync(async (key, value, rev) => {
+  const docSaves = docSync(async (key, value, rev) => {
     const r = await db.rpc('save_doc', { p_org: org, p_key: key, p_value: value, p_rev: rev });
     if (r.error) throw new Error(r.error.message);
     return r.data as { ok: boolean; rev: number; value?: unknown };
@@ -170,7 +170,7 @@ export function supabaseBackend(membership: Membership): Backend {
           await db.from('organizations').update({ name: e.config.ministryName, config: e.config }).eq('id', org);
           return;
         case 'doc':
-          await docs.save(e.key, e.value);
+          await docSaves.save(e.key, e.value);
           return;
         case 'media': {
           const path = e.item.path ?? org + '/' + e.item.week + '/' + e.item.id;
@@ -465,7 +465,7 @@ export function supabaseBackend(membership: Membership): Backend {
       for (const doc of (docs.data ?? []) as { key: string; value: unknown; rev: number }[]) {
         if (!(doc.key in d)) continue;
         (d as unknown as Record<string, unknown>)[doc.key] = doc.value;
-        docs.seed(doc.key as DocKey, doc.rev ?? 0, doc.value);
+        docSaves.seed(doc.key as DocKey, doc.rev ?? 0, doc.value);
       }
       /* Who brought whom and who recited what live on the ledger's own rows. */
       Object.assign(d, logsFromLedger(d.ledger, config.meetingDates));
@@ -542,6 +542,12 @@ export function supabaseBackend(membership: Membership): Backend {
       d.rsvpCounts = countsFrom(counts.data);
 
       /* The people list, for leaders (members_read_leader). */
+      if (membership.role === 'leader' || membership.role === 'owner') {
+        const sends = await db.from('report_sends').select('delivery_id, period, claimed_at, sent_at, status, sent, missing, error, by_name').eq('org_id', org).order('claimed_at', { ascending: false }).limit(60);
+        d.reportEmails = ((sends.data ?? []) as { delivery_id: string; period: string; claimed_at: string; sent_at: string | null; status: 'sending' | 'sent' | 'failed' | 'skipped'; sent: number; missing: string[]; error: string | null; by_name: string }[]).map((r) => ({
+          delivery: r.delivery_id, period: r.period, at: new Date(r.sent_at ?? r.claimed_at).getTime(), status: r.status, sent: r.sent, missing: r.missing ?? [], error: r.error, by: r.by_name
+        }));
+      }
       if (membership.role === 'leader' || membership.role === 'owner') {
         const ppl = await db.from('memberships').select('id, role, display_name, team_id, student_name').eq('org_id', org).order('display_name');
         d.people = ((ppl.data ?? []) as { id: string; role: PersonRow['role']; display_name: string; team_id: string | null; student_name: string | null }[]).map((r) => ({
@@ -710,7 +716,7 @@ export function supabaseBackend(membership: Membership): Backend {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ministry_docs', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
           const row = payload.new as { key?: DocKey; value?: unknown; rev?: number } | undefined;
-          if (row?.key && typeof row.rev === 'number') docs.absorb(row.key, row.rev, row.value);
+          if (row?.key && typeof row.rev === 'number') docSaves.absorb(row.key, row.rev, row.value);
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'nights', filter: 'org_id=eq.' + org }, (payload: { new: unknown }) => {
           const row = payload.new as { meeting_date?: string; huddle?: MinistryData['huddle']; game?: MinistryData['game'] } | undefined;
@@ -727,7 +733,7 @@ export function supabaseBackend(membership: Membership): Backend {
     live: supabaseLive(db, org, membership),
 
     bind(io: DocIO) {
-      docs.bind(io);
+      docSaves.bind(io);
     }
   };
   return backend;

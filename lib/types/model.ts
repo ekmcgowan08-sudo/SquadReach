@@ -208,6 +208,9 @@ export interface MinistryConfig {
   gameSetup: GameSetup;
   /** What the public parent board (/b/[parentCode]) shows. */
   parentShare: ParentShare;
+  /** IANA zone the ministry meets in — the server sends scheduled reports
+   *  by this clock. Absent means America/Chicago. */
+  timeZone?: string;
 }
 
 export interface ParentShare {
@@ -657,6 +660,8 @@ export interface MinistryData {
   deliveries: Delivery[];
   /** Deliveries sent by hand ("Send now"), newest first. */
   reportSendLog: { id: string; delivery: string; period: string; at: number; by: string }[];
+  /** Supabase: what the server emailed, newest first (report_sends; leaders only). */
+  reportEmails?: { delivery: string; period: string; at: number; status: 'sending' | 'sent' | 'failed' | 'skipped'; sent: number; missing: string[]; error: string | null; by: string }[];
   /** The seven-year plan: lanes, seasons, items, gathering plans. */
   plan: Plan;
 }

@@ -6,6 +6,7 @@ import { dmThread } from '@/lib/chat-dm';
 import { demoBackend } from '@/lib/data/demo-backend';
 import { emptyMinistry } from '@/lib/data/empty';
 import { demoMinistry } from '@/lib/data/seed';
+import { supabaseBrowser } from '@/lib/supabase/client';
 import { supabaseBackend } from '@/lib/data/supabase-backend';
 import { createAppStore, type AppState, type AppStore } from '@/lib/store/app-store';
 import type { Persona } from '@/lib/types/domain';
@@ -16,7 +17,7 @@ const RolesCtx = createContext<Persona[]>([]);
 
 export function AppProvider({ membership, roles, children }: { membership: Membership; roles: Persona[]; children: ReactNode }) {
   const [store] = useState(() =>
-    createAppStore(membership.mode === 'supabase' ? supabaseBackend(membership) : demoBackend, membership, demoMinistry())
+    createAppStore(membership.mode === 'supabase' ? supabaseBackend(membership, supabaseBrowser()) : demoBackend, membership, demoMinistry())
   );
 
   /* The server re-resolves who you are on every navigation (a role switch
