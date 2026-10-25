@@ -53,6 +53,7 @@ To reset the demo, clear the site’s storage for localhost.
 | `npm run lint` | ESLint, including the React Compiler rules |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Vitest unit tests (scoring, feeds, outbox, game clock, the night cycle, seasons, reports, plan dates and insights, live ministry time) |
+| `npm run e2e` | Playwright smoke tests in demo mode, on a phone and at a desk (`e2e/`). Starts the app itself; set `E2E_BASE_URL` to test a running one |
 | `npm run db:test` | Applies every migration to a throwaway Postgres and runs the RLS tests in `supabase/tests/*.test.sql`. Needs Postgres 15+ binaries on `PATH` or under `/usr/lib/postgresql/*/bin` |
 
 ## Running against Supabase
