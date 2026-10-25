@@ -109,6 +109,9 @@ email it as well:
 3. Set the ministry's time zone in Console › Setup. Deliveries go out by that
    clock.
 
+The same secret runs `GET /api/cron/media` once a day (also in `vercel.json`),
+which removes game film past the ministry's keep-for days.
+
 Each (delivery, period) is claimed in `report_sends` before anything is sent,
 so the job running twice never sends twice, and a period more than a day
 overdue is skipped rather than sent late. Recipients are matched to the
@@ -215,6 +218,13 @@ Where the prototype left a call open, the build took the safer default:
   the other side edited the thing, mine wins only when both changed the same
   value) and goes again. Other leaders' saves arrive over realtime and merge
   into unsaved local edits. Undo reverts only its own step.
+- **Game film is off the server by default.** A clip stays on the phone
+  that filmed it. A leader can allow clips in the week album (Console ›
+  Setup › Game film), with a size limit per clip (80 MB unless changed) and
+  a keep-for period (60 days unless changed). `GET /api/cron/media` runs
+  daily and removes expired film, file first and then its album row; photos
+  are never touched. Supabase's own upload limit (50 MB on the free plan)
+  still applies.
 - **Live ministry time.** Answers can only be written while an activity is
   open (with three seconds’ grace after its timer). The database stamps
   each answer’s time and the first name shown, so speed and names can’t be
@@ -226,9 +236,6 @@ Where the prototype left a call open, the build took the safer default:
 
 - **Congregation members** are a demo persona only. Parents have the family
   link and the public board.
-- **Game film clips** stay on the device that recorded them (IndexedDB).
-  Photos upload to the `media` bucket. Clips would need a size and retention
-  policy before they upload too.
 - **Library sharing** goes out to other ministries with no review step.
 - **Live ministry time on the projector** is the `/live/room` page on the
   computer that drives it, or the leader’s phone mirrored with AirPlay or

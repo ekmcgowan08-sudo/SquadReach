@@ -11,7 +11,7 @@ import { delBlob, getBlob, putBlob, useFileUrl } from '@/lib/media-store';
 import { canApprove } from '@/lib/permissions';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
-import type { Clip, MediaItem } from '@/lib/types/model';
+import { FILM_DEFAULTS, type Clip, type MediaItem } from '@/lib/types/model';
 
 const KINDS = [
   { id: 'game', label: 'Game night' },
@@ -75,7 +75,7 @@ export function MediaScreen() {
           </div>
         }
       />
-      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Everything files into the week it happened in and stays there. Clips stay on the phone that filmed them until someone saves or shares them.</div>
+      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Everything files into the week it happened in and stays there. Clips stay on the phone that filmed them unless someone adds them to the album.</div>
 
       {d.filmMarks.length ? (
         <div className="sr-card overflow-hidden border border-accent-700">
@@ -287,14 +287,23 @@ function PhotoViewer({ item, onClose }: { item: MediaItem | null; onClose: () =>
   const api = useAppApi();
   const url = useFileUrl(item?.localKey, item?.path, (p) => api().backend.fileUrl(p));
   const canRemove = !!item && (canApprove(m.persona) || item.by === m.displayName);
+  const video = item?.kind === 'video';
+  const keep = (useApp((s) => s.data.config.filmUpload) ?? FILM_DEFAULTS).keepDays;
   return (
-    <Sheet open={!!item} onClose={onClose} label="Photo" z={92} maxH="92%">
+    <Sheet open={!!item} onClose={onClose} label={video ? 'Clip' : 'Photo'} z={92} maxH="92%">
       <div className="text-[15px] font-medium leading-[1.2] text-neutral-100">
         {item?.label} · Week {item?.week}
       </div>
+      {url && video ? <video src={url} controls playsInline className="w-full rounded-md bg-black" /> : null}
       {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL or a signed URL */}
-      {url ? <img src={url} alt={item?.label ?? 'Photo'} className="w-full rounded-md" /> : <div className="sr-shimmer h-48 rounded-md" />}
-      {item?.by ? <div className="text-[11px] leading-none text-neutral-500">Added by {item.by}</div> : null}
+      {url && !video ? <img src={url} alt={item?.label ?? 'Photo'} className="w-full rounded-md" /> : null}
+      {!url ? <div className="sr-shimmer h-48 rounded-md" /> : null}
+      {item?.by ? (
+        <div className="text-[11px] leading-[1.5] text-neutral-500">
+          Added by {item.by}
+          {video ? ' · film leaves the album ' + keep + ' days after it was added (' + new Date(item.at + keep * 86_400_000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ')' : ''}
+        </div>
+      ) : null}
       <div className="flex gap-2">
         {url ? (
           <Btn variant="secondary" className="flex-1 justify-center" href={url} download={'squadrise-week' + item?.week + '.jpg'}>
@@ -306,7 +315,7 @@ function PhotoViewer({ item, onClose }: { item: MediaItem | null; onClose: () =>
             variant="ghost"
             className="flex-1 justify-center"
             onClick={() => {
-              if (!item || !window.confirm('Remove this photo from the album?')) return;
+              if (!item || !window.confirm('Remove this ' + (video ? 'clip' : 'photo') + ' from the album?')) return;
               api().mutate((x) => void (x.media = x.media.filter((y) => y.id !== item.id)));
               if (item.localKey) void delBlob(item.localKey);
               api().emit({ kind: 'mediaRemove', id: item.id, path: item.path ?? null });
@@ -321,8 +330,53 @@ function PhotoViewer({ item, onClose }: { item: MediaItem | null; onClose: () =>
   );
 }
 
+/** Add a clip filmed on this phone to the week album — when the ministry
+ *  has turned film uploads on, and the clip is within the size limit. */
+function useAddClip() {
+  const api = useAppApi();
+  return async (clip: Clip) => {
+    const cfg = api().data.config.filmUpload ?? FILM_DEFAULTS;
+    if (!cfg.on) return api().say('Film uploads are off for this ministry. A leader can turn them on in the console.');
+    if (clip.mb > cfg.maxMb) return api().say('This clip is ' + clip.mb + ' MB; the album takes up to ' + cfg.maxMb + ' MB. Trim it, or save it to your phone.');
+    const blob = await getBlob(clip.localKey);
+    if (!blob) return api().say('That clip is no longer on this phone.');
+    const m = api().membership;
+    const id = uid();
+    /* The album's own copy, so deleting the clip from the phone leaves it. */
+    await putBlob('media:' + id, blob);
+    const item: MediaItem = { id, week: clip.week, kind: 'video', label: clip.line || clip.dur + 's clip', localKey: 'media:' + id, path: null, by: m.displayName, at: Date.now() };
+    api().mutate((x) => {
+      x.media.push(item);
+      const c = x.clips.find((y) => y.id === clip.id);
+      if (c) c.uploaded = item.id;
+    });
+    if (api().backend.mode !== 'supabase') return api().say('Added to the week ' + clip.week + ' album.');
+    if (api().offline()) return api().say('Added on this phone — it uploads when you have signal.');
+    const path = m.orgId + '/' + item.week + '/' + item.id;
+    api().say('Uploading the clip…');
+    try {
+      await api().backend.sync({ kind: 'media', item: { ...item, path }, file: blob });
+      api().mutate((x) => {
+        const r = x.media.find((y) => y.id === item.id);
+        if (r) r.path = path;
+      });
+      api().say('In the week ' + clip.week + ' album. It leaves the album after ' + cfg.keepDays + ' days.');
+    } catch {
+      api().mutate((x) => {
+        x.media = x.media.filter((y) => y.id !== item.id);
+        const c = x.clips.find((y) => y.id === clip.id);
+        if (c) delete c.uploaded;
+      });
+      api().say('The upload didn’t go through. The clip is still on this phone.');
+    }
+  };
+}
+
 function ClipViewer({ clip, onClose }: { clip: Clip | null; onClose: () => void }) {
   const api = useAppApi();
+  const film = useApp((s) => s.data.config.filmUpload) ?? FILM_DEFAULTS;
+  const addClip = useAddClip();
+  const live = useApp((s) => s.data.clips.find((c) => c.id === clip?.id));
   const url = useFileUrl(clip?.localKey, null, async () => null);
   const ext = clip?.mime.includes('mp4') ? 'mp4' : 'webm';
   const name = 'squadrise-week' + clip?.week + '-' + (clip?.line || 'clip').replace(/[^A-Za-z0-9]+/g, '-') + '.' + ext;
@@ -368,8 +422,13 @@ function ClipViewer({ clip, onClose }: { clip: Clip | null; onClose: () => void 
         </div>
       ) : null}
       <div className="text-[11px] leading-[1.5] text-neutral-500">
-        {clip?.dur}s · {clip?.mb} MB · only on this phone — save or share it to keep a copy.
+        {clip?.dur}s · {clip?.mb} MB · {live?.uploaded ? 'in the week album, and on this phone' : 'only on this phone — save or share it to keep a copy'}.
       </div>
+      {film.on && clip && !live?.uploaded ? (
+        <Btn variant="secondary" className="justify-center" disabled={clip.mb > film.maxMb} onClick={() => void addClip(clip)}>
+          {clip.mb > film.maxMb ? 'Too big for the album (' + film.maxMb + ' MB)' : 'Add to the week ' + clip.week + ' album'}
+        </Btn>
+      ) : null}
       <div className="flex gap-2">
         {url ? (
           <Btn className="flex-1 justify-center" href={url} download={name}>
@@ -383,7 +442,7 @@ function ClipViewer({ clip, onClose }: { clip: Clip | null; onClose: () => void 
           variant="ghost"
           className="flex-1 justify-center"
           onClick={() => {
-            if (!clip || !window.confirm('Delete this clip? It has not been uploaded anywhere — once it is gone there is no getting it back.')) return;
+            if (!clip || !window.confirm(live?.uploaded ? 'Delete this clip from this phone? The album keeps its copy.' : 'Delete this clip? It has not been uploaded anywhere — once it is gone there is no getting it back.')) return;
             void delBlob(clip.localKey);
             api().mutate((x) => void (x.clips = x.clips.filter((y) => y.id !== clip.id)));
             onClose();

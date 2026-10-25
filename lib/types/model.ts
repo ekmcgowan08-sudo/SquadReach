@@ -208,10 +208,20 @@ export interface MinistryConfig {
   gameSetup: GameSetup;
   /** What the public parent board (/b/[parentCode]) shows. */
   parentShare: ParentShare;
+  /** Game film in the week album: off until an owner or leader turns it
+   *  on, with a size limit per clip and how long uploads are kept. */
+  filmUpload?: FilmUpload;
   /** IANA zone the ministry meets in — the server sends scheduled reports
    *  by this clock. Absent means America/Chicago. */
   timeZone?: string;
 }
+
+export interface FilmUpload {
+  on: boolean;
+  maxMb: number;
+  keepDays: number;
+}
+export const FILM_DEFAULTS: FilmUpload = { on: false, maxMb: 80, keepDays: 60 };
 
 export interface ParentShare {
   standings: boolean;
@@ -476,6 +486,8 @@ export interface Clip {
   week: number;
   /** Seconds into the clip where a highlight was pinned. */
   pins: number[];
+  /** The album item it was added to, once uploaded. */
+  uploaded?: string;
 }
 
 /** A highlight pinned while the camera was off — a note for the editor. */
