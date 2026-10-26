@@ -5,7 +5,7 @@
 import { emptyNight, familyView, type FamilyView } from '@/lib/cycle';
 import { tonightDate } from '@/lib/dates';
 import { emptyMinistry } from '@/lib/data/empty';
-import type { CycleConfig, NightCycle, RunSheetItem } from '@/lib/types/model';
+import type { CycleConfig, NightCycle, RunSheetItem, CheckinVia } from '@/lib/types/model';
 
 export interface FamilyRaw {
   ministry: string;
@@ -19,7 +19,7 @@ export interface FamilyRaw {
   runSheet: Pick<RunSheetItem, 'time' | 'label' | 'debrief'>[];
   tonight: string | null;
   present: boolean;
-  via: 'qr' | 'leader' | null;
+  via: CheckinVia | null;
   presentDates: string[];
   night: Partial<NightCycle> | null;
   slips: { id: string; title: string; due: string }[];

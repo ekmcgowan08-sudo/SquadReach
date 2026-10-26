@@ -79,6 +79,7 @@ To reset the demo, clear the site’s storage for localhost.
    | `20261025110000_library_names.sql` | Shared library units can't name a student, guardian or account holder |
    | `20261025120000_live_cast.sql` | Cast links: the room screen on a TV or cast device, for one evening, with no sign-in |
    | `20261025130000_library_reports.sql` | Reports on shared library units: hidden from a ministry that reports one, and from everyone once two do |
+   | `20261026100000_planning_center.sql` | `pco_connections` (a ministry's Planning Center tokens, server-only) and `pco_status`; attendance can record a Planning Center check-in |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -120,6 +121,26 @@ so the job running twice never sends twice, and a period more than a day
 overdue is skipped rather than sent late. Recipients are matched to the
 email on their account by name. The console shows who had no email on file.
 “Send now” emails through the same path.
+
+### Planning Center (optional)
+
+Register an OAuth application with Planning Center
+(api.planningcenteronline.com/oauth/applications), with the redirect URI
+`<your origin>/api/pco/callback`, and set `PCO_CLIENT_ID` and
+`PCO_CLIENT_SECRET` (plus `SUPABASE_SERVICE_ROLE_KEY`). Then a leader connects
+the ministry's own Planning Center from Console › People and can:
+
+- import students into the roster — everyone in the grades the plan serves,
+  or one Planning Center list — after a preview of exactly who comes in;
+  names already on the roster are skipped and new students arrive without a
+  squad;
+- pull the night's Planning Center check-ins from Night recap › Attendance
+  (coaches can too), which marks matching roster names here and lists the
+  check-ins that match nobody.
+
+SquadRise asks only for the `people` and `check_ins` scopes and only reads.
+The tokens sit in `pco_connections`, which no client can read; they refresh
+themselves, and Disconnect forgets them.
 
 ### Plans & Billing, for the vendor (optional)
 

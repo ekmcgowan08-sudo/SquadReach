@@ -155,3 +155,12 @@ test('who-can-do-what prints on its own, chat scoping included', async ({ page }
   await expect(sheet.getByText('Chat is scoped by tier, not by role')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Who can do what' })).toBeHidden();
 });
+
+test('People explains Planning Center in the demo, and the connect route says it isn’t set up', async ({ page }) => {
+  await page.goto('/console?tab=people');
+  await ready(page);
+  await expect(page.getByRole('heading', { name: 'Planning Center' })).toBeVisible();
+  await expect(page.getByText(/On the live app a leader connects the church’s Planning Center once/)).toBeVisible();
+  await page.goto('/api/pco/connect');
+  await expect(page).toHaveURL(/\/console\?tab=people&pco=unavailable$/);
+});

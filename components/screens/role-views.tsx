@@ -408,10 +408,12 @@ export function AdminViewScreen() {
       </div>
       <div className="flex flex-col gap-2 rounded-lg border border-neutral-700 px-[14px] py-[13px]">
         <div className="flex items-center gap-[9px]">
-          <Icon name="ph ph-plugs-connected" className="flex-none text-[15px] text-accent-300" />
-          <div className="flex-1 text-[12.5px] font-medium leading-[1.2] text-neutral-200">Planning Center not connected</div>
+          <Icon name={d.pco?.connected ? 'ph-fill ph-check-circle' : 'ph ph-plugs-connected'} className="flex-none text-[15px] text-accent-300" />
+          <div className="flex-1 text-[12.5px] font-medium leading-[1.2] text-neutral-200">{d.pco?.connected ? 'Planning Center connected' + (d.pco.org ? ' · ' + d.pco.org : '') : 'Planning Center not connected'}</div>
         </div>
-        <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">Until this is connected nobody new can be verified, and every access request has to be judged by hand.</div>
+        <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">
+          {d.pco?.connected ? 'Students import from it in Console › People, and tonight’s check-ins pull in from Night recap.' : 'Connect it to import the roster in one go and pull check-ins on the night, instead of typing names.'}
+        </div>
         <Btn variant="ghost" className="justify-center" href="/console?tab=people">
           Open People &amp; roles
         </Btn>

@@ -18,7 +18,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { chatStamp } from '@/lib/selectors';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
-  AccessRequest, Category, ChatMessage, ChatThread, LibraryFlag, LibraryFlagReason, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData,
+  AccessRequest, Category, ChatMessage, ChatThread, CheckinVia, LibraryFlag, LibraryFlagReason, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData,
   MinistryEvent, Rsvp, RsvpCount, Student, Team
 } from '@/lib/types/model';
 
@@ -525,7 +525,7 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         })
         .filter((b) => b.attendStreak || b.bibleStreak);
       const byId = new Map(studentRows.map((s) => [s.id, s.name]));
-      for (const a of (att.data ?? []) as { student_id: string; present: boolean; via: 'qr' | 'leader' | null }[]) {
+      for (const a of (att.data ?? []) as { student_id: string; present: boolean; via: CheckinVia | null }[]) {
         const name = byId.get(a.student_id);
         if (name && a.present) {
           d.tonight.presence[name] = true;
@@ -553,6 +553,12 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         (d.rsvps[r.event_id] ??= {})[r.name] = { status: r.status, guests: r.guests };
       }
       d.rsvpCounts = countsFrom(counts.data);
+
+      /* Planning Center: connected or not (and to what, for leaders). */
+      if (membership.role === 'coach' || membership.role === 'leader' || membership.role === 'owner') {
+        const pco = (await db.rpc('pco_status', { p_org: org })).data as { connected: boolean; org?: string; at?: string } | null;
+        d.pco = pco ? { connected: pco.connected, org: pco.org, at: pco.at ? Date.parse(pco.at) : undefined } : null;
+      }
 
       /* The people list, for leaders (members_read_leader). */
       if (membership.role === 'leader' || membership.role === 'owner') {

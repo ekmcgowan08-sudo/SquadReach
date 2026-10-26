@@ -578,7 +578,7 @@ export function familyView(d: MinistryData, kid: string, now: number): FamilyVie
     kicker: after ? 'Last night' : live ? 'Tonight · live' : weekday(iso),
     title: after ? (here ? first + ' was there' : first + ' missed this week') : live ? (here ? first + ' is checked in' : first + ' hasn’t checked in') : d.config.gameName || 'This week',
     status: here
-      ? 'Checked in ' + (via === 'qr' ? 'at the door' : 'by a leader') + '.' + group
+      ? 'Checked in ' + (via === 'qr' ? 'at the door' : via === 'pco' ? 'at church check-in' : 'by a leader') + '.' + group
       : after
         ? 'We missed them.' + (coach ? ' ' + coach + ' may reach out this week.' : '')
         : clock(t.doors) + ' to ' + clock(t.pickup) + (d.config.venueAddress ? ' · ' + d.config.venueAddress.split('·')[0].trim() : '') + '.' + group,

@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import { PreviewClock, Seg, Tick } from '@/components/cycle/bits';
 import { useCycle, useNightSave } from '@/components/cycle/use-cycle';
+import { PcoCheckInsButton } from '@/components/pco';
 import { QrCode } from '@/components/qr-code';
 import { Sheet } from '@/components/sheet';
 import { Btn, Chip, EmptyNote, Icon, Label, Screen, ScreenHeader, Stat } from '@/components/ui';
@@ -135,6 +136,8 @@ function AttendanceTab() {
         </div>
       ))}
 
+      <PcoCheckInsButton />
+
       {open && m.mode === 'demo' ? (
         <Btn
           variant="ghost"
@@ -175,7 +178,7 @@ function AttendanceTab() {
                 {guests.has(s.name) ? <span className="text-neutral-500"> · guest</span> : null}
               </span>
               <span className="text-[10.5px]" style={{ color: via === 'qr' ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
-                {here ? (via === 'qr' ? 'Door' : 'Tapped') : ''}
+                {here ? (via === 'qr' ? 'Door' : via === 'pco' ? 'Check-in' : 'Tapped') : ''}
               </span>
             </button>
           );

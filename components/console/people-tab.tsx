@@ -3,6 +3,7 @@
    adults and students who hold a role in the app. */
 import Link from 'next/link';
 import { useState } from 'react';
+import { PcoSection } from '@/components/pco';
 import { RolesMatrix } from '@/components/console/roles-matrix';
 import { Section } from '@/components/console/kit';
 import { Btn, Icon } from '@/components/ui';
@@ -171,6 +172,8 @@ export function PeopleTab() {
           <span className="text-[11.5px] text-neutral-500">Names already on the roster are skipped, so importing twice is safe.</span>
         </div>
       </Section>
+
+      <PcoSection onImport={(rows) => rows.forEach(saveStudent)} />
 
       <Section title="Roles in the app" sub="Who can do what. Students join as members; a leader grants every other role.">
         {m.mode === 'demo' ? (

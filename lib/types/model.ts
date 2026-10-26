@@ -684,6 +684,9 @@ export interface MinistryData {
   /** Deliveries sent by hand ("Send now"), newest first. */
   reportSendLog: { id: string; delivery: string; period: string; at: number; by: string }[];
   /** Supabase: what the server emailed, newest first (report_sends; leaders only). */
+  /** Planning Center, as this person may see it: leaders get what it's
+   *  connected to; coaches only whether it is. Absent in the demo. */
+  pco?: { connected: boolean; org?: string; at?: number } | null;
   reportEmails?: { delivery: string; period: string; at: number; status: 'sending' | 'sent' | 'failed' | 'skipped'; sent: number; missing: string[]; error: string | null; by: string }[];
   /** The seven-year plan: lanes, seasons, items, gathering plans. */
   plan: Plan;
@@ -728,7 +731,8 @@ export interface Delivery {
 /* ── The week around the night ──────────────────────────────────────────
    Prep reminders before it, attendance during it, follow-ups after it,
    the volunteer schedule around it, and what families see. */
-export type CheckinVia = 'qr' | 'leader';
+/** How someone was checked in: the door QR, a leader's tap, or Planning Center Check-Ins. */
+export type CheckinVia = 'qr' | 'leader' | 'pco';
 export type ReminderAudience = 'leaders' | 'parents';
 
 export interface ReminderDef {
