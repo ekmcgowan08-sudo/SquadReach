@@ -144,3 +144,14 @@ test('on a touch screen, a ministry-year bar is held and slid to another month',
   await expect.poll(async () => (await bar().boundingBox())!.x).toBeGreaterThan(from.x + from.width);
   await context.close();
 });
+
+test('who-can-do-what prints on its own, chat scoping included', async ({ page }) => {
+  await page.goto('/console?tab=people');
+  await ready(page);
+  await expect(page.getByRole('button', { name: 'Print' })).toBeVisible();
+  await page.emulateMedia({ media: 'print' });
+  const sheet = page.locator('.sr-print-root');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('Chat is scoped by tier, not by role')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Who can do what' })).toBeHidden();
+});

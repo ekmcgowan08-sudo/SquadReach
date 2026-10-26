@@ -88,3 +88,27 @@ export function isPreviewing(p: Persona, view: RoleView): boolean {
   if (view === 'congregation') return p !== 'congregation';
   return false;
 }
+
+/* ── chat, scoped by tier rather than role ─────────────────────────────
+   The same rules chat_can() enforces in the database. Staff is the
+   volunteer set (SCORE_ENTRY_ROLES); students are members and captains.
+   Parents hold no account — they have their family link. */
+const STUDENT_ROLES = ['captain', 'member'] as const;
+export interface ChatScope {
+  id: 'all' | 'leaders' | 'team' | 'dm-adults' | 'dm-student';
+  label: string;
+  read: readonly Persona[];
+  post: readonly Persona[];
+  /** Roles who may read without being in it — the open door. */
+  openDoor?: readonly Persona[];
+  /** Who, of the roles listed, actually belongs in it. */
+  scope?: string;
+}
+export const CHAT_SCOPES: readonly ChatScope[] = [
+  { id: 'all', label: 'Announcements', read: [...SCORE_ENTRY_ROLES, ...STUDENT_ROLES], post: SCORE_ENTRY_ROLES },
+  { id: 'leaders', label: 'Leaders & coaches', read: SCORE_ENTRY_ROLES, post: SCORE_ENTRY_ROLES },
+  { id: 'team', label: 'A squad thread', read: [...SCORE_ENTRY_ROLES, ...STUDENT_ROLES], post: [...SCORE_ENTRY_ROLES, ...STUDENT_ROLES], scope: 'students in that squad' },
+  { id: 'dm-adults', label: 'Two adults, privately', read: SCORE_ENTRY_ROLES, post: SCORE_ENTRY_ROLES, scope: 'the two people in it' },
+  { id: 'dm-student', label: 'An adult and a student', read: [...SCORE_ENTRY_ROLES, ...STUDENT_ROLES], post: [...SCORE_ENTRY_ROLES, ...STUDENT_ROLES], openDoor: LEADER_ROLES, scope: 'the two people in it' }
+];
+export const chatScope = (id: ChatScope['id']) => CHAT_SCOPES.find((c) => c.id === id)!;

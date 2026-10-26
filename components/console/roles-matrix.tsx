@@ -2,10 +2,12 @@
 /* Who can do what — read straight off lib/permissions.ts, the same
    functions every menu row, screen gate and (by its role lists) RLS policy
    uses, so this table can't drift from what the app actually allows. */
+import { useSyncExternalStore, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Section } from '@/components/console/kit';
-import { Icon } from '@/components/ui';
+import { Btn, Icon } from '@/components/ui';
 import {
-  autoApproves, canApprove, canControlEvent, canCoordinateServing, canEditRoster, canHuddle, canMessageParents, canNightRecap, canOpenLibrary,
+  CHAT_SCOPES, autoApproves, canApprove, canControlEvent, canCoordinateServing, canEditRoster, canHuddle, canMessageParents, canNightRecap, canOpenLibrary,
   canPrepWeek, canPublishBoard, canReviewPrayer, canRunDoor, canRunLive, canScore, canSeeAttendance, canServe, canShareRecap
 } from '@/lib/permissions';
 import { PERSONAS, realRole, type Persona } from '@/lib/types/domain';
@@ -31,10 +33,44 @@ const ROWS: { label: string; gate: string; can: (p: Persona) => boolean }[] = [
   { label: 'The console and the planner', gate: 'LEADER_ROLES', can: canApprove }
 ];
 
+const noop = () => () => {};
+
 export function RolesMatrix() {
   const cols = PERSONAS.filter((p) => realRole(p.id));
+  const client = useSyncExternalStore(noop, () => true, () => false);
+  const tables = <Tables cols={cols} />;
   return (
-    <Section title="Who can do what" sub="Read off the same checks the app and the database use. Owners are the only ones who can make another owner.">
+    <Section
+      title="Who can do what"
+      sub="Read off the same checks the app and the database use. Owners are the only ones who can make another owner."
+      right={
+        <Btn variant="secondary" className="px-4 text-[12.5px]" onClick={() => window.print()}>
+          <Icon name="ph ph-printer" className="mr-[6px] text-[14px]" />
+          Print
+        </Btn>
+      }
+    >
+      {tables}
+      {client ? createPortal(<PrintSheet>{tables}</PrintSheet>, document.body) : null}
+    </Section>
+  );
+}
+
+/* On paper: only these tables, landscape, dark ink on white — a copy that
+   sits straight under <body> so nothing else on the page takes up a sheet. */
+function PrintSheet({ children }: { children: ReactNode }) {
+  return (
+    <div className="sr-print-root">
+      <style>{`.sr-print-root { display: none } @media print { @page { size: landscape; margin: 12mm } html, body { background: #fff !important; color-scheme: light !important } body > :not(.sr-print-root) { display: none !important } .sr-print-root { display: block !important; color: #111 } .sr-print-root * { color: #111 !important; background: transparent !important; border-color: #bdbdbd !important } .sr-print-root .sr-break { break-before: page } .sr-print-root table { min-width: 0 !important } .sr-print-root tr { break-inside: avoid } .sr-print-root td, .sr-print-root th { padding-top: 2px !important; padding-bottom: 2px !important } .sr-print-root td div { font-size: 10.5px !important; line-height: 1.3 !important } }`}</style>
+      <div className="mb-3 text-[16px] font-medium">Who can do what — read off the app’s own permission checks</div>
+      {children}
+    </div>
+  );
+}
+
+function Tables({ cols }: { cols: { id: Persona; label: string }[] }) {
+  return (
+    <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-lg border border-neutral-800">
         <table className="w-full min-w-[720px] border-collapse text-left">
           <thead>
@@ -64,9 +100,44 @@ export function RolesMatrix() {
           </tbody>
         </table>
       </div>
-      <div className="mt-3 text-[12px] leading-[1.6] text-neutral-500">
-        Chat: everyone reads the announcements and the volunteer set posts there; the volunteers’ thread is just the volunteer set; a squad thread is that squad plus the volunteer set. Adults can message each other privately. Any thread with a student in it is an open door — leaders can read it, not post in it — and students can’t message each other. Parents use their family link; they hold no account.
+      <div className="sr-break mt-2 text-[13px] font-medium text-neutral-100">Chat is scoped by tier, not by role</div>
+      <div className="overflow-x-auto rounded-lg border border-neutral-800">
+        <table className="w-full min-w-[720px] border-collapse text-left">
+          <thead>
+            <tr>
+              <th className="px-3 py-2 text-[11px] font-normal text-neutral-500">Thread</th>
+              {cols.map((c) => (
+                <th key={c.id} className="border-l border-neutral-800 px-2 py-2 text-center text-[11.5px] font-medium text-neutral-200">
+                  {c.label.replace('Organization ', '').replace('Ministry ', '').replace('Team ', '')}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {CHAT_SCOPES.map((t) => (
+              <tr key={t.id} className="border-t border-neutral-800">
+                <td className="px-3 py-[7px]">
+                  <div className="text-[12.5px] text-neutral-100">{t.label}</div>
+                  {t.scope ? <div className="text-[10.5px] text-neutral-500">Only {t.scope}</div> : null}
+                </td>
+                {cols.map((c) => {
+                  const posts = t.post.includes(c.id);
+                  const door = !!t.openDoor?.includes(c.id);
+                  const reads = t.read.includes(c.id);
+                  return (
+                    <td key={c.id} className="border-l border-neutral-800 px-1 text-center text-[11.5px]">
+                      {posts ? <span className="text-accent-200">Read · post{door ? ' · open door' : ''}</span> : reads || door ? <span className="text-neutral-300">{door && !reads ? 'Open door' : 'Read'}</span> : <span className="text-neutral-700">·</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </Section>
+      <div className="text-[12px] leading-[1.6] text-neutral-500">
+        Open door: any thread with a student in it can be read by leaders, who can’t post in it — and the thread says so. Students can’t message each other. Parents hold no account; they use their family link. These rules are <span className="font-mono text-[11px]">CHAT_SCOPES</span>, the same ones the database’s chat_can() enforces.
+      </div>
+    </div>
   );
 }

@@ -12,10 +12,11 @@ import { logsFromLedger } from '@/lib/logs';
 import { supabaseLive } from '@/lib/data/supabase-live';
 import { dmThread } from '@/lib/chat-dm';
 import { bibleStats } from '@/lib/bible';
+import { chatScope } from '@/lib/permissions';
 import { isoDay, periodKey, tonightDate, weekOf } from '@/lib/dates';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { chatStamp } from '@/lib/selectors';
-import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
+import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, Category, ChatMessage, ChatThread, LibraryFlag, LibraryFlagReason, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData,
   MinistryEvent, Rsvp, RsvpCount, Student, Team
@@ -83,17 +84,17 @@ function countsFrom(rows: unknown): Record<string, RsvpCount> {
   return out;
 }
 
-const STAFF: Persona[] = ['leader', 'owner', 'scorekeeper', 'coach'];
-/** The threads chat_can() allows, as the list screen shows them. */
+/** The threads chat_can() allows, as the list screen shows them (the rules
+ *  are CHAT_SCOPES in lib/permissions). */
 function chatThreads(teams: Team[], rosterSize: number, m: Membership): ChatThread[] {
-  const all: Persona[] = ['leader', 'owner', 'scorekeeper', 'coach', 'captain', 'member'];
+  const [all, leaders, team] = [chatScope('all'), chatScope('leaders'), chatScope('team')];
   const out: ChatThread[] = [
-    { id: 'all', kind: 'announce', name: 'Announcements', sub: rosterSize + ' students', icon: 'ph-fill ph-megaphone', tint: '#3a3860', read: all, post: STAFF },
-    { id: 'leaders', kind: 'group', name: 'Leaders & coaches', sub: 'the volunteer set', icon: 'ph-fill ph-users-three', tint: '#26404d', read: STAFF, post: STAFF }
+    { id: 'all', kind: 'announce', name: 'Announcements', sub: rosterSize + ' students', icon: 'ph-fill ph-megaphone', tint: '#3a3860', read: [...all.read], post: [...all.post] },
+    { id: 'leaders', kind: 'group', name: 'Leaders & coaches', sub: 'the volunteer set', icon: 'ph-fill ph-users-three', tint: '#26404d', read: [...leaders.read], post: [...leaders.post] }
   ];
   for (const t of teams) {
-    if (!STAFF.includes(m.persona) && m.teamId !== t.id) continue;
-    out.push({ id: 'team-' + t.id, kind: 'team', name: t.name + ' Squad', sub: 'squad thread', icon: 'ph-fill ph-shield-check', tint: t.color, read: all, post: all, team: t.id });
+    if (!leaders.read.includes(m.persona) && m.teamId !== t.id) continue;
+    out.push({ id: 'team-' + t.id, kind: 'team', name: t.name + ' Squad', sub: 'squad thread', icon: 'ph-fill ph-shield-check', tint: t.color, read: [...team.read], post: [...team.post], team: t.id });
   }
   return out;
 }
