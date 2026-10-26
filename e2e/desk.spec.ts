@@ -85,3 +85,12 @@ test('the one-pager renders for both audiences', async ({ page }) => {
   await page.getByRole('button', { name: 'Elders & staff' }).click();
   await expect(page.getByText('Seven-year plan · for elders & staff')).toBeVisible();
 });
+
+test('pricing never reaches a ministry, not even its owner', async ({ page, context, baseURL }) => {
+  await as(context, 'owner', baseURL!);
+  const res = await page.goto('/vendor');
+  expect(res?.status()).toBe(404);
+  await page.goto('/console');
+  await ready(page);
+  await expect(page.getByText(/Plans & Billing|per student per year/)).toHaveCount(0);
+});

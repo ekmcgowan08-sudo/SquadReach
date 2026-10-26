@@ -121,6 +121,17 @@ overdue is skipped rather than sent late. Recipients are matched to the
 email on their account by name. The console shows who had no email on file.
 “Send now” emails through the same path.
 
+### Plans & Billing, for the vendor (optional)
+
+Pricing is vendor-only. `/vendor` is a calculator over the four candidate
+models in `lib/pricing.ts` (flat annual by size band, recommended; per
+student; per season; per leader seat), the reasoning for the recommendation,
+and what each band includes. Set `VENDOR_EMAILS` to the sign-in emails that
+may open it; anyone else, every ministry owner included, gets a 404. With
+`SUPABASE_SERVICE_ROLE_KEY` set it also lists every ministry — rostered
+students, leaders with a login, seasons saved this year — priced under each
+model, with the yearly total. A demo build opens it only with `VENDOR_DEMO=1`.
+
 ## How it’s put together
 
 ```
@@ -258,6 +269,11 @@ Where the prototype left a call open, the build took the safer default:
   snapshot — what the room is shown anyway, never answers — for twelve
   hours or until a leader stops it. Chrome offers its cast picker for it;
   any other screen can open the link in its browser.
+- **Pricing is vendor-only, and not decided.** No ministry sees a price or
+  the calculator; it lives on the founder's `/vendor` admin. The handoff
+  recommends the flat annual band (a youth budget is set once a year, and
+  per-student pricing charges for the growth the app exists to cause), but
+  the numbers are there to test on real churches. Nothing is billed.
 
 ## Not built yet / open decisions
 
