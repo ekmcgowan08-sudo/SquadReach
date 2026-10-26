@@ -310,5 +310,14 @@ Where the prototype left a call open, the build took the safer default:
 
 - **Congregation members** are a demo persona only. Parents have the family
   link and the public board.
+- **Text-message delivery.** The prototype offers Text as a report delivery
+  channel. It needs phone numbers on file and a rule for messaging minors
+  and their parents, so it's a decision before it's code. Deliveries land in
+  notifications, and go by email when that's set up.
+- **Signing in through Planning Center.** The prototype also signs people in
+  with Planning Center and checks access requests against its people
+  database. The app signs in by email link and leaders judge requests;
+  using Planning Center for identity would make it a requirement for every
+  church, so it's left as a decision. Importing and check-ins work today.
 - **Casting from the demo.** The demo's room lives on one device, so it
   has no cast link; open the room screen in another window instead.
