@@ -74,6 +74,18 @@ describe('documents whose save couldn’t go', () => {
     expect(docs(sent)).toHaveLength(0);
   });
 
+  it('record when a document last saved, only once the save lands', async () => {
+    const { backend, state } = flaky();
+    const store = createAppStore(backend, leader, demoMinistry());
+    state.down = true;
+    store.getState().emit({ kind: 'doc', key: 'plan', value: store.getState().data.plan });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.getState().docSavedAt.plan).toBeUndefined();
+    state.down = false;
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(store.getState().docSavedAt.plan).toBeTypeOf('number');
+  });
+
   it('don’t include other writes, which aren’t queued', async () => {
     const { backend, state } = flaky();
     const store = createAppStore(backend, leader, demoMinistry());

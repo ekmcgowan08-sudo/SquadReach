@@ -14,6 +14,7 @@ test('moving a roadmap item is one undo step', async ({ page }) => {
   await chip.focus();
   await page.keyboard.press('Alt+ArrowRight');
   await expect.poll(async () => (await page.getByRole('button', { name: /Gospel of Mark/ }).first().boundingBox())!.x).toBeGreaterThan(x0);
+  await expect(page.getByText(/^Saved on this device \d/)).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect.poll(async () => (await page.getByRole('button', { name: /Gospel of Mark/ }).first().boundingBox())!.x).toBe(x0);
 });

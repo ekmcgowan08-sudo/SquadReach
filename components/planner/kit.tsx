@@ -129,8 +129,16 @@ export function UndoButtons() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [u]);
+  const savedAt = useApp((s) => s.docSavedAt.plan);
+  const demo = useApp((s) => s.backend.mode === 'demo');
+  const unsaved = useApp((s) => s.unsavedDocs.includes('plan'));
   return (
-    <div className="flex gap-1">
+    <div className="flex items-center gap-1">
+      {savedAt && !unsaved ? (
+        <span className="mr-2 whitespace-nowrap text-[11.5px] text-neutral-500" title={new Date(savedAt).toLocaleString('en-US')}>
+          Saved{demo ? ' on this device' : ''} {new Date(savedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase()}
+        </span>
+      ) : null}
       <button onClick={u.undo} disabled={!u.canUndo} title={u.undoLabel ? 'Undo ' + lowerFirst(u.undoLabel) + ' (⌘Z)' : 'Nothing to undo'} aria-label="Undo" className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-800 text-neutral-300 disabled:opacity-40">
         <Icon name="ph ph-arrow-counter-clockwise" className="text-[14px]" />
       </button>

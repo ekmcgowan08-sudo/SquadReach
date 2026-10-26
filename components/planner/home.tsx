@@ -10,6 +10,7 @@ import { Btn, Icon, cx } from '@/components/ui';
 import { clock, countdown, history, whoServes } from '@/lib/cycle';
 import { isoDay } from '@/lib/dates';
 import { clockOf, orderOf, orderTimes, seasonOfNight, teachingByNight, teachingOf, yearOf, yearLabel } from '@/lib/plan';
+import { publishDiff } from '@/lib/plan-insights';
 import { leaderNeeds, myCycleNeeds } from '@/lib/selectors';
 import { useAppApi } from '@/lib/store/provider';
 
@@ -39,6 +40,8 @@ export function PlannerHome() {
     .slice(0, 6);
   const y1 = teachingOf(p, 0);
   const drafts = p.items.filter((x) => x.status === 'draft').length;
+  const diff = publishDiff(p);
+  const unpublished = diff.added.length + diff.changed.length + diff.removed.length;
 
   return (
     <div className="flex flex-col gap-5">
@@ -178,6 +181,12 @@ export function PlannerHome() {
               {y1.length} teaching series this year · {drafts} drafts across seven years
               {p.published ? ' · published ' + new Date(p.published.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ' · never published'}
             </div>
+            {unpublished ? (
+              <Link href="/planner/roadmap?publish=1" className="mt-1 inline-flex min-h-11 items-center gap-[6px] text-[12.5px] font-medium text-accent-200">
+                <Icon name="ph ph-paper-plane-tilt" className="text-[13px]" />
+                {unpublished} year-one {unpublished === 1 ? 'change' : 'changes'} not published yet — review them
+              </Link>
+            ) : null}
           </Panel>
         </div>
       </div>

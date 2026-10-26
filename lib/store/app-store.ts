@@ -72,6 +72,8 @@ export interface AppState {
   netOnline: boolean;
   /** Documents edited here whose save hasn't gone through yet. */
   unsavedDocs: DocKey[];
+  /** When each document last saved from here. */
+  docSavedAt: Partial<Record<DocKey, number>>;
   offlineSim: boolean;
   /** When this phone last had confirmed signal — the "as of last signal" pill. */
   lastOnlineAt: number;
@@ -240,6 +242,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
         staleHeld: null,
         netOnline: true,
         unsavedDocs: [],
+        docSavedAt: {},
         offlineSim: false,
         lastOnlineAt: Date.now(),
         toast: null,
@@ -349,7 +352,9 @@ export function createAppStore(backend: Backend, membership: Membership, initial
             if (e.kind === 'doc') hold(e.key);
             return;
           }
-          get().backend.sync(e).catch(() => {
+          const sent = get().backend.sync(e);
+          if (e.kind === 'doc') void sent.then(() => set((s) => void (s.docSavedAt[e.key] = Date.now())), () => {});
+          sent.catch(() => {
             /* Other non-score writes are not queued: the screens that make
                them say they need a connection rather than pretending to. */
             if (e.kind !== 'doc') return;
