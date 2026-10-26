@@ -6,6 +6,7 @@
    label. Every tap target is at least 44px tall. */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { cameFromInApp } from '@/lib/recents';
 import type { CSSProperties, ReactNode } from 'react';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
@@ -31,7 +32,7 @@ export function ScreenHeader({ title, sub, right, back }: { title: string; sub?:
     <div className="flex items-center gap-3">
       <button
         aria-label="Back"
-        onClick={() => (back ? router.push(back) : window.history.length > 1 ? router.back() : router.push('/dashboard'))}
+        onClick={() => (cameFromInApp() ? router.back() : router.push(back ?? '/dashboard'))}
         className="flex h-11 w-11 flex-none items-center justify-center rounded-full border border-neutral-800 bg-transparent text-neutral-300 sr-hover"
       >
         <Icon name="ph ph-caret-left" className="text-[15px]" />

@@ -4,7 +4,7 @@
    the SAME function that gates its screen: a row you can see is a screen you
    can open, and the screen re-checks rather than trusting the menu. */
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { InviteSheet } from '@/components/dashboard/invite-sheet';
 import { useCycle } from '@/components/cycle/use-cycle';
 import { CHAPTERS } from '@/lib/walkthrough';
@@ -19,8 +19,11 @@ import {
 import { attendanceStats, checkinOpen, followups, isAfter, myNights, nextReminder, reminders, slipsView, weekday } from '@/lib/cycle';
 import { computeNotifications, eventLabel, myBible, myTeamId, openFollowups, teamOf, upcomingEvents } from '@/lib/selectors';
 import { usePrefs } from '@/lib/prefs';
+import { clearRecents, recentsOwner, recentsSnapshot, subscribeRecents } from '@/lib/recents';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef, realRole } from '@/lib/types/domain';
+
+const NO_RECENTS: string[] = [];
 
 interface Item {
   label: string;
@@ -39,6 +42,8 @@ export function MoreScreen() {
   const stale = useApp((s) => s.staleHeld);
   const api = useAppApi();
   const [q, setQ] = useState('');
+  const who = recentsOwner(m);
+  const recentHrefs = useSyncExternalStore(subscribeRecents, () => recentsSnapshot(who), () => NO_RECENTS);
   const [invite, setInvite] = useState(false);
   const p = m.persona;
   const prefs = usePrefs();
@@ -86,7 +91,7 @@ export function MoreScreen() {
                 window.location.reload();
               }
             }
-          : { label: 'Sign out', meta: m.displayName, icon: 'ph ph-sign-out', href: '/logout' }
+          : { label: 'Sign out', meta: m.displayName, icon: 'ph ph-sign-out', href: '/logout', onClick: clearRecents }
       ]
     },
     {
@@ -165,6 +170,10 @@ export function MoreScreen() {
     }
   ];
 
+  /* Recent: deep screens opened lately that this role can still open —
+     anything it can't (or that no longer exists) quietly drops out. */
+  const byHref = new Map(groups.filter((g) => g.visible).flatMap((g) => (g.items.filter(Boolean) as Item[]).filter((it) => it.href).map((it) => [it.href!, it] as const)));
+  const recent = recentHrefs.map((h) => byHref.get(h)).filter((x): x is Item => !!x).slice(0, 5);
   const needle = q.trim().toLowerCase();
   const shown = groups
     .filter((g) => g.visible)
@@ -204,6 +213,19 @@ export function MoreScreen() {
           </button>
         ) : null}
       </div>
+      {!needle && recent.length >= 2 ? (
+        <div>
+          <div className="mb-[9px] mt-[2px] text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Recent</div>
+          <div className="-mx-1 flex gap-[7px] overflow-x-auto px-1 pb-[2px]" style={{ scrollbarWidth: 'none' }}>
+            {recent.map((it) => (
+              <Link key={it.href} href={it.href!} className="flex min-h-11 flex-none items-center gap-[7px] rounded-full border border-neutral-800 px-[13px] text-[12.5px] font-medium text-neutral-200">
+                <Icon name={it.icon} className="text-[14px] text-accent-300" />
+                {it.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {needle && !shown.length ? (
         <div className="rounded-lg bg-surface px-4 py-[22px] text-center text-[12.5px] leading-[1.5] text-neutral-500 text-pretty">
           Nothing here matches that. Try a shorter word — squads, points, prayer, film.
@@ -224,7 +246,7 @@ export function MoreScreen() {
               );
               const cls = 'flex min-h-[52px] w-full items-center gap-3 px-[15px] py-3 text-left sr-hover' + (i ? ' border-t border-divider' : '');
               return it.href ? (
-                <Link key={it.label} href={it.href} className={cls} style={{ color: 'inherit' }}>
+                <Link key={it.label} href={it.href} onClick={it.onClick} className={cls} style={{ color: 'inherit' }}>
                   {inner}
                 </Link>
               ) : (

@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { clearRecents, noteNavigation, noteVisit, recentsOwner } from '@/lib/recents';
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { switchRole } from '@/app/actions';
 import { canScore } from '@/lib/permissions';
@@ -227,6 +228,7 @@ function RoleSheet() {
         api().say(res.error ?? 'Could not switch.');
         return;
       }
+      clearRecents();
       api().setRoleSheet(false);
       router.push('/dashboard');
       router.refresh();
@@ -311,9 +313,12 @@ export function Ready({ children }: { children: ReactNode }) {
 export function PhoneShell({ children }: { children: ReactNode }) {
   const scroller = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const who = useApp((s) => recentsOwner(s.membership));
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
-  }, [pathname]);
+    noteNavigation(pathname);
+    noteVisit(who, pathname);
+  }, [pathname, who]);
 
   return (
     <div

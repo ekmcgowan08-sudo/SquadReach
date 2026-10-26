@@ -70,3 +70,31 @@ test('a leader reports another ministry’s library unit, and sees why theirs wa
   await expect(page.getByText(/one more report hides it/)).toBeVisible();
   await expect(page.getByText(/not for our sixth graders/)).toBeVisible();
 });
+
+test('Back walks the real way back, and More remembers recent screens', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  /* Loaded cold, a screen's Back goes to its parent. */
+  await page.goto('/dashboard/library');
+  await ready(page);
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page).toHaveURL(/\/dashboard\/more$/);
+  /* Opened from inside the app, Back returns to whatever opened it. */
+  await page.getByRole('link', { name: /^Calendar/ }).first().click();
+  await expect(page).toHaveURL(/\/dashboard\/calendar$/);
+  await page.locator('a[href^="/dashboard/events/"]').first().click();
+  await expect(page).toHaveURL(/\/dashboard\/events\//);
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page).toHaveURL(/\/dashboard\/calendar$/);
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page).toHaveURL(/\/dashboard\/more$/);
+  /* Two deep screens visited: Recent shows them, survives a reload, and
+     steps aside while searching. */
+  const recent = page.getByText('Recent', { exact: true });
+  await expect(recent).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Library' }).first()).toBeVisible();
+  await page.reload();
+  await ready(page);
+  await expect(recent).toBeVisible();
+  await page.getByLabel('Search everything').fill('prayer');
+  await expect(recent).toHaveCount(0);
+});

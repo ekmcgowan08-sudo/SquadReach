@@ -229,6 +229,12 @@ Where the prototype left a call open, the build took the safer default:
   dashed draft only when a leader taps it. If the model declines, a
   fallback model is tried server-side; if that declines too, the leader is
   told so.
+- **Back goes back.** On the phone, Back returns to whatever opened the
+  screen (an event opened from the calendar returns to the calendar); only
+  a screen loaded cold falls back to its parent. More keeps a Recent row of
+  the deep screens you opened lately once there are two — on this device,
+  across reloads, for the role you're in; switching role or signing out
+  clears it, and anything the role can't open drops out.
 - **Plan items move three ways.** Drag with a mouse; on a touch screen,
   hold a chip for about 0.4s, slide it and lift (a finger that moves sooner
   is a scroll); or focus it and press Alt + arrows. Every move is one undo
