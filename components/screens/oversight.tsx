@@ -260,7 +260,7 @@ function LedgerRow({ e, reversed = false }: { e: LedgerEntry; reversed?: boolean
           {e.why ? ' · ' + e.why : ''}
           {e.student ? ' · ' + e.student : ''}
         </div>
-        <div className="mt-[3px] text-[10.5px] leading-[1.3] text-neutral-600">
+        <div className="mt-[3px] text-[10.5px] leading-[1.3] text-neutral-500">
           {ago(e.at)}
           {e.decidedBy ? ' · decided by ' + e.decidedBy + (e.decidedAt ? ' ' + ago(e.decidedAt) : '') : ''}
         </div>
@@ -408,7 +408,7 @@ export function AuditScreen() {
               <Icon name="ph ph-clock-counter-clockwise" className="mt-[2px] flex-none text-[14px] text-neutral-500" />
               <div className="min-w-0 flex-1">
                 <div className="text-[12.5px] leading-[1.45] text-neutral-200 text-pretty">{a.line}</div>
-                <div className="mt-[3px] text-[10.5px] leading-none text-neutral-600">{ago(a.at)}</div>
+                <div className="mt-[3px] text-[10.5px] leading-none text-neutral-500">{ago(a.at)}</div>
               </div>
             </div>
           ))}

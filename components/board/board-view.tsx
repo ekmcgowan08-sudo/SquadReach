@@ -76,7 +76,7 @@ export function BoardView({ data }: { data: PublicBoardData }) {
             ))}
           </section>
         ) : null}
-        <div className="text-[11px] leading-[1.5] text-neutral-600">
+        <div className="text-[11px] leading-[1.5] text-neutral-500">
           Powered by SQUAD<span className="text-accent-400">RISE</span> · nothing on this page names a student in full.
         </div>
       </div>

@@ -249,6 +249,7 @@ export function BibleScreen() {
                 return (
                   <button
                     key={i}
+                    data-drill-word
                     onClick={() => setHidden((h) => (off ? h.filter((x) => x !== i) : h.concat(i)))}
                     className="rounded-[5px] px-[9px] py-2 text-[15.5px] leading-[1.35]"
                     style={{ background: off ? 'var(--color-accent-900)' : 'transparent', color: off ? 'var(--color-accent-400)' : 'var(--color-neutral-100)' }}

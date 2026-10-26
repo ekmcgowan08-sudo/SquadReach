@@ -276,7 +276,7 @@ export function YearBoard() {
                       className={cx('group absolute inset-y-0 flex items-end p-[3px]', m > 0 && 'border-l border-neutral-800', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === l.id + '|' + m && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}
                       style={{ left: (m / 12) * 100 + '%', width: 100 / 12 + '%' }}
                     >
-                      <button onClick={() => add(l.id, m)} aria-label={'Add to ' + l.short + ' in ' + name} className="rounded px-1 text-[10.5px] text-neutral-600 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                      <button onClick={() => add(l.id, m)} aria-label={'Add to ' + l.short + ' in ' + name} className="rounded px-1 text-[10.5px] text-neutral-500 opacity-0 group-hover:opacity-100 focus:opacity-100">
                         + Add
                       </button>
                     </div>
@@ -285,7 +285,7 @@ export function YearBoard() {
                 </div>
                 <div {...dropProps(anyCell, l.id, undefined)} className={cx('group flex min-h-[54px] min-w-0 flex-col gap-1 border-b border-l border-neutral-800 p-[5px]', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === anyCell && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}>
                   {any.map((it) => chip(it, l.hue, { height: CHIP_H }, false))}
-                  <button onClick={() => add(l.id, undefined)} aria-label={'Add to ' + l.short + ', anytime'} className="mt-auto self-start rounded px-1 text-[10.5px] text-neutral-600 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                  <button onClick={() => add(l.id, undefined)} aria-label={'Add to ' + l.short + ', anytime'} className="mt-auto self-start rounded px-1 text-[10.5px] text-neutral-500 opacity-0 group-hover:opacity-100 focus:opacity-100">
                     + Add
                   </button>
                 </div>

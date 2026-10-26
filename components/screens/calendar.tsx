@@ -131,7 +131,7 @@ export function CalendarScreen() {
         </div>
         <div className="mb-[6px] grid grid-cols-7 gap-[5px]">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((x, i) => (
-            <div key={i} className="text-center text-[9.5px] font-medium leading-none text-neutral-600">
+            <div key={i} className="text-center text-[9.5px] font-medium leading-none text-neutral-500">
               {x}
             </div>
           ))}

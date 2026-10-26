@@ -38,7 +38,7 @@ function LeaderLive({ night }: { night: string }) {
             ['results', 'Results']
           ] as const
         ).map(([id, label]) => (
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={cx('min-h-9 flex-1 rounded-full text-[12.5px] font-medium', tab === id ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-400')}>
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={cx('min-h-11 flex-1 rounded-full text-[12.5px] font-medium', tab === id ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-400')}>
             {label}
           </button>
         ))}

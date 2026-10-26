@@ -215,7 +215,7 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                         </span>
                       </button>
                     ))}
-                    <button onClick={() => add(l.id, y)} aria-label={'Add to ' + l.short + ' in ' + yearLabel(sy, y)} className="mt-auto self-start rounded px-1 text-[11px] text-neutral-600 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                    <button onClick={() => add(l.id, y)} aria-label={'Add to ' + l.short + ' in ' + yearLabel(sy, y)} className="mt-auto self-start rounded px-1 text-[11px] text-neutral-500 opacity-0 group-hover:opacity-100 focus:opacity-100">
                       + Add
                     </button>
                   </div>

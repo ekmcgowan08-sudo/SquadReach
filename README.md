@@ -53,7 +53,7 @@ To reset the demo, clear the site’s storage for localhost.
 | `npm run lint` | ESLint, including the React Compiler rules |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Vitest unit tests (scoring, feeds, outbox, game clock, the night cycle, seasons, reports, plan dates and insights, live ministry time) |
-| `npm run e2e` | Playwright tests in demo mode (`e2e/`): smoke tests on a phone and at a desk, and axe accessibility scans of about sixty screens (any serious or critical WCAG 2.1 AA finding fails), and the handoff's Pilot QA: every desk screen at 1180, 1280 and 1440px with no sideways scroll, nothing past the window edge, no control wrapped onto two lines, and the nav faded exactly when links are cut off. Starts the app itself; set `E2E_BASE_URL` to test a running one |
+| `npm run e2e` | Playwright tests in demo mode (`e2e/`): smoke tests on a phone and at a desk, and axe accessibility scans of about sixty screens (any serious or critical WCAG 2.1 AA finding fails), and the handoff's Pilot QA: every desk screen at 1180, 1280 and 1440px with no sideways scroll, nothing past the window edge, no control wrapped onto two lines, and the nav faded exactly when links are cut off; and the handoff's tap-target walk: every button and link on about forty phone screens and overlays (the recorder, the small-group player, the role sheet, library sheets) at least 44px tall, the memory drill's verse words excepted at 24px. Starts the app itself; set `E2E_BASE_URL` to test a running one |
 | `npm run db:test` | Applies every migration to a throwaway Postgres and runs the RLS tests in `supabase/tests/*.test.sql`. Needs Postgres 15+ binaries on `PATH` or under `/usr/lib/postgresql/*/bin` |
 
 ## Running against Supabase

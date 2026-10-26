@@ -98,7 +98,7 @@ export function ShowRoom({ night }: { night: string }) {
 
   return (
     <>
-      <button onClick={() => void openRoom(href, other)} className="flex min-h-10 items-center rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-200">
+      <button onClick={() => void openRoom(href, other)} className="flex min-h-11 items-center rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-200">
         <Icon name={other ? 'ph ph-monitor' : 'ph ph-arrow-square-out'} className="mr-[6px] text-[13px]" />
         {other ? 'Show on the other screen' : 'Open the room screen'}
       </button>
@@ -108,7 +108,7 @@ export function ShowRoom({ night }: { night: string }) {
             setSheet(true);
             if (!url) void mint();
           }}
-          className="flex min-h-10 items-center rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-200"
+          className="flex min-h-11 items-center rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-200"
         >
           <Icon name="ph ph-screencast" className="mr-[6px] text-[13px]" />
           Cast to a TV

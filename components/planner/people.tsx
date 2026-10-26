@@ -139,7 +139,7 @@ function Volunteers() {
                             onClick={() => cycle(p, n)}
                             aria-label={p + ' on ' + nightLabel(n) + ': ' + (a === 'yes' ? 'in' : a === 'no' ? 'away' : 'not said')}
                             className="min-h-8 min-w-[70px] rounded-full border px-2 text-[11px]"
-                            style={{ borderColor: a === 'yes' ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', color: a === 'yes' ? 'var(--color-accent-200)' : a === 'no' ? 'var(--color-neutral-300)' : 'var(--color-neutral-600)' }}
+                            style={{ borderColor: a === 'yes' ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', color: a === 'yes' ? 'var(--color-accent-200)' : a === 'no' ? 'var(--color-neutral-300)' : 'var(--color-neutral-500)' }}
                           >
                             {a === 'yes' ? 'In' : a === 'no' ? 'Away' : '—'}
                           </button>

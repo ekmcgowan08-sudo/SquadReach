@@ -350,7 +350,7 @@ export const HEALTH: Record<Health | 'dismissed', { label: string; color: string
   healthy: { label: 'Healthy', color: 'oklch(0.66 0.085 292)' },
   attention: { label: 'Attention needed', color: 'oklch(0.72 0.105 66)' },
   gap: { label: 'Gap', color: 'oklch(0.66 0.11 24)' },
-  dismissed: { label: 'Set aside', color: 'var(--color-neutral-600)' }
+  dismissed: { label: 'Set aside', color: 'var(--color-neutral-500)' }
 };
 
 /** Set a check, suggestion or coverage cell aside — always with a reason. */

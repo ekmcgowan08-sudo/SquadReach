@@ -28,7 +28,7 @@ export function PreviewClock({ t, stages, current, mode }: { t: NightTimes; stag
               key={g.id}
               onClick={() => pick(on ? null : g.id, t)}
               aria-pressed={on}
-              className="min-h-9 flex-none rounded-full border px-3 text-[11.5px] font-medium leading-none"
+              className="min-h-11 flex-none rounded-full border px-3 text-[11.5px] font-medium leading-none"
               style={{ borderColor: on ? 'var(--color-accent-500)' : 'var(--color-neutral-800)', background: on ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent', color: on ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}
             >
               {g.short}
@@ -53,7 +53,7 @@ export function Seg<T extends string>({ value, options, onChange, small }: { val
             role="tab"
             aria-selected={on}
             onClick={() => onChange(o.id)}
-            className={cx('flex-1 rounded-full font-medium leading-none', small ? 'min-h-9 text-[11.5px]' : 'min-h-10 text-[12.5px]')}
+            className={cx('flex-1 rounded-full font-medium leading-none', small ? 'min-h-11 text-[11.5px]' : 'min-h-11 text-[12.5px]')}
             style={{ background: on ? 'var(--color-neutral-800)' : 'transparent', color: on ? 'var(--color-neutral-100)' : 'var(--color-neutral-500)' }}
           >
             {o.label}
@@ -82,7 +82,7 @@ export function PersonChip({ name, on, tag, onClick }: { name: string; on: boole
     <button
       onClick={onClick}
       aria-pressed={on}
-      className="min-h-9 flex-none rounded-full border px-3 text-[11.5px] font-medium leading-none"
+      className="min-h-11 flex-none rounded-full border px-3 text-[11.5px] font-medium leading-none"
       style={{ borderColor: on ? 'var(--color-accent-500)' : 'var(--color-neutral-700)', background: on ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent', color: on ? 'var(--color-accent-100)' : 'var(--color-neutral-300)' }}
     >
       {name}

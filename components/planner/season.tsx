@@ -279,7 +279,7 @@ function NightDetail({ night }: { night: string }) {
                       <td className="py-[6px]">
                         <input className="input !min-h-8 !w-[80px] !py-0" type="number" min={0} value={a ?? ''} onChange={(e) => setActual({ ...actual, [b.id]: e.target.value })} aria-label={'Actual minutes for ' + (b.title || b.kind)} />
                       </td>
-                      <td className="tabular py-[6px]" style={{ color: off ? (off > 0 ? 'var(--color-accent-200)' : 'var(--color-neutral-300)') : 'var(--color-neutral-600)' }}>
+                      <td className="tabular py-[6px]" style={{ color: off ? (off > 0 ? 'var(--color-accent-200)' : 'var(--color-neutral-300)') : 'var(--color-neutral-500)' }}>
                         {off == null ? '—' : (off > 0 ? '+' : '') + off}
                       </td>
                     </tr>

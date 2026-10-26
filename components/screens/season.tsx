@@ -481,7 +481,7 @@ function GroupEditor({ group, onClose }: { group: SmallGroup; onClose: () => voi
           <div key={s.id} className="flex flex-col gap-2 rounded-lg bg-neutral-900 p-3" style={{ boxShadow: 'inset 0 0 0 1px var(--color-neutral-800)' }}>
             <div className="flex items-center gap-2">
               <Icon name={ty.icon} className="text-[15px]" style={{ color: ty.color }} />
-              <select className="input !min-h-10 flex-1 !py-0" value={s.type} onChange={(e) => patchScreen(k, { type: e.target.value })} aria-label="Screen type">
+              <select className="input !min-h-11 flex-1 !py-0" value={s.type} onChange={(e) => patchScreen(k, { type: e.target.value })} aria-label="Screen type">
                 {SG_TYPES.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.label}

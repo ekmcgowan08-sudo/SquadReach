@@ -39,7 +39,7 @@ export function LiveConsole({ c, night }: { c: Console; night: string }) {
           const on = i === room.idx;
           const ran = room.opened[a.id] !== undefined;
           return (
-            <button key={a.id} onClick={() => c.go(i)} aria-pressed={on} className={cx('flex min-h-10 flex-none items-center gap-[6px] rounded-full border px-3 text-[12px]', on ? 'border-accent-500 bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-accent-100' : 'border-neutral-800 text-neutral-400')}>
+            <button key={a.id} onClick={() => c.go(i)} aria-pressed={on} className={cx('flex min-h-11 flex-none items-center gap-[6px] rounded-full border px-3 text-[12px]', on ? 'border-accent-500 bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-accent-100' : 'border-neutral-800 text-neutral-400')}>
               <Icon name={'ph ' + (ran ? 'ph-check' : liveType(a.type).icon)} className="text-[13px]" />
               {i + 1}. {liveType(a.type).label}
             </button>

@@ -194,7 +194,7 @@ export function TonightCard() {
         {shownNeeds.map((n) => (
           <div key={n.id} className="flex items-start gap-[11px] border-b border-divider py-[10px] animate-sr-rise">
             <Icon name={'ph ' + n.icon} className="mt-[1px] flex-none text-[16px] text-accent-300" />
-            <Link href={n.href} className="min-w-0 flex-1" style={{ color: 'inherit' }}>
+            <Link href={n.href} className="flex min-h-11 min-w-0 flex-1 flex-col justify-center" style={{ color: 'inherit' }}>
               <div className="text-[12.5px] font-medium leading-[1.3] text-neutral-100">{n.title}</div>
               <div className="mt-[2px] text-[11px] leading-[1.45] text-neutral-500 text-pretty">{n.meta}</div>
             </Link>
@@ -211,13 +211,13 @@ export function TonightCard() {
           </div>
         ))}
         {!needs.length ? (
-          <div className="flex min-h-10 items-center gap-[9px] text-[12px] leading-[1.3] text-neutral-400">
+          <div className="flex min-h-11 items-center gap-[9px] text-[12px] leading-[1.3] text-neutral-400">
             <Icon name="ph ph-check-circle" className="text-[16px] text-accent-300" />
             Nothing waiting on you.
           </div>
         ) : null}
         {!open && needs.length > 2 ? (
-          <button onClick={() => setOpen(true)} className="min-h-10 w-full text-left text-[11.5px] font-medium leading-none text-accent-200">
+          <button onClick={() => setOpen(true)} className="min-h-11 w-full text-left text-[11.5px] font-medium leading-none text-accent-200">
             Show {needs.length - 2} more and the ready check
           </button>
         ) : null}

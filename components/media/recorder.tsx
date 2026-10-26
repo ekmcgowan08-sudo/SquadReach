@@ -431,13 +431,13 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
             <div className="flex w-[118px] flex-none flex-col items-center gap-[5px]">
               <div className="tabular text-[15px] font-semibold leading-none">{clockText(sec)}</div>
               <div className="flex items-center gap-[5px]">
-                <button aria-label="Take a second off the clock" onClick={() => nudge(-1)} className="min-h-9 rounded-full border px-2 text-[11px]" style={{ borderColor: dark + '.2)' }}>
+                <button aria-label="Take a second off the clock" onClick={() => nudge(-1)} className="min-h-11 rounded-full border px-2 text-[11px]" style={{ borderColor: dark + '.2)' }}>
                   −1
                 </button>
                 <button aria-label={clock.startedAt != null ? 'Pause the clock' : 'Start the clock'} aria-pressed={clock.startedAt != null} onClick={toggleClock} className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-white">
                   <Icon name={clock.startedAt != null ? 'ph-fill ph-pause' : 'ph-fill ph-play'} className="text-[15px]" />
                 </button>
-                <button aria-label="Add a second to the clock" onClick={() => nudge(1)} className="min-h-9 rounded-full border px-2 text-[11px]" style={{ borderColor: dark + '.2)' }}>
+                <button aria-label="Add a second to the clock" onClick={() => nudge(1)} className="min-h-11 rounded-full border px-2 text-[11px]" style={{ borderColor: dark + '.2)' }}>
                   +1
                 </button>
               </div>
@@ -473,13 +473,13 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
                     </div>
                     <div className="tabular text-[22px] font-semibold leading-none">{tally[t.id] ?? 0}</div>
                     <div className="flex w-full items-center justify-between gap-2 rounded-xl border p-2" style={{ borderColor: dark + '.14)' }}>
-                      <button aria-label={'Take one from ' + t.name} onClick={() => tap(t.id, -1)} className="h-9 w-9 rounded-full border" style={{ borderColor: dark + '.18)' }}>
+                      <button aria-label={'Take one from ' + t.name} onClick={() => tap(t.id, -1)} className="h-11 w-11 rounded-full border" style={{ borderColor: dark + '.18)' }}>
                         <Icon name="ph ph-minus" className="text-[13px]" />
                       </button>
                       <span className="text-[13px] font-medium" style={{ color: dark + '.85)' }}>
                         {abbr(t.name)}
                       </span>
-                      <button aria-label={t.name + ' scores'} onClick={() => tap(t.id)} className="h-9 w-9 rounded-full border-[1.5px] border-accent text-accent-200">
+                      <button aria-label={t.name + ' scores'} onClick={() => tap(t.id)} className="h-11 w-11 rounded-full border-[1.5px] border-accent text-accent-200">
                         <Icon name="ph ph-plus" className="text-[13px]" />
                       </button>
                     </div>
@@ -491,24 +491,24 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
                   </div>
                   <div className="flex flex-wrap justify-center gap-[5px]">
                     {PERIODS.map((p) => (
-                      <button key={p} onClick={() => setPeriod(p)} aria-pressed={period === p} className="min-h-9 min-w-[38px] rounded-lg border text-[11px] font-medium" style={{ borderColor: period === p ? 'var(--color-accent)' : dark + '.18)', background: period === p ? 'color-mix(in srgb, var(--color-accent) 22%, transparent)' : 'transparent' }}>
+                      <button key={p} onClick={() => setPeriod(p)} aria-pressed={period === p} className="min-h-11 min-w-11 rounded-lg border text-[11px] font-medium" style={{ borderColor: period === p ? 'var(--color-accent)' : dark + '.18)', background: period === p ? 'color-mix(in srgb, var(--color-accent) 22%, transparent)' : 'transparent' }}>
                         {p}
                       </button>
                     ))}
                   </div>
                   <div className="flex gap-[6px]">
                     {(['up', 'down'] as const).map((md) => (
-                      <button key={md} onClick={() => setClock((c) => ({ ...c, mode: md, base: 0, startedAt: null }))} aria-pressed={clock.mode === md} className="min-h-8 rounded-full border px-[10px] text-[11px]" style={{ borderColor: clock.mode === md ? 'var(--color-accent)' : dark + '.18)' }}>
+                      <button key={md} onClick={() => setClock((c) => ({ ...c, mode: md, base: 0, startedAt: null }))} aria-pressed={clock.mode === md} className="min-h-11 rounded-full border px-[10px] text-[11px]" style={{ borderColor: clock.mode === md ? 'var(--color-accent)' : dark + '.18)' }}>
                         {md === 'up' ? 'Up' : 'Down'}
                       </button>
                     ))}
                   </div>
                   {clock.mode === 'down' ? (
                     <div className="flex gap-[6px]">
-                      <button onClick={() => setClock((c) => ({ ...c, target: Math.max(60, c.target - 60) }))} className="min-h-8 rounded-full border px-[11px] text-[11px]" style={{ borderColor: dark + '.18)' }}>
+                      <button onClick={() => setClock((c) => ({ ...c, target: Math.max(60, c.target - 60) }))} className="min-h-11 rounded-full border px-[11px] text-[11px]" style={{ borderColor: dark + '.18)' }}>
                         −1m
                       </button>
-                      <button onClick={() => setClock((c) => ({ ...c, target: c.target + 60 }))} className="min-h-8 rounded-full border px-[11px] text-[11px]" style={{ borderColor: dark + '.18)' }}>
+                      <button onClick={() => setClock((c) => ({ ...c, target: c.target + 60 }))} className="min-h-11 rounded-full border px-[11px] text-[11px]" style={{ borderColor: dark + '.18)' }}>
                         +1m
                       </button>
                     </div>

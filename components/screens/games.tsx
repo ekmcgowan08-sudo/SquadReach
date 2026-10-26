@@ -302,7 +302,7 @@ export function GamesScreen() {
                       <div key={p.id} className="flex min-w-0 flex-col items-center gap-[5px] rounded-md border border-neutral-800 px-1 pb-[7px] pt-[6px]">
                         <div className="w-full truncate text-center text-[8.5px] uppercase leading-none tracking-[.04em] text-neutral-500">{p.label}</div>
                         <div className="flex items-center gap-[3px]">
-                          <button aria-label={'Remove ' + p.label + ' from ' + r.team.name} onClick={() => tap(r.team.id, p, -1)} className="relative h-[21px] w-[21px] flex-none rounded-[6px] border border-neutral-800 text-[10px] font-semibold leading-none text-neutral-600 before:absolute before:-inset-x-1 before:-inset-y-3 before:content-['']">
+                          <button aria-label={'Remove ' + p.label + ' from ' + r.team.name} onClick={() => tap(r.team.id, p, -1)} className="relative h-[21px] w-[21px] flex-none rounded-[6px] border border-neutral-800 text-[10px] font-semibold leading-none text-neutral-500 before:absolute before:-inset-x-1 before:-inset-y-3 before:content-['']">
                             −
                           </button>
                           <div className="tabular min-w-[10px] text-center text-[12px] font-semibold leading-none" style={{ color: n ? 'var(--color-accent-200)' : 'var(--color-neutral-500)' }}>
@@ -317,7 +317,7 @@ export function GamesScreen() {
                             +
                           </button>
                         </div>
-                        <div className="whitespace-nowrap text-[9.5px] leading-none text-neutral-600">{(p.kind === 'subtract' ? '−' : '+') + p.sec + 's'}</div>
+                        <div className="whitespace-nowrap text-[9.5px] leading-none text-neutral-500">{(p.kind === 'subtract' ? '−' : '+') + p.sec + 's'}</div>
                       </div>
                     );
                   })}
@@ -512,7 +512,7 @@ export function GameRulesScreen() {
               {gs.offsiteAddress.trim() ? ' · offsite' : ''}
             </div>
             <div className="text-[11.5px] leading-[1.5] text-neutral-400 text-pretty">{address}</div>
-            <a href={'https://maps.google.com/?q=' + encodeURIComponent(address)} target="_blank" rel="noreferrer" className="mt-[3px] text-[11px] font-medium leading-none text-accent-300">
+            <a href={'https://maps.google.com/?q=' + encodeURIComponent(address)} target="_blank" rel="noreferrer" className="-ml-1 inline-flex min-h-11 items-center self-start px-1 text-[11px] font-medium leading-none text-accent-300">
               Open in maps →
             </a>
           </div>

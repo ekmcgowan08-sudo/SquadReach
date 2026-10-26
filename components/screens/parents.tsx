@@ -89,7 +89,7 @@ export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
 
       <div className="flex items-baseline justify-between">
         <Label>Permission slips</Label>
-        <button onClick={() => setNewSlip(true)} className="text-[11.5px] font-medium text-accent-300">
+        <button onClick={() => setNewSlip(true)} className="-mr-2 min-h-11 px-2 text-[11.5px] font-medium text-accent-300">
           + New slip
         </button>
       </div>
@@ -142,7 +142,7 @@ export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
                       <div className="truncate text-[12.5px] text-neutral-200">{k.name}</div>
                       <div className="truncate text-[10.5px] text-neutral-500">{k.signed ? 'Signed · ' + k.by : k.guardian || 'No guardian on file'}</div>
                     </div>
-                    <button onClick={() => paper(v.slip.id, k.name, !k.signed)} className="min-h-9 rounded-full border border-neutral-700 px-3 text-[11px] text-neutral-300">
+                    <button onClick={() => paper(v.slip.id, k.name, !k.signed)} className="min-h-11 rounded-full border border-neutral-700 px-3 text-[11px] text-neutral-300">
                       {k.signed ? 'Undo' : 'Paper slip'}
                     </button>
                   </div>

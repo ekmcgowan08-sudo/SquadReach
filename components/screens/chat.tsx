@@ -76,7 +76,7 @@ function ThreadList() {
             key={f.id}
             onClick={() => setFilter(f.id)}
             aria-pressed={filter === f.id}
-            className="relative min-h-9 flex-1 rounded-full border text-[11.5px] font-medium leading-none before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']"
+            className="relative min-h-11 flex-1 rounded-full border text-[11.5px] font-medium leading-none"
             style={{ borderColor: filter === f.id ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', background: filter === f.id ? 'color-mix(in srgb, var(--color-accent) 16%, transparent)' : 'transparent', color: filter === f.id ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}
           >
             {f.label}
