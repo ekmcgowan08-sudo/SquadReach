@@ -229,6 +229,10 @@ Where the prototype left a call open, the build took the safer default:
   dashed draft only when a leader taps it. If the model declines, a
   fallback model is tried server-side; if that declines too, the leader is
   told so.
+- **Plan items move three ways.** Drag with a mouse; on a touch screen,
+  hold a chip for about 0.4s, slide it and lift (a finger that moves sooner
+  is a scroll); or focus it and press Alt + arrows. Every move is one undo
+  step (⌘Z / Ctrl+Z, ⇧⌘Z / Ctrl+Y).
 - **Leaders edit together without overwriting each other.** The plan,
   reports and other ministry documents carry a revision. A save only lands
   over the revision the phone last saw; otherwise it merges onto what's

@@ -6,7 +6,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { ItemPanel, KINDS } from '@/components/planner/item-panel';
-import { DismissBox, HEALTH, PageHead, Panel, UndoButtons, usePlanSave } from '@/components/planner/kit';
+import { DismissBox, HEALTH, HOLDABLE, PageHead, Panel, UndoButtons, usePlanSave, useTouchDrag } from '@/components/planner/kit';
 import { Btn, Icon, cx } from '@/components/ui';
 import { advent1, easter } from '@/lib/liturgical';
 import type { AiSuggestion } from '@/lib/plan-ai';
@@ -82,6 +82,12 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
   const save = usePlanSave();
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  const touch = useTouchDrag({
+    start: setDrag,
+    over: setOver,
+    drop: (id, cell) => move(id, cell.slice(0, cell.lastIndexOf('|')), Number(cell.slice(cell.lastIndexOf('|') + 1))),
+    end: () => (setDrag(null), setOver(null))
+  });
   const [hideDrafts, setHideDrafts] = useState(false);
   const lanes = p.lanes.filter((l) => l.on);
   const sy = p.settings.startYear;
@@ -163,6 +169,7 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                 return (
                   <div
                     key={y}
+                    data-drop={cell}
                     onDragOver={(e) => {
                       if (!drag) return;
                       e.preventDefault();
@@ -181,6 +188,7 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                       <button
                         key={it.id}
                         draggable
+                        {...touch(it.id)}
                         onDragStart={(e) => {
                           setDrag(it.id);
                           e.dataTransfer.effectAllowed = 'move';
@@ -192,7 +200,7 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                         }}
                         onClick={() => onOpen(it.id)}
                         onKeyDown={(e) => onKey(e, it)}
-                        className={cx('flex items-start gap-[6px] rounded-md px-2 py-[5px] text-left text-[11.5px] leading-[1.3]', it.status === 'draft' && 'italic')}
+                        className={cx('flex items-start gap-[6px] rounded-md px-2 py-[5px] text-left text-[11.5px] leading-[1.3]', HOLDABLE, it.status === 'draft' && 'italic')}
                         style={{
                           background: it.status === 'confirmed' ? 'color-mix(in srgb, ' + laneColor(l.hue) + ' 22%, var(--color-neutral-900))' : 'transparent',
                           border: '1px ' + (it.status === 'draft' ? 'dashed' : 'solid') + ' ' + laneColor(l.hue),

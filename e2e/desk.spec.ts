@@ -94,3 +94,52 @@ test('pricing never reaches a ministry, not even its owner', async ({ page, cont
   await ready(page);
   await expect(page.getByText(/Plans & Billing|per student per year/)).toHaveCount(0);
 });
+
+test('on a touch screen, a roadmap chip is held, slid and lifted to move it', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ hasTouch: true, viewport: { width: 1280, height: 900 } });
+  await as(context, 'leader', baseURL!);
+  const page = await context.newPage();
+  await page.goto('/planner/roadmap');
+  await ready(page);
+  const chip = () => page.getByRole('button', { name: /Gospel of Mark/ }).first();
+  const from = (await chip().boundingBox())!;
+  const cdp = await context.newCDPSession(page);
+  const finger = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  const x0 = from.x + from.width / 2;
+  const y0 = from.y + from.height / 2;
+  await finger('touchStart', x0, y0);
+  await page.waitForTimeout(550);
+  for (let i = 1; i <= 8; i++) await finger('touchMove', x0 + (from.width + 30) * (i / 8), y0);
+  await finger('touchEnd');
+  await expect.poll(async () => (await chip().boundingBox())!.x).toBeGreaterThan(from.x + 40);
+  /* Lifting the finger drops; it doesn't also open the item. */
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(async () => (await chip().boundingBox())!.x).toBe(from.x);
+  /* A tap a moment later still opens it (the lift's own click is the
+     only one swallowed). */
+  await page.waitForTimeout(400);
+  await page.touchscreen.tap(x0, y0);
+  await expect(page.getByRole('dialog', { name: /Gospel of Mark/ })).toBeVisible();
+  await context.close();
+});
+
+test('on a touch screen, a ministry-year bar is held and slid to another month', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ hasTouch: true, viewport: { width: 1280, height: 900 } });
+  await as(context, 'leader', baseURL!);
+  const page = await context.newPage();
+  await page.goto('/planner/year');
+  await ready(page);
+  const bar = () => page.getByRole('button', { name: /^Fall kickoff/ }).first();
+  const from = (await bar().boundingBox())!;
+  const cdp = await context.newCDPSession(page);
+  const finger = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  const x0 = from.x + from.width / 2;
+  const y0 = from.y + from.height / 2;
+  await finger('touchStart', x0, y0);
+  await page.waitForTimeout(550);
+  for (let i = 1; i <= 8; i++) await finger('touchMove', x0 + (from.width + 6) * 2 * (i / 8), y0);
+  await finger('touchEnd');
+  await expect.poll(async () => (await bar().boundingBox())!.x).toBeGreaterThan(from.x + from.width);
+  await context.close();
+});

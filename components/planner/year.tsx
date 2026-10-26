@@ -5,7 +5,7 @@
    (or Alt+arrow) to set when it starts; "Anytime" means no month yet. */
 import { useState } from 'react';
 import { ItemPanel, KINDS } from '@/components/planner/item-panel';
-import { PageHead, UndoButtons, usePlanSave } from '@/components/planner/kit';
+import { HOLDABLE, PageHead, UndoButtons, usePlanSave, useTouchDrag } from '@/components/planner/kit';
 import { Icon, cx } from '@/components/ui';
 import { holyDaysBetween } from '@/lib/liturgical';
 import { MONTHS_FROM_AUG, laneColor, monthIndex, nightsOf, seasonsOf, teachingByNight, yearBounds, yearLabel, yearOf, type PlanItem } from '@/lib/plan';
@@ -56,6 +56,16 @@ export function YearBoard() {
   const [open, setOpen] = useState<string | null>(null);
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  const touch = useTouchDrag({
+    start: setDrag,
+    over: setOver,
+    drop: (id, cell) => {
+      const at = cell.lastIndexOf('|');
+      const m = cell.slice(at + 1);
+      move(id, cell.slice(0, at), m === 'any' ? undefined : Number(m));
+    },
+    end: () => (setDrag(null), setOver(null))
+  });
   const sy = p.settings.startYear;
   const lanes = p.lanes.filter((l) => l.on);
   const nights = nightsOf(p, y);
@@ -127,6 +137,7 @@ export function YearBoard() {
       <button
         key={it.id}
         draggable
+        {...touch(it.id)}
         onDragStart={(e) => {
           setDrag(it.id);
           e.dataTransfer.effectAllowed = 'move';
@@ -138,7 +149,7 @@ export function YearBoard() {
         }}
         onClick={() => setOpen(it.id)}
         onKeyDown={(e) => onKey(e, it)}
-        className={cx('z-[1] flex min-w-0 items-center gap-[6px] overflow-hidden rounded-md px-[6px] text-left text-[11.5px] leading-none', it.status === 'draft' && 'italic')}
+        className={cx('z-[1] flex min-w-0 items-center gap-[6px] overflow-hidden rounded-md px-[6px] text-left text-[11.5px] leading-none', HOLDABLE, it.status === 'draft' && 'italic')}
         style={{ ...style, background: it.status === 'confirmed' ? 'color-mix(in srgb, ' + laneColor(hue) + ' 22%, var(--color-neutral-900))' : 'var(--color-bg)', border: '1px ' + (it.status === 'draft' ? 'dashed' : 'solid') + ' ' + laneColor(hue), color: 'var(--color-neutral-100)', opacity: drag === it.id ? 0.4 : 1 }}
         title={it.title + ' — ' + KINDS[it.kind].label + (meta ? ' · ' + meta : '')}
       >
@@ -273,6 +284,7 @@ export function YearBoard() {
                   {MONTHS_FROM_AUG.map((name, m) => (
                     <div
                       key={name}
+                      data-drop={l.id + '|' + m}
                       className={cx('group absolute inset-y-0 flex items-end p-[3px]', m > 0 && 'border-l border-neutral-800', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === l.id + '|' + m && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}
                       style={{ left: (m / 12) * 100 + '%', width: 100 / 12 + '%' }}
                     >
@@ -283,7 +295,7 @@ export function YearBoard() {
                   ))}
                   {bars.map((b) => chip(b.it, l.hue, { position: 'absolute', left: 'calc(' + (b.from / 12) * 100 + '% + 3px)', width: 'calc(' + ((b.to - b.from + 1) / 12) * 100 + '% - 6px)', top: 4 + b.track * (CHIP_H + 4), height: CHIP_H }, b.to > b.from))}
                 </div>
-                <div {...dropProps(anyCell, l.id, undefined)} className={cx('group flex min-h-[54px] min-w-0 flex-col gap-1 border-b border-l border-neutral-800 p-[5px]', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === anyCell && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}>
+                <div {...dropProps(anyCell, l.id, undefined)} data-drop={anyCell} className={cx('group flex min-h-[54px] min-w-0 flex-col gap-1 border-b border-l border-neutral-800 p-[5px]', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === anyCell && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}>
                   {any.map((it) => chip(it, l.hue, { height: CHIP_H }, false))}
                   <button onClick={() => add(l.id, undefined)} aria-label={'Add to ' + l.short + ', anytime'} className="mt-auto self-start rounded px-1 text-[10.5px] text-neutral-500 opacity-0 group-hover:opacity-100 focus:opacity-100">
                     + Add

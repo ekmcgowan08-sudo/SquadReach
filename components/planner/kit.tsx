@@ -142,6 +142,85 @@ export function UndoButtons() {
 }
 
 /* ── the shell ───────────────────────────────────────────────────────── */
+/** While a held chip is being dragged, the page mustn't scroll under it. */
+const blockScroll = (e: TouchEvent) => e.preventDefault();
+
+/** Touch can't use the browser's drag and drop, so on a touch screen a chip
+ *  is held for 0.4s, slid and lifted to drop. Cells name themselves with
+ *  data-drop; the cell under the finger is the target. A finger that moves
+ *  before then is a scroll, not a drag. Mouse and pen keep native drag. */
+export function useTouchDrag(on: { start: (id: string) => void; over: (cell: string | null) => void; drop: (id: string, cell: string) => void; end: () => void }) {
+  const cb = useRef(on);
+  useEffect(() => {
+    cb.current = on;
+  });
+  const st = useRef<{ id: string; x: number; y: number; timer: ReturnType<typeof setTimeout> | null; live: boolean; cell: string | null } | null>(null);
+  const swallowClick = useRef(false);
+  const stop = (drop: boolean) => {
+    const s = st.current;
+    st.current = null;
+    if (!s) return;
+    if (s.timer) clearTimeout(s.timer);
+    if (!s.live) return;
+    document.removeEventListener('touchmove', blockScroll);
+    /* The click a lift makes comes straight after it; don't let a missed
+       one swallow the next real tap. */
+    swallowClick.current = drop;
+    if (drop) setTimeout(() => (swallowClick.current = false), 350);
+    if (drop && s.cell) cb.current.drop(s.id, s.cell);
+    cb.current.end();
+  };
+  useEffect(() => () => document.removeEventListener('touchmove', blockScroll), []);
+  return (id: string) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      if (e.pointerType !== 'touch') return;
+      const el = e.currentTarget;
+      const pid = e.pointerId;
+      const s = { id, x: e.clientX, y: e.clientY, timer: null as ReturnType<typeof setTimeout> | null, live: false, cell: null as string | null };
+      s.timer = setTimeout(() => {
+        s.timer = null;
+        s.live = true;
+        document.addEventListener('touchmove', blockScroll, { passive: false });
+        try {
+          el.setPointerCapture(pid);
+        } catch {
+          /* the pointer already went */
+        }
+        navigator.vibrate?.(10);
+        cb.current.start(id);
+      }, 400);
+      st.current = s;
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      const s = st.current;
+      if (!s || s.id !== id) return;
+      if (!s.live) {
+        if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 8) stop(false);
+        return;
+      }
+      const hit = document.elementsFromPoint(e.clientX, e.clientY).find((el): el is HTMLElement => el instanceof HTMLElement && !!el.dataset.drop);
+      const cell = hit?.dataset.drop ?? null;
+      if (cell !== s.cell) {
+        s.cell = cell;
+        cb.current.over(cell);
+      }
+    },
+    onPointerUp: () => stop(true),
+    onPointerCancel: () => stop(false),
+    onContextMenu: (e: React.MouseEvent) => {
+      if (st.current) e.preventDefault();
+    },
+    onClickCapture: (e: React.MouseEvent) => {
+      if (!swallowClick.current) return;
+      swallowClick.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+}
+/** A chip that can be held: no text selection or callout menu under the finger. */
+export const HOLDABLE = 'select-none [-webkit-touch-callout:none]';
+
 /** True while a horizontal strip's content runs past its right edge — so
  *  the edge fades only when there is more to scroll to. Re-measured when
  *  it or its links resize (fonts loading included) and as it scrolls. */
