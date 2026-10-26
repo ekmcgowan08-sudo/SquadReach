@@ -33,6 +33,19 @@ function labelRows<T extends { name: string; date: string }>(days: T[]) {
     return { h, row: row >= 0 ? row : null };
   });
 }
+const CHIP_H = 26;
+/** Lays bars into tracks: each goes in the first track free by its start. */
+function pack<T extends { from: number; to: number }>(bars: T[]) {
+  const ends: number[] = [];
+  return [...bars]
+    .sort((a, b) => a.from - b.from || b.to - a.to)
+    .map((b) => {
+      let track = ends.findIndex((e) => e < b.from);
+      if (track < 0) track = ends.length;
+      ends[track] = b.to;
+      return { ...b, track };
+    });
+}
 const BAND = ['oklch(0.63 0.085 292)', 'oklch(0.63 0.085 208)', 'oklch(0.63 0.085 168)', 'oklch(0.63 0.085 42)', 'oklch(0.63 0.085 18)', 'oklch(0.63 0.085 330)'];
 
 export function YearBoard() {
@@ -98,7 +111,48 @@ export function YearBoard() {
     }
   });
 
-  const cols = '170px repeat(12, minmax(88px, 1fr)) 120px';
+  /** What a bar says after its title: when a series is taught, or how big an item is. */
+  const metaOf = (it: PlanItem) => {
+    const span = it.kind === 'series' && it.lane === 'teach' ? seriesSpan(it) : null;
+    if (span) return short(span.from) + ' – ' + short(span.to) + (span.n < it.size ? ' · ' + (it.size - span.n) + ' weeks don’t fit' : '');
+    if (it.kind === 'series') return it.size + ' weeks';
+    if (it.size > 1 && it.kind !== 'goal' && it.kind !== 'milestone') return it.size + ' ' + KINDS[it.kind].size.toLowerCase();
+    return '';
+  };
+  /* One line, as the design has it: the dates give way to the title, and
+     show only on bars that span months; all of it is on hover and read aloud. */
+  const chip = (it: PlanItem, hue: number, style: React.CSSProperties, showMeta: boolean) => {
+    const meta = metaOf(it);
+    return (
+      <button
+        key={it.id}
+        draggable
+        onDragStart={(e) => {
+          setDrag(it.id);
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', it.id);
+        }}
+        onDragEnd={() => {
+          setDrag(null);
+          setOver(null);
+        }}
+        onClick={() => setOpen(it.id)}
+        onKeyDown={(e) => onKey(e, it)}
+        className={cx('z-[1] flex min-w-0 items-center gap-[6px] overflow-hidden rounded-md px-[6px] text-left text-[11.5px] leading-none', it.status === 'draft' && 'italic')}
+        style={{ ...style, background: it.status === 'confirmed' ? 'color-mix(in srgb, ' + laneColor(hue) + ' 22%, var(--color-neutral-900))' : 'var(--color-bg)', border: '1px ' + (it.status === 'draft' ? 'dashed' : 'solid') + ' ' + laneColor(hue), color: 'var(--color-neutral-100)', opacity: drag === it.id ? 0.4 : 1 }}
+        title={it.title + ' — ' + KINDS[it.kind].label + (meta ? ' · ' + meta : '')}
+      >
+        <span className="max-w-full flex-none truncate">{it.title}</span>
+        {meta ? <span className={cx('min-w-0 truncate text-[10.5px] not-italic text-neutral-400', !showMeta && 'sr-only')}>{meta}</span> : null}
+      </button>
+    );
+  };
+  const monthAt = (e: React.DragEvent) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return Math.max(0, Math.min(11, Math.floor(((e.clientX - r.left) / r.width) * 12)));
+  };
+
+  const cols = '150px repeat(12, minmax(64px, 1fr)) 104px';
   return (
     <>
       <PageHead
@@ -128,7 +182,7 @@ export function YearBoard() {
       />
       <div className="mb-3 text-[11.5px] text-neutral-500">Drag an item to a month or lane, or focus it and press Alt + arrows. Teaching series run back to back from their month; the ticks show which night each one lands on.</div>
       <div className="overflow-x-auto rounded-lg border border-neutral-800">
-        <div className="grid min-w-[1360px]" style={{ gridTemplateColumns: cols }}>
+        <div className="grid min-w-[1100px]" style={{ gridTemplateColumns: cols }}>
           <div className="sticky left-0 z-10 border-b border-neutral-800 bg-surface px-3 py-2 text-[11px] text-neutral-500">Month</div>
           {MONTHS_FROM_AUG.map((m, i) => (
             <div key={m} className="border-b border-l border-neutral-800 px-2 py-2">
@@ -176,62 +230,68 @@ export function YearBoard() {
             {nowAt !== null ? <span className="absolute inset-y-[2px] w-[2px] bg-accent-400" style={{ left: nowAt * 100 + '%' }} title="Today" /> : null}
           </Track>
 
-          {lanes.map((l) => (
-            <div key={l.id} className="contents">
-              <div className="sticky left-0 z-10 flex items-start gap-2 border-b border-neutral-800 bg-surface px-3 py-2">
-                <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: laneColor(l.hue) }} />
-                <span className="text-[12px] leading-[1.3] text-neutral-300">{l.name}</span>
+          {lanes.map((l) => {
+            /* Bars run across the months an item covers, packed into tracks
+               so none overlap. Only "Anytime" stays a stack. */
+            const bars = pack(
+              p.items
+                .filter((i) => i.year === y && i.lane === l.id && i.month !== undefined)
+                .map((it) => {
+                  const span = it.kind === 'series' && it.lane === 'teach' ? seriesSpan(it) : null;
+                  const from = it.month!;
+                  const to = Math.min(11, Math.max(from, span ? monthIndex(span.to) : it.kind === 'series' ? from + Math.ceil(it.size / 4.35) - 1 : from));
+                  return { it, from, to };
+                })
+            );
+            const tracks = Math.max(1, ...bars.map((b) => b.track + 1));
+            const any = p.items.filter((i) => i.year === y && i.lane === l.id && i.month === undefined);
+            const anyCell = l.id + '|any';
+            return (
+              <div key={l.id} className="contents">
+                <div className="sticky left-0 z-10 flex items-start gap-2 border-b border-neutral-800 bg-surface px-3 py-2">
+                  <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: laneColor(l.hue) }} />
+                  <span className="text-[12px] leading-[1.3] text-neutral-300">{l.name}</span>
+                </div>
+                <div
+                  className="relative border-b border-l border-neutral-800"
+                  style={{ gridColumn: '2 / span 12', height: Math.max(54, tracks * (CHIP_H + 4) + 4 + 20) }}
+                  onDragOver={(e) => {
+                    if (!drag) return;
+                    e.preventDefault();
+                    setOver(l.id + '|' + monthAt(e));
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver((o) => (o?.startsWith(l.id + '|') && o !== anyCell ? null : o));
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (drag) move(drag, l.id, monthAt(e));
+                    setDrag(null);
+                    setOver(null);
+                  }}
+                >
+                  {MONTHS_FROM_AUG.map((name, m) => (
+                    <div
+                      key={name}
+                      className={cx('group absolute inset-y-0 flex items-end p-[3px]', m > 0 && 'border-l border-neutral-800', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === l.id + '|' + m && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}
+                      style={{ left: (m / 12) * 100 + '%', width: 100 / 12 + '%' }}
+                    >
+                      <button onClick={() => add(l.id, m)} aria-label={'Add to ' + l.short + ' in ' + name} className="rounded px-1 text-[10.5px] text-neutral-600 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                        + Add
+                      </button>
+                    </div>
+                  ))}
+                  {bars.map((b) => chip(b.it, l.hue, { position: 'absolute', left: 'calc(' + (b.from / 12) * 100 + '% + 3px)', width: 'calc(' + ((b.to - b.from + 1) / 12) * 100 + '% - 6px)', top: 4 + b.track * (CHIP_H + 4), height: CHIP_H }, b.to > b.from))}
+                </div>
+                <div {...dropProps(anyCell, l.id, undefined)} className={cx('group flex min-h-[54px] min-w-0 flex-col gap-1 border-b border-l border-neutral-800 p-[5px]', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === anyCell && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}>
+                  {any.map((it) => chip(it, l.hue, { height: CHIP_H }, false))}
+                  <button onClick={() => add(l.id, undefined)} aria-label={'Add to ' + l.short + ', anytime'} className="mt-auto self-start rounded px-1 text-[10.5px] text-neutral-600 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                    + Add
+                  </button>
+                </div>
               </div>
-              {[...MONTHS_FROM_AUG.map((_, i) => i as number | undefined), undefined].map((m) => {
-                const cell = l.id + '|' + (m ?? 'any');
-                const items = p.items.filter((i) => i.year === y && i.lane === l.id && i.month === m);
-                return (
-                  <div key={cell} {...dropProps(cell, l.id, m)} className={cx('group flex min-h-[54px] flex-col gap-1 border-b border-l border-neutral-800 p-[5px]', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === cell && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500')}>
-                    {items.map((it) => {
-                      const span = it.kind === 'series' && it.lane === 'teach' ? seriesSpan(it) : null;
-                      return (
-                        <button
-                          key={it.id}
-                          draggable
-                          onDragStart={(e) => {
-                            setDrag(it.id);
-                            e.dataTransfer.effectAllowed = 'move';
-                            e.dataTransfer.setData('text/plain', it.id);
-                          }}
-                          onDragEnd={() => {
-                            setDrag(null);
-                            setOver(null);
-                          }}
-                          onClick={() => setOpen(it.id)}
-                          onKeyDown={(e) => onKey(e, it)}
-                          className={cx('flex flex-col rounded-md px-[6px] py-1 text-left text-[11px] leading-[1.25]', it.status === 'draft' && 'italic')}
-                          style={{ background: it.status === 'confirmed' ? 'color-mix(in srgb, ' + laneColor(l.hue) + ' 22%, var(--color-neutral-900))' : 'transparent', border: '1px ' + (it.status === 'draft' ? 'dashed' : 'solid') + ' ' + laneColor(l.hue), color: 'var(--color-neutral-100)', opacity: drag === it.id ? 0.4 : 1 }}
-                          title={KINDS[it.kind].label}
-                        >
-                          <span>{it.title}</span>
-                          {span ? (
-                            <span className="text-[10px] not-italic text-neutral-400">
-                              {short(span.from)} – {short(span.to)}
-                              {span.n < it.size ? ' · ' + (it.size - span.n) + ' weeks don’t fit' : ''}
-                            </span>
-                          ) : it.kind === 'series' ? (
-                            <span className="text-[10px] not-italic text-neutral-400">{it.size} weeks</span>
-                          ) : it.size > 1 && it.kind !== 'goal' && it.kind !== 'milestone' ? (
-                            <span className="text-[10px] not-italic text-neutral-400">
-                              {it.size} {KINDS[it.kind].size.toLowerCase()}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                    <button onClick={() => add(l.id, m)} aria-label={'Add to ' + l.short + (m === undefined ? ', anytime' : ' in ' + MONTHS_FROM_AUG[m])} className="mt-auto self-start rounded px-1 text-[10.5px] text-neutral-600 opacity-0 group-hover:opacity-100 focus:opacity-100">
-                      + Add
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       {open ? <ItemPanel id={open} onClose={() => setOpen(null)} /> : null}

@@ -199,13 +199,19 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                           color: 'var(--color-neutral-100)',
                           opacity: drag === it.id ? 0.4 : 1
                         }}
-                        title={KINDS[it.kind].label + ' · ' + it.size + ' ' + KINDS[it.kind].size.toLowerCase() + (it.month !== undefined ? ' · from ' + MONTHS_FROM_AUG[it.month] : '')}
+                        title={it.title + ' — ' + KINDS[it.kind].label + ' · ' + it.size + ' ' + KINDS[it.kind].size.toLowerCase() + (it.month !== undefined ? ' · from ' + MONTHS_FROM_AUG[it.month] : '')}
                       >
                         <Icon name={'ph ' + KINDS[it.kind].icon} className="mt-[1px] flex-none text-[11px] text-neutral-400" />
+                        {/* One line each, cut short rather than wrapped (the full title is on hover and read aloud). */}
                         <span className="min-w-0 flex-1">
-                          {it.title}
-                          {it.kind === 'series' ? <span className="text-neutral-300"> · {it.size}w</span> : null}
-                          {it.suggested ? <span className="text-accent-300"> · suggested</span> : null}
+                          <span className="block truncate">{it.title}</span>
+                          {it.kind === 'series' || it.suggested ? (
+                            <span className="block truncate text-[10.5px] not-italic text-neutral-300">
+                              {it.kind === 'series' ? it.size + ' weeks' : null}
+                              {it.kind === 'series' && it.suggested ? ' · ' : null}
+                              {it.suggested ? <span className="text-accent-300">suggested</span> : null}
+                            </span>
+                          ) : null}
                         </span>
                       </button>
                     ))}

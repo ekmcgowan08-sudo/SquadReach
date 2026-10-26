@@ -4,7 +4,7 @@
    undo/redo, and the card every screen is built from. */
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { PushBanner, Ready, Toast } from '@/components/shell/phone-shell';
 import { Btn, Icon, cx } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
@@ -142,12 +142,35 @@ export function UndoButtons() {
 }
 
 /* ── the shell ───────────────────────────────────────────────────────── */
+/** True while a horizontal strip's content runs past its right edge — so
+ *  the edge fades only when there is more to scroll to. Re-measured when
+ *  it or its links resize (fonts loading included) and as it scrolls. */
+function useCutOff<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setCut(el.scrollWidth - el.clientWidth - el.scrollLeft > 2);
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const c of el.children) ro.observe(c);
+    el.addEventListener('scroll', measure, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', measure);
+    };
+  }, []);
+  return [ref, cut] as const;
+}
+
 export function PlannerShell({ children }: { children: ReactNode }) {
   const name = useApp((s) => s.data.config.ministryName);
   const unsaved = useApp((s) => s.unsavedDocs.includes('plan'));
   const path = usePathname();
   const router = useRouter();
   const [palette, setPalette] = useState(false);
+  const [navRef, navCut] = useCutOff<HTMLDivElement>();
 
   useEffect(() => {
     let gAt = 0;
@@ -186,7 +209,7 @@ export function PlannerShell({ children }: { children: ReactNode }) {
             SQUAD<span className="text-accent-400">RISE</span>
           </Link>
           <nav className="relative min-w-0 flex-1" aria-label="Planner">
-            <div className="flex gap-[2px] overflow-x-auto" style={{ scrollbarWidth: 'none', maskImage: 'linear-gradient(90deg,#000 92%,transparent)' }}>
+            <div ref={navRef} className="flex gap-[2px] overflow-x-auto" style={{ scrollbarWidth: 'none', maskImage: navCut ? 'linear-gradient(90deg,#000 92%,transparent)' : undefined }}>
               {PLANNER_NAV.map((n) => {
                 const on = n.href === '/planner' ? path === '/planner' : path.startsWith(n.href);
                 return (
