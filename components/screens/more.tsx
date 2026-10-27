@@ -13,6 +13,7 @@ import { crewAll } from '@/components/screens/huddle';
 import { Icon, Screen } from '@/components/ui';
 import { previewBlankDemo, resetDemo } from '@/lib/data/demo-backend';
 import { startTour, tourSteps } from '@/components/shell/tour';
+import { awardOpen } from '@/lib/awards';
 import { heldTotal } from '@/lib/held';
 import {
   canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek, canPublishBoard,
@@ -173,7 +174,7 @@ export function MoreScreen() {
         { label: 'Calendar', meta: upcomingEvents(d, p)[0] ? eventLabel(upcomingEvents(d, p)[0]) : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },
         canOpenLibrary(p) ? { label: 'Library', meta: 'search weeks, lessons, games', icon: 'ph ph-magnifying-glass', href: '/dashboard/library' } : null,
         { label: 'Season & Small Groups', meta: d.config.seasonWeeks + ' weeks · ' + d.smallGroups.length + ' guides', icon: 'ph ph-list-checks', href: '/dashboard/season-plan' },
-        { label: 'Trophies & Awards', meta: d.awards.filter((a) => a.decidedBy === 'vote' && a.votingOpen).length + ' open for vote', icon: 'ph ph-trophy', href: '/dashboard/awards' }
+        { label: 'Trophies & Awards', meta: d.awards.filter((a) => a.decidedBy === 'vote' && awardOpen(a, cy.today)).length + ' open for vote', icon: 'ph ph-trophy', href: '/dashboard/awards' }
       ]
     },
     {

@@ -303,6 +303,8 @@ select pg_temp.check((select count(*) from media_items) = 1, 'a member files a p
 
 -- Awards: one vote per person per period; only leaders read the tally.
 reset role;
+insert into ministry_docs (org_id, key, value) values (:'org', 'awards', '[{"id":"mvp","decidedBy":"vote","votingOpen":true}]')
+  on conflict (org_id, key) do update set value = excluded.value;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
 insert into award_votes (org_id, award_id, period, membership_id, choice) values (:'org', 'mvp', 'season', :'m_student', 'n1');
 do $$ begin

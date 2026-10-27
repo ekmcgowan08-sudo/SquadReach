@@ -4,30 +4,13 @@
    weeks it runs. One with a squad, a category and an amount posts its
    points through award() when it's marked ready and someone pushes it on
    the phone; without them it's a goal the coaches confirm by hand. */
-import { useState } from 'react';
-import { Section } from '@/components/console/kit';
+import { Blur, Section } from '@/components/console/kit';
 import { Btn, Icon, cx } from '@/components/ui';
 import { challengesIn } from '@/lib/feeds';
 import { fmt } from '@/lib/scoring';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { Challenge } from '@/lib/types/model';
-
-/** A text box that saves when you leave it, so typing doesn't sync per key. */
-function Blur({ value, onSave, label, area, placeholder, className }: { value: string; onSave: (v: string) => void; label: string; area?: boolean; placeholder?: string; className?: string }) {
-  const [v, setV] = useState(value);
-  const [last, setLast] = useState(value);
-  if (value !== last) {
-    setLast(value);
-    setV(value);
-  }
-  const commit = () => v.trim() !== value && onSave(v.trim());
-  return area ? (
-    <textarea aria-label={label} className={cx('input min-h-[64px] py-2 text-[13px] leading-[1.5]', className)} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit} />
-  ) : (
-    <input aria-label={label} className={cx('input', className)} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
-  );
-}
 
 /** "All season", "Weeks 3–4", "Weeks 2, 5 and 7", or "Paused". */
 export function weeksLabel(weeks: number[] | null | undefined): string {

@@ -291,6 +291,12 @@ Where the prototype left a call open, the build took the safer default:
   daily and removes expired film, file first and then its album row; photos
   are never touched. Supabase's own upload limit (50 MB on the free plan)
   still applies.
+- **Award voting keeps to its window.** In Console › Awards a leader can
+  schedule when voting on each popularity award opens and closes (days in
+  the ministry's time zone), or close it by hand. The database refuses a
+  vote or a nomination outside the window, on an award that isn't a vote,
+  or on one that doesn't exist, so a phone with an old copy can't slip one
+  in.
 - **Live ministry time.** Answers can only be written while an activity is
   open (with three seconds’ grace after its timer). The database stamps
   each answer’s time and the first name shown, so speed and names can’t be

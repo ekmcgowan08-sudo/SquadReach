@@ -5,12 +5,14 @@
 import { useState } from 'react';
 import { useStandings } from '@/components/dashboard/standings-list';
 import { Btn, Icon, Screen, ScreenHeader } from '@/components/ui';
-import { periodKey } from '@/lib/dates';
+import { awardOpen, awardStatus } from '@/lib/awards';
+import { isoDay, periodKey } from '@/lib/dates';
 import { canApprove } from '@/lib/permissions';
 import { categoryTotals, fmt } from '@/lib/scoring';
 import { computeBadges, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
+import { useNow } from '@/lib/use-now';
 import type { Award } from '@/lib/types/model';
 
 const FREQ: Record<string, string> = { once: 'Once per season', daily: 'Once per day', weekly: 'Once per week' };
@@ -45,6 +47,7 @@ export function AwardsScreen() {
   const [nominee, setNominee] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState({ name: '', description: '', decidedBy: 'vote' as Award['decidedBy'], recipientType: 'team' as 'team' | 'individual', voteFrequency: 'once', categoryId: '' });
   const badges = computeBadges(d);
+  const today = isoDay(new Date(useNow(true, 60_000)));
 
   const saveAwards = (fn: (list: Award[]) => Award[]) => {
     api().mutate((x) => void (x.awards = fn(x.awards)));
@@ -52,6 +55,7 @@ export function AwardsScreen() {
   };
 
   const vote = (a: Award, choice: string) => {
+    if (!awardOpen(a, today)) return api().say('Voting on ' + a.name + ' isn’t open.');
     const period = periodKey(a.voteFrequency);
     if (d.awardVotes[a.id]?.[period]) {
       api().say(a.voteFrequency === 'once' ? 'You already voted on this one this season.' : 'You already voted this ' + (a.voteFrequency === 'daily' ? 'day' : 'week') + '.');
@@ -179,7 +183,7 @@ export function AwardsScreen() {
               const opts = team ? d.teams.map((t) => ({ key: t.id, label: t.name, color: t.color })) : (a.nominees ?? []).map((n) => ({ key: n.id, label: n.name, color: 'var(--color-accent-500)' }));
               const period = periodKey(a.voteFrequency);
               const mine = d.awardVotes[a.id]?.[period];
-              const open = !!a.votingOpen;
+              const open = awardOpen(a, today);
               const tally = d.awardTallies?.[a.id] ?? {};
               return (
                 <div key={a.id} className="sr-card px-[15px] py-[14px]">
@@ -200,17 +204,19 @@ export function AwardsScreen() {
                         <button
                           onClick={() => {
                             saveAwards((list) => list.map((x) => (x.id === a.id ? { ...x, votingOpen: !x.votingOpen } : x)));
-                            api().logActivity((open ? 'Closed' : 'Opened') + ' voting on ' + a.name);
+                            api().logActivity((a.votingOpen ? 'Closed' : 'Opened') + ' voting on ' + a.name);
                           }}
                           className="min-h-11 rounded-full border border-neutral-700 px-[9px] text-[11px] font-medium leading-none text-neutral-300"
                         >
-                          {open ? 'Close voting' : 'Open voting'}
+                          {a.votingOpen ? 'Close voting' : 'Open voting'}
                         </button>
                       </>
                     ) : null
                   )}
                   <div className="mt-[3px] text-[11px] leading-[1.4] text-neutral-500 text-pretty">{a.description}</div>
-                  <div className="mt-[5px] text-[10px] leading-none text-accent-300">{FREQ[a.voteFrequency ?? 'once']}</div>
+                  <div className="mt-[5px] text-[10px] leading-none text-accent-300">
+                    {FREQ[a.voteFrequency ?? 'once']} · <span className={open ? '' : 'text-neutral-500'}>{awardStatus(a, today)}</span>
+                  </div>
                   <div className="mt-[11px] flex flex-col gap-2">
                     {opts.map((o) => (
                       <div key={o.key} className="flex items-center gap-[9px]">
@@ -228,7 +234,7 @@ export function AwardsScreen() {
                     ))}
                     {!opts.length ? <div className="text-[11px] text-neutral-500">No nominees yet.</div> : null}
                   </div>
-                  <div className="mt-2 text-[10.5px] leading-[1.4] text-neutral-500">{!open ? 'Voting is closed.' : mine ? 'You voted on this one.' : ''}</div>
+                  <div className="mt-2 text-[10.5px] leading-[1.4] text-neutral-500">{!open ? (a.votingOpen && a.votingStartDate && today < a.votingStartDate ? 'Voting hasn’t opened yet.' : 'Voting is closed.') : mine ? 'You voted on this one.' : ''}</div>
                   {!team && open ? (
                     <div className="mt-[10px] flex gap-[7px]">
                       <input value={nominee[a.id] ?? ''} onChange={(e) => setNominee((n) => ({ ...n, [a.id]: e.target.value }))} className="input flex-1" placeholder="Add a nominee" aria-label={'Nominate someone for ' + a.name} list={'roster-' + a.id} />

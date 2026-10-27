@@ -3,25 +3,14 @@
    mascot bits, commercials, hype videos, whatever the ministry calls
    them. Each spot runs all season or in the weeks picked; the season plan
    and the phone's Media screen show the spots for each week. */
-import { useState } from 'react';
 import { weeksLabel } from '@/components/console/challenges-tab';
-import { Field, Section, useSaveConfig } from '@/components/console/kit';
+import { Blur, Field, Section, useSaveConfig } from '@/components/console/kit';
 import { Btn, Icon, Switch2, cx } from '@/components/ui';
 import { uid } from '@/lib/store/app-store';
 import { useApp } from '@/lib/store/provider';
 import { FILM_DEFAULTS, type MediaSpot } from '@/lib/types/model';
 
 const SPOT_COLORS = ['#e0a23f', '#5a9fd6', '#74b37a', '#968ae0', '#d9708c', '#4fb3a9'];
-
-function Blur({ value, onSave, label, className }: { value: string; onSave: (v: string) => void; label: string; className?: string }) {
-  const [v, setV] = useState(value);
-  const [last, setLast] = useState(value);
-  if (value !== last) {
-    setLast(value);
-    setV(value);
-  }
-  return <input aria-label={label} className={cx('input', className)} value={v} onChange={(e) => setV(e.target.value)} onBlur={() => v.trim() !== value && onSave(v.trim())} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />;
-}
 
 export function MediaTab() {
   const c = useApp((s) => s.data.config);

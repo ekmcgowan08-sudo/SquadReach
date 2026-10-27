@@ -6,6 +6,7 @@ import { DEFAULT_ZONE, ZONES } from '@/lib/time-zone';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { BibleTab } from '@/components/console/bible-tab';
+import { AwardsTab } from '@/components/console/awards-tab';
 import { ChallengesTab } from '@/components/console/challenges-tab';
 import { DraftTab } from '@/components/console/draft-tab';
 import { HomeTab } from '@/components/console/home-tab';
@@ -35,6 +36,7 @@ const TABS = [
   { id: 'scoring', label: 'Scoring', icon: 'ph ph-trophy' },
   { id: 'challenges', label: 'Challenges', icon: 'ph ph-flag-checkered' },
   { id: 'bible', label: 'Bible & memory', icon: 'ph ph-book-open-text' },
+  { id: 'awards', label: 'Awards', icon: 'ph ph-medal' },
   { id: 'media', label: 'Media', icon: 'ph ph-images' },
   { id: 'overlay', label: 'Recording overlay', icon: 'ph ph-video-camera' },
   { id: 'people', label: 'People', icon: 'ph ph-users-three' },
@@ -65,7 +67,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'media' ? <MediaTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
+        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'awards' ? <AwardsTab /> : tab === 'media' ? <MediaTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );

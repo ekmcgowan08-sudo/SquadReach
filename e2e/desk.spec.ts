@@ -353,3 +353,22 @@ test('media spots run in the weeks picked and show on the season plan', async ({
   await expect(tonight.getByText('Pizza night thanks')).toBeVisible();
   await expect(tonight.getByText('Fall retreat promo')).toBeVisible();
 });
+
+test('an award voting window set in the console holds on the phone', async ({ page }) => {
+  await page.goto('/console?tab=awards');
+  await ready(page);
+  const mvp = page.getByRole('group', { name: 'Award: MVP' });
+  await expect(mvp.getByText(/^Open · closes after/)).toBeVisible();
+  await mvp.getByLabel('Voting starts').fill('2099-01-01');
+  await expect(mvp.getByText('Scheduled · starts Jan 1')).toBeVisible();
+
+  await page.goto('/dashboard/awards');
+  await ready(page);
+  await expect(page.getByText('Voting hasn’t opened yet.')).toBeVisible();
+  await expect(page.getByText(/Scheduled · starts Jan 1/)).toBeVisible();
+
+  await page.goto('/console?tab=awards');
+  await ready(page);
+  await page.getByRole('group', { name: 'Award: MVP' }).getByRole('button', { name: 'Clear dates' }).click();
+  await expect(page.getByRole('group', { name: 'Award: MVP' }).getByText('Open', { exact: true })).toBeVisible();
+});

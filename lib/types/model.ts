@@ -488,6 +488,11 @@ export interface Award {
   categoryId?: string | null;
   recipientType?: 'team' | 'individual';
   votingOpen?: boolean;
+  /** The voting window, as days (YYYY-MM-DD) in the ministry's zone. Both
+   *  optional: voting is open while votingOpen is on and today falls
+   *  inside whichever ends are set (lib/awards awardOpen). */
+  votingStartDate?: string | null;
+  votingEndDate?: string | null;
   voteFrequency?: string;
   nominees?: { id: string; name: string }[];
   metric?: 'bible' | 'attendance';

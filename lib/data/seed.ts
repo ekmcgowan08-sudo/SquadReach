@@ -482,7 +482,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
       { id: 'aw1', name: 'Top Squad', description: 'Highest total points this season — awarded automatically.', decidedBy: 'score', categoryId: null },
       { id: 'aw2', name: 'Bible Champions', description: 'Most memory-verse points earned — awarded automatically.', decidedBy: 'score', categoryId: 'verses' },
       { id: 'aw3', name: 'Most Spirited', description: 'Which team brings it every week? Everyone gets a vote.', decidedBy: 'vote', recipientType: 'team', votingOpen: true, voteFrequency: 'weekly', nominees: [] },
-      { id: 'aw4', name: 'MVP', description: 'The student who went above and beyond this season.', decidedBy: 'vote', recipientType: 'individual', votingOpen: true, voteFrequency: 'once', nominees: [{ id: 'n1', name: 'Ellison Reid' }, { id: 'n2', name: 'Melanie Russell' }, { id: 'n3', name: 'Wyatt Price' }] },
+      { id: 'aw4', name: 'MVP', description: 'The student who went above and beyond this season.', decidedBy: 'vote', recipientType: 'individual', votingOpen: true, votingEndDate: isoDay(new Date(now + 14 * DAY)), voteFrequency: 'once', nominees: [{ id: 'n1', name: 'Ellison Reid' }, { id: 'n2', name: 'Melanie Russell' }, { id: 'n3', name: 'Wyatt Price' }] },
       { id: 'aw5', name: 'Most Devoted', description: 'Longest Bible memory-verse streak this season — awarded automatically.', decidedBy: 'streak', metric: 'bible' },
       { id: 'aw6', name: 'Never Miss', description: 'Longest attendance streak this season — awarded automatically.', decidedBy: 'streak', metric: 'attendance' }
     ],

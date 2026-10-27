@@ -1,6 +1,7 @@
 'use client';
 /* The Console's building blocks, shared by every tab. */
 import { useState, type ReactNode } from 'react';
+import { cx } from '@/components/ui';
 import { useAppApi } from '@/lib/store/provider';
 import type { MinistryConfig } from '@/lib/types/model';
 
@@ -48,3 +49,18 @@ export function Field({ label, value, onSave, type = 'text', placeholder, hint }
   );
 }
 
+/** A text box that saves when you leave it, so typing doesn't sync per key. */
+export function Blur({ value, onSave, label, area, placeholder, className }: { value: string; onSave: (v: string) => void; label: string; area?: boolean; placeholder?: string; className?: string }) {
+  const [v, setV] = useState(value);
+  const [last, setLast] = useState(value);
+  if (value !== last) {
+    setLast(value);
+    setV(value);
+  }
+  const commit = () => v.trim() !== value && onSave(v.trim());
+  return area ? (
+    <textarea aria-label={label} className={cx('input min-h-[64px] py-2 text-[13px] leading-[1.5]', className)} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit} />
+  ) : (
+    <input aria-label={label} className={cx('input', className)} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+  );
+}
