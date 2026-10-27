@@ -676,3 +676,38 @@ test('the screen map prints every More row with the roles that see it', async ({
   await expect(page.getByRole('region', { name: 'The tab bar, by role' }).getByRole('row', { name: /Your role/ })).toContainText('Console');
   await expect(page.getByText('from the QR code on Night recap').first()).toBeVisible();
 });
+
+test('the field map takes a square brush and text labels, and players see it', async ({ page }) => {
+  await page.goto('/console?tab=scoring');
+  await ready(page);
+  const pad = page.getByLabel('Field map drawing pad');
+  await pad.scrollIntoViewIfNeeded();
+  await page.getByRole('button', { name: 'Square brush' }).click();
+  await expect(page.getByRole('button', { name: 'Square brush' })).toHaveAttribute('aria-pressed', 'true');
+  const box = (await pad.boundingBox())!;
+  await page.mouse.move(box.x + 40, box.y + 40);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 160, box.y + 90, { steps: 6 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await expect(page.getByText('Tap the map where a label goes')).toBeVisible();
+  await pad.click({ position: { x: 60, y: 120 } });
+  await page.getByLabel('Label on the map').fill('Base A');
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Label on the map')).toHaveCount(0);
+  /* The label really landed in the pixels, not just in a box over them. */
+  const inked = await pad.evaluate((cv: HTMLCanvasElement) => {
+    const r = cv.getBoundingClientRect();
+    const sx = cv.width / r.width;
+    const d = cv.getContext('2d')!.getImageData(Math.round(60 * sx), Math.round(120 * sx), Math.round(60 * sx), Math.round(30 * sx)).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 150 && d[i + 1] < 120) n++;
+    return n;
+  });
+  expect(inked).toBeGreaterThan(20);
+  await page.getByRole('button', { name: 'Save map' }).click();
+  await expect(page.getByRole('button', { name: 'Save map' })).toBeDisabled();
+  await page.goto('/dashboard/game-rules');
+  await ready(page);
+  await expect(page.getByRole('img', { name: 'Field map' })).toBeVisible();
+});

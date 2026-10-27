@@ -170,23 +170,40 @@ export function ScoringTab() {
   );
 }
 
-/* A drawing pad for the field: a photo of the floor (or nothing), then pen,
-   colour and eraser on top. Saved as one small image players see. */
+/* A drawing pad for the field: a photo of the floor (or nothing), then a
+   round or square brush, colour, eraser and text labels on top. Saved as
+   one small image players see. */
+type Tool = 'pen' | 'eraser' | 'text';
+type Label = { x: number; y: number; left: number; top: number; text: string };
+const PAD = '#1b1d27';
+
 function FieldMap() {
   const gs = useApp((s) => s.data.config.gameSetup);
   const save = useSaveConfig();
   const ref = useRef<HTMLCanvasElement>(null);
   const [color, setColor] = useState('#ef4444');
   const [size, setSize] = useState(5);
-  const [erasing, setErasing] = useState(false);
+  const [shape, setShape] = useState<'round' | 'square'>('round');
+  const [tool, setTool] = useState<Tool>('pen');
   const [dirty, setDirty] = useState(false);
+  /* How many screen pixels one canvas pixel takes, for the brush cursor. */
+  const [scale, setScale] = useState(1);
+  const [label, setLabelState] = useState<Label | null>(null);
+  /* The open label, read by commit: Enter and the blur that follows it
+     (or a tap elsewhere) must not set the same text twice. */
+  const open = useRef<Label | null>(null);
+  const setLabel = (l: Label | null) => {
+    open.current = l;
+    setLabelState(l);
+  };
   const drawing = useRef<{ x: number; y: number } | null>(null);
+  const labelRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const cv = ref.current;
     const ctx = cv?.getContext('2d');
     if (!cv || !ctx) return;
-    ctx.fillStyle = '#1b1d27';
+    ctx.fillStyle = PAD;
     ctx.fillRect(0, 0, cv.width, cv.height);
     if (gs.markupDataUrl) {
       const img = new Image();
@@ -195,6 +212,10 @@ function FieldMap() {
     }
   }, [gs.markupDataUrl]);
 
+  useEffect(() => {
+    if (label) labelRef.current?.focus();
+  }, [label]);
+
   const at = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * e.currentTarget.width, y: ((e.clientY - r.top) / r.height) * e.currentTarget.height };
@@ -202,13 +223,27 @@ function FieldMap() {
   const line = (a: { x: number; y: number }, b: { x: number; y: number }) => {
     const ctx = ref.current?.getContext('2d');
     if (!ctx) return;
-    ctx.strokeStyle = erasing ? '#1b1d27' : color;
-    ctx.lineWidth = erasing ? size * 4 : size;
-    ctx.lineCap = 'round';
+    ctx.strokeStyle = tool === 'eraser' ? PAD : color;
+    ctx.lineWidth = tool === 'eraser' ? size * 4 : size;
+    ctx.lineCap = shape;
+    ctx.lineJoin = shape === 'square' ? 'miter' : 'round';
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
+  };
+  /* Text in the pen colour, sized with the brush, set where it was tapped. */
+  const commitLabel = () => {
+    const l = open.current;
+    const ctx = ref.current?.getContext('2d');
+    if (l && l.text.trim() && ctx) {
+      ctx.font = '600 ' + (14 + size * 2) + 'px Inter, sans-serif';
+      ctx.fillStyle = color;
+      ctx.textBaseline = 'top';
+      ctx.fillText(l.text.trim(), l.x, l.y);
+      setDirty(true);
+    }
+    setLabel(null);
   };
   const background = (file: File | undefined) => {
     if (!file) return;
@@ -227,40 +262,115 @@ function FieldMap() {
     img.src = url;
   };
 
+  /* The cursor is the brush itself: its size and shape, at screen scale. */
+  const diam = Math.max(6, Math.round((tool === 'eraser' ? size * 4 : size) * scale) + 2);
+  const half = diam / 2;
+  const ink = tool === 'eraser' ? '#ffffff' : color;
+  const mark =
+    shape === 'square'
+      ? '<rect x="1" y="1" width="' + (diam - 2) + '" height="' + (diam - 2) + '" fill="none" stroke="' + ink + '" stroke-width="1.5"/>'
+      : '<circle cx="' + half + '" cy="' + half + '" r="' + (half - 1) + '" fill="none" stroke="' + ink + '" stroke-width="1.5"/>';
+  const cursor = tool === 'text' ? 'text' : 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="' + diam + '" height="' + diam + '">' + mark + '</svg>') + '") ' + Math.round(half) + ' ' + Math.round(half) + ', crosshair';
+  const toolBtn = (on: boolean) => ({
+    borderColor: on ? 'var(--color-accent-600)' : 'var(--color-neutral-800)',
+    background: on ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent',
+    color: on ? 'var(--color-accent-100)' : 'var(--color-neutral-400)'
+  });
+
   return (
     <div className="flex flex-col gap-2">
       <div className="sr-label">Field map</div>
-      <canvas
-        ref={ref}
-        width={960}
-        height={540}
-        className="w-full touch-none rounded-md border border-neutral-800"
-        onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId);
-          drawing.current = at(e);
-        }}
-        onPointerMove={(e) => {
-          if (!drawing.current) return;
-          const p = at(e);
-          line(drawing.current, p);
-          drawing.current = p;
-          setDirty(true);
-        }}
-        onPointerUp={() => (drawing.current = null)}
-        aria-label="Field map drawing pad"
-      />
+      <div className="relative">
+        <canvas
+          ref={ref}
+          width={960}
+          height={540}
+          className="block w-full touch-none rounded-md border border-neutral-800"
+          style={{ cursor }}
+          onPointerEnter={(e) => setScale(e.currentTarget.getBoundingClientRect().width / e.currentTarget.width)}
+          /* Keep focus in the label being placed rather than blurring it. */
+          onMouseDown={(e) => tool === 'text' && e.preventDefault()}
+          onPointerDown={(e) => {
+            const p = at(e);
+            if (tool === 'text') {
+              commitLabel();
+              const r = e.currentTarget.getBoundingClientRect();
+              setLabel({ x: p.x, y: p.y, left: e.clientX - r.left, top: e.clientY - r.top, text: '' });
+              return;
+            }
+            e.currentTarget.setPointerCapture(e.pointerId);
+            drawing.current = p;
+            /* A tap leaves one mark, round or square, the size of the brush. */
+            line(p, p);
+            setDirty(true);
+          }}
+          onPointerMove={(e) => {
+            if (!drawing.current) return;
+            const p = at(e);
+            line(drawing.current, p);
+            drawing.current = p;
+          }}
+          onPointerUp={() => (drawing.current = null)}
+          aria-label="Field map drawing pad"
+        />
+        {label ? (
+          <input
+            ref={labelRef}
+            value={label.text}
+            onChange={(e) => setLabel({ ...label, text: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitLabel();
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setLabel(null);
+              }
+            }}
+            onBlur={commitLabel}
+            placeholder="Label…"
+            aria-label="Label on the map"
+            className="absolute min-h-9 w-[180px] rounded border border-accent-600 bg-bg px-2 text-[13px] font-semibold outline-none"
+            style={{ left: Math.max(0, label.left), top: Math.max(0, label.top), color }}
+          />
+        ) : null}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {['#ef4444', '#facc15', '#22c55e', '#38bdf8', '#ffffff'].map((c) => (
-          <button key={c} aria-label={'Pen ' + c} aria-pressed={!erasing && color === c} onClick={() => (setColor(c), setErasing(false))} className="h-8 w-8 rounded-full" style={{ background: c, boxShadow: !erasing && color === c ? '0 0 0 2px var(--color-bg), 0 0 0 4px ' + c : undefined }} />
+          <button
+            key={c}
+            aria-label={'Pen ' + c}
+            aria-pressed={tool !== 'eraser' && color === c}
+            onClick={() => (setColor(c), setTool((t) => (t === 'eraser' ? 'pen' : t)))}
+            className="h-8 w-8 rounded-full"
+            style={{ background: c, boxShadow: tool !== 'eraser' && color === c ? '0 0 0 2px var(--color-bg), 0 0 0 4px ' + c : undefined }}
+          />
         ))}
         <select className="input !min-h-10 w-auto" value={size} onChange={(e) => setSize(Number(e.target.value))} aria-label="Pen size">
           <option value={3}>Thin</option>
           <option value={5}>Medium</option>
           <option value={10}>Thick</option>
         </select>
-        <Btn variant={erasing ? 'primary' : 'ghost'} className="px-3" onClick={() => setErasing((v) => !v)}>
+        <div role="group" aria-label="Brush shape" className="flex gap-1">
+          {(['round', 'square'] as const).map((sh) => (
+            <button
+              key={sh}
+              aria-pressed={shape === sh}
+              aria-label={sh === 'round' ? 'Round brush' : 'Square brush'}
+              onClick={() => setShape(sh)}
+              className="flex h-11 w-11 items-center justify-center rounded-md border"
+              style={toolBtn(shape === sh)}
+            >
+              <Icon name={sh === 'round' ? 'ph-fill ph-circle' : 'ph-fill ph-square'} className="text-[14px]" />
+            </button>
+          ))}
+        </div>
+        <button aria-pressed={tool === 'text'} onClick={() => setTool((t) => (t === 'text' ? 'pen' : 'text'))} className="flex min-h-11 items-center gap-[6px] rounded-md border px-3 text-[12.5px] font-medium" style={toolBtn(tool === 'text')}>
+          <Icon name="ph ph-text-t" className="text-[15px]" />
+          Text
+        </button>
+        <button aria-pressed={tool === 'eraser'} onClick={() => setTool((t) => (t === 'eraser' ? 'pen' : 'eraser'))} className="flex min-h-11 items-center gap-[6px] rounded-md border px-3 text-[12.5px] font-medium" style={toolBtn(tool === 'eraser')}>
+          <Icon name="ph ph-eraser" className="text-[15px]" />
           Eraser
-        </Btn>
+        </button>
         <label className="btn btn-ghost min-h-11 cursor-pointer px-3">
           Photo underneath
           <input type="file" accept="image/*" className="hidden" onChange={(e) => background(e.target.files?.[0])} />
@@ -273,9 +383,10 @@ function FieldMap() {
             save((cc) => ({ gameSetup: { ...cc.gameSetup, markupDataUrl: null } }));
             const ctx = ref.current?.getContext('2d');
             if (ctx && ref.current) {
-              ctx.fillStyle = '#1b1d27';
+              ctx.fillStyle = PAD;
               ctx.fillRect(0, 0, ref.current.width, ref.current.height);
             }
+            setLabel(null);
             setDirty(false);
           }}
         >
@@ -293,6 +404,7 @@ function FieldMap() {
           Save map
         </Btn>
       </div>
+      <div className="text-[11.5px] leading-[1.5] text-neutral-500">{tool === 'text' ? 'Tap the map where a label goes, type it, then press Enter.' : 'Draw lanes, bases and the out-of-bounds line. A tap leaves one mark the size and shape of the brush.'}</div>
     </div>
   );
 }
