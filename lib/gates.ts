@@ -2,7 +2,7 @@
    function by name (functions cannot cross the server/client boundary). */
 import {
   canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek,
-  canPublishBoard, canRunDoor, canRunLive, canScore, canSeeAttendance, canServe, canShareRecap
+  canPublishBoard, canRunDoor, canRunLive, canScore, canSeeAttendance, canSeeCare, canServe, canShareRecap
 } from '@/lib/permissions';
 import { realRole, type Persona } from '@/lib/types/domain';
 
@@ -12,6 +12,7 @@ export const GATES = {
   score: canScore,
   submit: (p: Persona) => canScore(p) || p === 'captain',
   approve: canApprove,
+  care: canSeeCare,
   huddle: canHuddle,
   event: canControlEvent,
   library: canOpenLibrary,

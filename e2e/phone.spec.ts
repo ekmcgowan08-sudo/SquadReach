@@ -43,6 +43,25 @@ test('every role reaches its More menu without errors', async ({ page, context, 
   expect(errors).toEqual([]);
 });
 
+test('More shows only rows whose screens the role can open', async ({ page, context, baseURL }) => {
+  const more = async (role: 'member' | 'parent' | 'coach') => {
+    await as(context, role, baseURL!);
+    await page.goto('/dashboard/more');
+    await ready(page);
+    return page.locator('[data-screen-label="More menu"]');
+  };
+  let menu = await more('member');
+  await expect(menu.getByRole('link', { name: /^Prayer Wall/ })).toBeVisible();
+  await expect(menu.getByRole('link', { name: /^Submit Points/ })).toHaveCount(0);
+  menu = await more('parent');
+  await expect(menu.getByRole('link', { name: /^Bible & Memory/ })).toBeVisible();
+  await expect(menu.getByRole('link', { name: /^Prayer/ })).toHaveCount(0);
+  menu = await more('coach');
+  await expect(menu.getByRole('link', { name: /^Prayer & Care/ })).toBeVisible();
+  await menu.getByRole('link', { name: /^Submit Points/ }).click();
+  await expect(page).toHaveURL(/\/dashboard\/submit-points$/);
+});
+
 test('a family’s private link shows their student without signing in', async ({ page }) => {
   await page.goto('/f/demo-reid-family');
   await page.waitForLoadState('networkidle');

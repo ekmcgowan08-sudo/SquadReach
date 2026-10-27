@@ -2,10 +2,9 @@
 /* Who can do what — read straight off lib/permissions.ts, the same
    functions every menu row, screen gate and (by its role lists) RLS policy
    uses, so this table can't drift from what the app actually allows. */
-import { useSyncExternalStore, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { Section } from '@/components/console/kit';
-import { Btn, Icon } from '@/components/ui';
+import { PrintButton, PrintSheet } from '@/components/console/print-sheet';
+import { Icon } from '@/components/ui';
 import {
   CHAT_SCOPES, autoApproves, canApprove, canControlEvent, canCoordinateServing, canEditRoster, canHuddle, canMessageParents, canNightRecap, canOpenLibrary,
   canPrepWeek, canPublishBoard, canReviewPrayer, canRunDoor, canRunLive, canScore, canSeeAttendance, canServe, canShareRecap
@@ -33,38 +32,18 @@ const ROWS: { label: string; gate: string; can: (p: Persona) => boolean }[] = [
   { label: 'The console and the planner', gate: 'LEADER_ROLES', can: canApprove }
 ];
 
-const noop = () => () => {};
-
 export function RolesMatrix() {
   const cols = PERSONAS.filter((p) => realRole(p.id));
-  const client = useSyncExternalStore(noop, () => true, () => false);
   const tables = <Tables cols={cols} />;
   return (
     <Section
       title="Who can do what"
       sub="Read off the same checks the app and the database use. Owners are the only ones who can make another owner."
-      right={
-        <Btn variant="secondary" className="px-4 text-[12.5px]" onClick={() => window.print()}>
-          <Icon name="ph ph-printer" className="mr-[6px] text-[14px]" />
-          Print
-        </Btn>
-      }
+      right={<PrintButton />}
     >
       {tables}
-      {client ? createPortal(<PrintSheet>{tables}</PrintSheet>, document.body) : null}
+      <PrintSheet title="Who can do what — read off the app’s own permission checks">{tables}</PrintSheet>
     </Section>
-  );
-}
-
-/* On paper: only these tables, landscape, dark ink on white — a copy that
-   sits straight under <body> so nothing else on the page takes up a sheet. */
-function PrintSheet({ children }: { children: ReactNode }) {
-  return (
-    <div className="sr-print-root">
-      <style>{`.sr-print-root { display: none } @media print { @page { size: landscape; margin: 12mm } html, body { background: #fff !important; color-scheme: light !important } body > :not(.sr-print-root) { display: none !important } .sr-print-root { display: block !important; color: #111 } .sr-print-root * { color: #111 !important; background: transparent !important; border-color: #bdbdbd !important } .sr-print-root .sr-break { break-before: page } .sr-print-root table { min-width: 0 !important } .sr-print-root tr { break-inside: avoid } .sr-print-root td, .sr-print-root th { padding-top: 2px !important; padding-bottom: 2px !important } .sr-print-root td div { font-size: 10.5px !important; line-height: 1.3 !important } }`}</style>
-      <div className="mb-3 text-[16px] font-medium">Who can do what — read off the app’s own permission checks</div>
-      {children}
-    </div>
   );
 }
 

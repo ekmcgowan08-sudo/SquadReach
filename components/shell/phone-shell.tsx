@@ -7,6 +7,7 @@ import { switchRole } from '@/app/actions';
 import { canScore } from '@/lib/permissions';
 import { SheetAutopublish } from '@/components/shell/sheet-autopublish';
 import { TourCard } from '@/components/shell/tour';
+import { ROLE_TAB, TABS, type TabSlot } from '@/lib/screen-map';
 import { chatThreadsFor } from '@/lib/selectors';
 import { useApp, useAppApi, useApprovedRoles } from '@/lib/store/provider';
 import { PERSONAS, type Persona } from '@/lib/types/domain';
@@ -22,27 +23,6 @@ interface TabDef {
   match: (p: string) => boolean;
 }
 
-export function roleTabFor(p: Persona): TabDef {
-  const t = (href: string, label: string, icon: string): TabDef => ({ href, label, icon, match: (x) => x.startsWith(href) });
-  switch (p) {
-    case 'owner':
-      return { href: '/console', label: 'Console', icon: 'ph-gauge', match: (x) => x.startsWith('/console') };
-    case 'scorekeeper':
-      return t('/dashboard/games', 'Timer', 'ph-timer');
-    case 'coach':
-    case 'leader':
-      return t('/dashboard/coach-view', 'Squad', 'ph-megaphone');
-    case 'captain':
-      return t('/dashboard/captain-view', 'Squad', 'ph-flag');
-    case 'member':
-      return t('/dashboard/team', 'Squad', 'ph-users-three');
-    case 'parent':
-      return t('/dashboard/parent-view', 'Family', 'ph-users');
-    case 'congregation':
-      return t('/dashboard/congregation-view', 'Board', 'ph-church');
-  }
-}
-
 function TabBar() {
   const pathname = usePathname();
   const persona = useApp((s) => s.membership.persona);
@@ -50,11 +30,12 @@ function TabBar() {
   const d = useApp((s) => s.data);
   const coachTeam = useApp((s) => s.coachTeam);
   const chatUnread = useMemo(() => chatThreadsFor(d, m, coachTeam).reduce((n, t) => n + (d.chatUnread[t.id] || 0), 0), [d, m, coachTeam]);
-  const home: TabDef = { href: '/dashboard', label: 'Home', icon: 'ph-house', match: (x) => x === '/dashboard' };
-  const role = roleTabFor(persona);
-  const bible: TabDef = { href: '/dashboard/bible', label: 'Bible', icon: 'ph-book-open-text', match: (x) => x.startsWith('/dashboard/bible') };
-  const chat: TabDef = { href: '/dashboard/chat', label: 'Chat', icon: 'ph-chat-circle-dots', match: (x) => x.startsWith('/dashboard/chat') };
-  const more: TabDef = { href: '/dashboard/more', label: 'More', icon: 'ph-dots-three-circle', match: (x) => x.startsWith('/dashboard/more') };
+  const tab = (t: TabSlot): TabDef => ({ ...t, match: (x) => x.startsWith(t.href) });
+  const home: TabDef = { ...TABS.home, match: (x) => x === '/dashboard' };
+  const role = tab(ROLE_TAB[persona]);
+  const bible = tab(TABS.bible);
+  const chat = tab(TABS.chat);
+  const more = tab(TABS.more);
   const scorer = canScore(persona);
 
   const plain = (t: TabDef, badge?: number) => {

@@ -662,3 +662,17 @@ test('a run sheet scheduled to publish goes out on its own once it is due', asyn
   await page.getByRole('button', { name: /Activity/ }).click();
   await expect(page.getByText(/Published the run sheet on schedule/)).toBeVisible();
 });
+
+test('the screen map prints every More row with the roles that see it', async ({ page }) => {
+  await page.goto('/console?tab=walkthrough');
+  await ready(page);
+  await expect(page.getByRole('heading', { name: 'Screen map' })).toBeVisible();
+  const index = page.getByRole('region', { name: 'The More index, by role' });
+  const submit = index.getByRole('row', { name: /Submit Points/ });
+  await expect(submit).toContainText('submit · /dashboard/submit-points');
+  /* After the row label come Leader, Owner, Scorekeeper, Coach, Captain, Member: a team member can’t submit points. */
+  await expect(submit.getByRole('cell').nth(6)).toContainText('Hidden');
+  await expect(submit.getByRole('cell').nth(5)).toContainText('Shows');
+  await expect(page.getByRole('region', { name: 'The tab bar, by role' }).getByRole('row', { name: /Your role/ })).toContainText('Console');
+  await expect(page.getByText('from the QR code on Night recap').first()).toBeVisible();
+});

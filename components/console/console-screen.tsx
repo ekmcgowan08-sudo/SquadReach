@@ -23,6 +23,7 @@ import { PeopleTab } from '@/components/console/people-tab';
 import { ReportsTab } from '@/components/console/reports-tab';
 import { ScoringTab } from '@/components/console/scoring-tab';
 import { SeasonTab } from '@/components/console/season-tab';
+import { ScreenMap } from '@/components/console/screen-map';
 import { WalkthroughChapters } from '@/components/walkthrough-chapters';
 import { Btn, Icon } from '@/components/ui';
 import { isoDay, parseLocalISO } from '@/lib/dates';
@@ -339,8 +340,11 @@ function TeamsTab() {
 
 function WalkthroughTab() {
   return (
-    <Section title="Walkthrough" sub="Written for your first month, in the order a week actually happens. Every chapter ends somewhere real, so reading it and doing it are one trip.">
-      <WalkthroughChapters />
-    </Section>
+    <>
+      <Section title="Walkthrough" sub="Written for your first month, in the order a week actually happens. Every chapter ends somewhere real, so reading it and doing it are one trip.">
+        <WalkthroughChapters />
+      </Section>
+      <ScreenMap consoleTabs={TABS} />
+    </>
   );
 }

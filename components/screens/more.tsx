@@ -15,16 +15,14 @@ import { previewBlankDemo, resetDemo } from '@/lib/data/demo-backend';
 import { startTour, tourSteps } from '@/components/shell/tour';
 import { awardOpen } from '@/lib/awards';
 import { heldTotal } from '@/lib/held';
-import {
-  canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek, canPublishBoard,
-  canRunDoor, canRunLive, canSeeAttendance, canSeeCare, canServe, canShareRecap, canSwitchTeamView
-} from '@/lib/permissions';
+import { canApprove, canNightRecap, canPrepWeek, canRunLive, canServe, canSwitchTeamView } from '@/lib/permissions';
 import { attendanceStats, checkinOpen, followups, isAfter, myNights, nextReminder, reminders, slipsView, weekday } from '@/lib/cycle';
 import { computeNotifications, eventLabel, myBible, myTeamId, openFollowups, teamOf, upcomingEvents } from '@/lib/selectors';
 import { notifOn, usePrefs } from '@/lib/prefs';
 import { clearRecents, recentsOwner, recentsSnapshot, subscribeRecents } from '@/lib/recents';
 import { useApp, useAppApi } from '@/lib/store/provider';
-import { personaDef, realRole } from '@/lib/types/domain';
+import { MORE_GROUPS, MORE_ROWS, moreRowShows, type MoreRow, type MoreRowId } from '@/lib/screen-map';
+import { personaDef } from '@/lib/types/domain';
 
 const NO_RECENTS: string[] = [];
 
@@ -58,7 +56,6 @@ export function MoreScreen() {
   const crewIds = crewAll(d.huddle).map((c) => c.id);
   const hereCount = crewIds.filter((id) => d.huddle.crewState[id] === 'here').length;
   const sheetNow = d.huddle.runSheet[Math.min(d.huddle.runIdx, Math.max(0, d.huddle.runSheet.length - 1))];
-  const real = !!realRole(p);
   const cy = useCycle();
   const cyAfter = isAfter(cy.t, cy.now);
   const nextRem = canPrepWeek(p) ? nextReminder(reminders(d, cy.iso, cy.now)) : null;
@@ -67,137 +64,90 @@ export function MoreScreen() {
   const myServe = canServe(p) ? myNights(d, cy.me.name, cy.nights) : [];
   const firstSlip = slipsView(d)[0];
 
-  const groups: { title: string; visible: boolean; items: (Item | null)[] }[] = [
-    {
-      title: 'Account',
-      visible: true,
-      items: [
-        { label: 'Settings', meta: 'Dark', icon: 'ph ph-moon', href: '/dashboard/settings' },
-        { label: 'Notifications', meta: notifs.length + ' new', icon: 'ph ph-bell', href: '/dashboard/notifications' },
-        canApprove(p) ? { label: 'Access requests', meta: pendingAccess + ' waiting', icon: 'ph ph-user-focus', href: '/dashboard/access-requests' } : null,
-        { label: 'Badges & Streaks', meta: 'season so far', icon: 'ph ph-medal', href: '/dashboard/badges' },
-        canApprove(p)
-          ? { label: 'Planning Center', meta: d.pco?.connected ? 'connected' + (d.pco.org ? ' · ' + d.pco.org : '') : m.mode === 'demo' ? 'on the live app' : 'not connected', icon: 'ph ph-plugs-connected', href: '/console?tab=people' }
-          : null,
-        canApprove(p) ? { label: 'Walkthrough', meta: CHAPTERS.length + ' chapters, in the order a week happens', icon: 'ph ph-compass', href: '/dashboard/walkthrough' } : null,
-        /* Review affordance: the offline design is unreviewable without it. */
-        { label: offlineSim ? 'Restore signal' : 'Simulate no signal', meta: outbox ? outbox + ' held' : 'try the gym case', icon: offlineSim ? 'ph ph-cloud-check' : 'ph ph-cloud-slash', onClick: () => api().toggleOfflineSim() },
-        {
-          label: stale ? 'Clear the old held queue' : 'Plant an old held queue',
-          meta: stale ? heldTotal(stale) + ' items from 3 days ago' : 'the phone-in-a-drawer case',
-          icon: 'ph ph-clock-counter-clockwise',
-          onClick: () => api().plantStaleHeld()
-        },
-        m.mode === 'demo' && d.teams.length
-          ? {
-              label: 'Preview a brand-new season',
-              meta: 'empty board, setup checklist',
-              icon: 'ph ph-sparkle',
-              onClick: () => {
-                previewBlankDemo();
-                /* A full load, so the demo reads the blank ministry back in. */
-                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-                window.location.assign('/dashboard');
-              }
-            }
-          : null,
-        m.mode === 'demo'
-          ? {
-              label: 'Reset the demo',
-              meta: 'back to week 9',
-              icon: 'ph ph-arrow-counter-clockwise',
-              onClick: () => {
-                resetDemo();
-                window.location.reload();
-              }
-            }
-          : { label: 'Sign out', meta: m.displayName, icon: 'ph ph-sign-out', href: '/logout', onClick: clearRecents }
-      ]
-    },
-    {
-      title: 'Discipleship',
-      visible: true,
-      items: [
-        { label: 'Bible & Memory', meta: myBible(d, m).due + ' due', icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
-        canSeeCare(p)
-          ? { label: 'Prayer & Care', meta: d.prayerQueue.length + ' to review · ' + openFollowups(d).length + ' follow-ups', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' }
-          : { label: 'Prayer Wall', meta: d.prayers.length + ' on the wall', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' }
-      ]
-    },
-    {
-      title: 'Views',
-      visible: true,
-      items: [
-        canOpenRoleView(p, 'coach') ? { label: 'Coach view', meta: myTeam.name + ' · roster, attendance, points', icon: 'ph ph-megaphone', href: '/dashboard/coach-view' } : null,
-        canOpenRoleView(p, 'captain') ? { label: 'Captain view', meta: 'who is missing · squad pushes', icon: 'ph ph-flag', href: '/dashboard/captain-view' } : null,
-        canOpenRoleView(p, 'admin') ? { label: 'Admin view', meta: pendingAccess + ' waiting · org health', icon: 'ph ph-buildings', href: '/dashboard/admin-view' } : null,
-        canOpenRoleView(p, 'parent') ? { label: 'Parent view', meta: (m.studentName ?? d.studentBadges[0]?.name ?? d.roster[0]?.name ?? '').split(' ')[0] + ' · one household', icon: 'ph ph-users', href: '/dashboard/parent-view' } : null,
-        { label: 'Congregation view', meta: 'the public board', icon: 'ph ph-church', href: '/dashboard/congregation-view' },
-        canOpenRoleView(p, 'team') ? { label: 'Team view', meta: myTeam.name + (canSwitchTeamView(p) ? ' · any squad' : ''), icon: 'ph ph-users-three', href: '/dashboard/team' } : null
-      ]
-    },
-    {
-      title: 'Tonight',
-      visible: real,
-      items: [
-        { label: 'Live', meta: canRunLive(p) ? 'run ministry time' : 'answer on your phone', icon: 'ph ph-broadcast', href: '/dashboard/live' },
-        canPrepWeek(p) ? { label: 'Prep week', meta: nextRem ? 'next: ' + nextRem.label.toLowerCase() : 'all reminders posted', icon: 'ph ph-calendar-check', href: '/dashboard/prep-week' } : null,
-        canNightRecap(p)
-          ? {
-              label: 'Night recap',
-              meta: cyAfter ? (myFu ? myFu + ' follow-ups yours' : 'follow-ups done') : checkinOpen(cy.t, cy.now) ? attendanceStats(d).here + ' checked in' : 'opens ' + weekday(cy.iso),
-              icon: 'ph ph-clipboard-text',
-              href: '/dashboard/night-recap'
-            }
-          : null,
-        canServe(p)
-          ? { label: 'Serving & swaps', meta: canApprove(p) ? (swaps ? swaps + ' swaps waiting' : 'no swaps') : myServe[0] ? myServe[0].role.toLowerCase() + ' · ' + myServe.length + ' nights' : 'not scheduled', icon: 'ph ph-swap', href: '/dashboard/serving' }
-          : null,
-        canMessageParents(p) ? { label: 'Message parents', meta: firstSlip ? firstSlip.signedN + ' of ' + firstSlip.total + ' signed · ' + firstSlip.slip.title.split(/ · | from /)[0] : 'families, slips, pickup', icon: 'ph ph-chat-circle-text', href: '/dashboard/parents' } : null,
-        canRunDoor(p) ? { label: 'Door kiosk', meta: 'students check themselves in', icon: 'ph ph-device-tablet', href: '/dashboard/door' } : null,
-        { label: canApprove(p) ? 'Leader tour' : 'Tour the app', meta: 'every screen in ' + tourSteps(p).length + ' steps', icon: 'ph ph-signpost', onClick: () => (startTour(), router.push('/dashboard')) },
-        canHuddle(p) && sheetNow ? { label: 'Huddle & run sheet', meta: sheetNow.time + ' · ' + sheetNow.label + ' · ' + hereCount + ' of ' + crewIds.length + ' here', icon: 'ph ph-users-four', href: '/dashboard/huddle' } : null,
-        canControlEvent(p) ? { label: 'Game timer', meta: 'week ' + d.config.weekNumber, icon: 'ph ph-timer', href: '/dashboard/games' } : null,
-        { label: 'Submit Points', meta: 'with photo proof', icon: 'ph ph-paper-plane-tilt', href: '/dashboard/submit-points' },
-        { label: 'Media & Film', meta: d.clips.length ? d.clips.length + ' clips · albums' : 'capture, film, albums', icon: 'ph ph-camera', href: '/dashboard/media' },
-        { label: 'Game Rules', meta: d.config.gameName, icon: 'ph ph-clipboard-text', href: '/dashboard/game-rules' }
-      ]
-    },
-    {
-      title: 'Season',
-      visible: real,
-      items: [
-        canShareRecap(p) ? { label: 'Weekly Recap Card', meta: 'share the week', icon: 'ph ph-share-network', href: '/dashboard/recap' } : null,
-        canSeeAttendance(p) ? { label: 'Attendance Map', meta: 'season heat map', icon: 'ph ph-grid-nine', href: '/dashboard/attendance' } : null,
-        canPublishBoard(p) ? { label: 'Parent Board Link', meta: 'read-only', icon: 'ph ph-link', href: '/dashboard/parent-link' } : null,
-        { label: 'Races', meta: 'squad pushes · individuals', icon: 'ph ph-target', href: '/dashboard/races' },
-        { label: 'Calendar', meta: upcomingEvents(d, p)[0] ? eventLabel(upcomingEvents(d, p)[0]) : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },
-        canOpenLibrary(p) ? { label: 'Library', meta: 'search weeks, lessons, games', icon: 'ph ph-magnifying-glass', href: '/dashboard/library' } : null,
-        { label: 'Season & Small Groups', meta: d.config.seasonWeeks + ' weeks · ' + d.smallGroups.length + ' guides', icon: 'ph ph-list-checks', href: '/dashboard/season-plan' },
-        { label: 'Trophies & Awards', meta: d.awards.filter((a) => a.decidedBy === 'vote' && awardOpen(a, cy.today)).length + ' open for vote', icon: 'ph ph-trophy', href: '/dashboard/awards' }
-      ]
-    },
-    {
-      title: 'Oversight',
-      visible: canApprove(p),
-      items: [
-        { label: 'Approval Queue', meta: pendingPts + ' pending', icon: 'ph ph-seal-check', href: '/dashboard/approvals' },
-        { label: 'People & Roles', meta: d.roster.length + ' people', icon: 'ph ph-users-three', href: '/console?tab=people' },
-        { label: 'Audit Log', meta: 'everything', icon: 'ph ph-list-magnifying-glass', href: '/dashboard/audit' },
-        { label: 'Web Dashboard', meta: 'full control', icon: 'ph ph-gauge', href: '/console' },
-        { label: 'Planner', meta: 'seven years · seasons · nights', icon: 'ph ph-map-trifold', href: '/planner' },
-        canControlEvent(p) ? { label: 'Projector Mode', meta: 'second screen', icon: 'ph ph-projector-screen', href: '/projector' } : null
-      ]
-    }
-  ];
+  /* Which rows show is read off lib/screen-map.ts — the same table the
+     Screen map prints and a test checks against every route's own gate. */
+  const row = (id: MoreRowId, rest: { meta: string; label?: string; icon?: string; href?: string; onClick?: () => void }): Item | null => {
+    if (!moreRowShows(id, p, m.mode === 'demo')) return null;
+    const r: MoreRow = MORE_ROWS[id];
+    return { label: rest.label ?? r.label, meta: rest.meta, icon: rest.icon ?? r.icon, href: rest.href ?? r.href, onClick: rest.onClick };
+  };
+  const items: Partial<Record<MoreRowId, Item | null>> = {
+    settings: row('settings', { meta: 'Dark' }),
+    notifications: row('notifications', { meta: notifs.length + ' new' }),
+    access: row('access', { meta: pendingAccess + ' waiting' }),
+    badges: row('badges', { meta: 'season so far' }),
+    pco: row('pco', { meta: d.pco?.connected ? 'connected' + (d.pco.org ? ' · ' + d.pco.org : '') : m.mode === 'demo' ? 'on the live app' : 'not connected' }),
+    walkthrough: row('walkthrough', { meta: CHAPTERS.length + ' chapters, in the order a week happens' }),
+    /* Review affordance: the offline design is unreviewable without it. */
+    offline: row('offline', { label: offlineSim ? 'Restore signal' : undefined, meta: outbox ? outbox + ' held' : 'try the gym case', icon: offlineSim ? 'ph ph-cloud-check' : undefined, onClick: () => api().toggleOfflineSim() }),
+    stale: row('stale', { label: stale ? 'Clear the old held queue' : undefined, meta: stale ? heldTotal(stale) + ' items from 3 days ago' : 'the phone-in-a-drawer case', onClick: () => api().plantStaleHeld() }),
+    blank: d.teams.length
+      ? row('blank', {
+          meta: 'empty board, setup checklist',
+          onClick: () => {
+            previewBlankDemo();
+            /* A full load, so the demo reads the blank ministry back in. */
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.assign('/dashboard');
+          }
+        })
+      : null,
+    reset: row('reset', {
+      meta: 'back to week 9',
+      onClick: () => {
+        resetDemo();
+        window.location.reload();
+      }
+    }),
+    signOut: row('signOut', { meta: m.displayName, href: '/logout', onClick: clearRecents }),
+    bible: row('bible', { meta: myBible(d, m).due + ' due' }),
+    care: row('care', { meta: d.prayerQueue.length + ' to review · ' + openFollowups(d).length + ' follow-ups' }),
+    wall: row('wall', { meta: d.prayers.length + ' on the wall' }),
+    coachView: row('coachView', { meta: myTeam.name + ' · roster, attendance, points' }),
+    captainView: row('captainView', { meta: 'who is missing · squad pushes' }),
+    adminView: row('adminView', { meta: pendingAccess + ' waiting · org health' }),
+    parentView: row('parentView', { meta: (m.studentName ?? d.studentBadges[0]?.name ?? d.roster[0]?.name ?? '').split(' ')[0] + ' · one household' }),
+    congregationView: row('congregationView', { meta: 'the public board' }),
+    teamView: row('teamView', { meta: myTeam.name + (canSwitchTeamView(p) ? ' · any squad' : '') }),
+    live: row('live', { meta: canRunLive(p) ? 'run ministry time' : 'answer on your phone' }),
+    prep: row('prep', { meta: nextRem ? 'next: ' + nextRem.label.toLowerCase() : 'all reminders posted' }),
+    nightRecap: row('nightRecap', {
+      meta: cyAfter ? (myFu ? myFu + ' follow-ups yours' : 'follow-ups done') : checkinOpen(cy.t, cy.now) ? attendanceStats(d).here + ' checked in' : 'opens ' + weekday(cy.iso)
+    }),
+    serving: row('serving', {
+      meta: canApprove(p) ? (swaps ? swaps + ' swaps waiting' : 'no swaps') : myServe[0] ? myServe[0].role.toLowerCase() + ' · ' + myServe.length + ' nights' : 'not scheduled'
+    }),
+    parents: row('parents', { meta: firstSlip ? firstSlip.signedN + ' of ' + firstSlip.total + ' signed · ' + firstSlip.slip.title.split(/ · | from /)[0] : 'families, slips, pickup' }),
+    door: row('door', { meta: 'students check themselves in' }),
+    tour: row('tour', { label: canApprove(p) ? 'Leader tour' : undefined, meta: 'every screen in ' + tourSteps(p).length + ' steps', onClick: () => (startTour(), router.push('/dashboard')) }),
+    huddle: sheetNow ? row('huddle', { meta: sheetNow.time + ' · ' + sheetNow.label + ' · ' + hereCount + ' of ' + crewIds.length + ' here' }) : null,
+    games: row('games', { meta: 'week ' + d.config.weekNumber }),
+    submit: row('submit', { meta: 'with photo proof' }),
+    media: row('media', { meta: d.clips.length ? d.clips.length + ' clips · albums' : 'capture, film, albums' }),
+    rules: row('rules', { meta: d.config.gameName }),
+    recap: row('recap', { meta: 'share the week' }),
+    attendance: row('attendance', { meta: 'season heat map' }),
+    board: row('board', { meta: 'read-only' }),
+    races: row('races', { meta: 'squad pushes · individuals' }),
+    calendar: row('calendar', { meta: upcomingEvents(d, p)[0] ? eventLabel(upcomingEvents(d, p)[0]) : 'nothing scheduled' }),
+    library: row('library', { meta: 'search weeks, lessons, games' }),
+    season: row('season', { meta: d.config.seasonWeeks + ' weeks · ' + d.smallGroups.length + ' guides' }),
+    awards: row('awards', { meta: d.awards.filter((a) => a.decidedBy === 'vote' && awardOpen(a, cy.today)).length + ' open for vote' }),
+    approvals: row('approvals', { meta: pendingPts + ' pending' }),
+    people: row('people', { meta: d.roster.length + ' people' }),
+    audit: row('audit', { meta: 'everything' }),
+    console: row('console', { meta: 'full control' }),
+    planner: row('planner', { meta: 'seven years · seasons · nights' }),
+    projector: row('projector', { meta: 'second screen' })
+  };
+  const groups = MORE_GROUPS.map((g) => ({ title: g.title, items: g.rows.map((id) => items[id] ?? null) }));
 
   /* Recent: deep screens opened lately that this role can still open —
      anything it can't (or that no longer exists) quietly drops out. */
-  const byHref = new Map(groups.filter((g) => g.visible).flatMap((g) => (g.items.filter(Boolean) as Item[]).filter((it) => it.href).map((it) => [it.href!, it] as const)));
+  const byHref = new Map(groups.flatMap((g) => (g.items.filter(Boolean) as Item[]).filter((it) => it.href).map((it) => [it.href!, it] as const)));
   const recent = recentHrefs.map((h) => byHref.get(h)).filter((x): x is Item => !!x).slice(0, 5);
   const needle = q.trim().toLowerCase();
   const shown = groups
-    .filter((g) => g.visible)
     .map((g) => ({
       ...g,
       items: (g.items.filter(Boolean) as Item[]).filter((it) => !needle || (it.label + ' ' + it.meta + ' ' + g.title).toLowerCase().includes(needle))

@@ -183,6 +183,7 @@ components/live/     Live ministry time: console, room screen, student pad, setu
 components/shell/    Phone shell, tab bar, the walkthrough
 lib/types/domain.ts  Roles and the role lists every gate reads
 lib/permissions.ts   Every gate as a named question (canScore, canApprove…)
+lib/screen-map.ts    Every route and its gate, the tab bar and the More index
 lib/scoring.ts       Standings, category totals, student ranks — all derived
 lib/feeds.ts         Automatic points (attendance, Bible practice, challenges)
 lib/game.ts          Game clock, heats, penalties, placement awards
@@ -211,7 +212,11 @@ Rules the code holds to:
   screen’s own server-side `requireGate` call the same function in
   `lib/permissions.ts`. The database’s RLS policies use the same role lists
   as `lib/types/domain.ts`, and `supabase/tests/rls.test.sql` tests them
-  role by role.
+  role by role. The More menu reads its rows and gates from
+  `lib/screen-map.ts`, and `lib/screen-map.test.ts` reads every `page.tsx`
+  to check that table against each route’s own gate — so a row a role can
+  see is always a screen it can open. The console’s Walkthrough tab prints
+  the same table as the Screen map; the People tab prints Who can do what.
 - **Offline is honest.** Points and approval decisions made without signal
   wait in the outbox and send once, by id, when you’re back online. Chat
   messages and RSVPs are held the same way. Anything else that needs a

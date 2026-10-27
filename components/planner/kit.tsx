@@ -12,21 +12,10 @@ import { nowMs } from '@/lib/dates';
 import { merge3 } from '@/lib/merge3';
 import type { Health } from '@/lib/plan-insights';
 import type { Plan } from '@/lib/plan';
+import { PLANNER_NAV } from '@/lib/screen-map';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
-export const PLANNER_NAV = [
-  { href: '/planner', label: 'Home', key: 'h', icon: 'ph ph-house' },
-  { href: '/planner/prep', label: 'Prep & recap', key: 'w', icon: 'ph ph-calendar-check' },
-  { href: '/planner/people', label: 'People', key: 'p', icon: 'ph ph-users-three' },
-  { href: '/planner/roadmap', label: 'Roadmap', key: 'r', icon: 'ph ph-map-trifold' },
-  { href: '/planner/year', label: 'Ministry year', key: 'y', icon: 'ph ph-columns' },
-  { href: '/planner/season', label: 'Season & night', key: 'n', icon: 'ph ph-moon-stars' },
-  { href: '/planner/live', label: 'Live', key: 'm', icon: 'ph ph-broadcast' },
-  { href: '/planner/coverage', label: 'Coverage', key: 'c', icon: 'ph ph-grid-four' },
-  { href: '/planner/liturgical', label: 'Liturgical', key: 'l', icon: 'ph ph-circle-half' },
-  { href: '/planner/settings', label: 'Settings', key: 's', icon: 'ph ph-sliders-horizontal' }
-] as const;
 
 const ACTIONS = [
   { label: 'Open the console', href: '/console', group: 'Elsewhere' },
