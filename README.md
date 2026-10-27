@@ -323,3 +323,14 @@ Where the prototype left a call open, the build took the safer default:
   church, so it's left as a decision. Importing and check-ins work today.
 - **Casting from the demo.** The demo's room lives on one device, so it
   has no cast link; open the room screen in another window instead.
+- **Who may read a prayer request.** The handoff asks that a request be
+  readable only by the leader it's assigned to. Today every leader can
+  read a queued request, because leaders review the queue before anything
+  goes on the wall; coaches and students see that a request exists and
+  who has it, never what it says. Assigning each request to one leader
+  means also deciding who reviews it, so it's left as a decision.
+- **A typed join code for ministry time.** The design shows a code such
+  as GRACE 4821 beside the room QR. Students are already signed in to
+  their ministry, so the room screen says "scan this, or open the app and
+  tap Live" instead. A code would only matter for people who aren't in
+  the app yet.
