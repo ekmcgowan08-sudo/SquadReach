@@ -11,7 +11,7 @@ import { CheckInCard, ParentTonight } from '@/components/cycle/home-cards';
 import { Sheet } from '@/components/sheet';
 import { Avatar, Btn, Icon, Screen, Stat, initialsOf } from '@/components/ui';
 import { ago } from '@/lib/dates';
-import { churchRows, churchSocials } from '@/lib/feeds';
+import { challengesIn, churchRows, churchSocials } from '@/lib/feeds';
 import { groupHeldEntries, heldTotal, wasHeld } from '@/lib/held';
 import { autoApproves, canApprove, canControlEvent, canHuddle } from '@/lib/permissions';
 import { deltaLabel, fmt, pointBase, studentRanks, studentTotal } from '@/lib/scoring';
@@ -205,7 +205,7 @@ export function HomeScreen() {
           canControlEvent(p) ? { label: 'Game timer', meta: d.config.gameName || 'no game set', icon: 'ph ph-timer', href: '/dashboard/games' } : null,
           { label: 'Calendar', meta: upcomingEvents(d, p)[0] ? 'Next: ' + eventLabel(upcomingEvents(d, p)[0]) : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },
           { label: 'Prayer request', meta: 'Ask your leaders to pray', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' },
-          { label: 'Join a challenge', meta: d.challenges.length ? d.challenges.length + ' running' : 'Nothing running yet', icon: 'ph ph-flag-checkered', href: '/dashboard/races' }
+          { label: 'Join a challenge', meta: challengesIn(d.challenges, d.config.weekNumber).length ? challengesIn(d.challenges, d.config.weekNumber).length + ' running' : 'Nothing running yet', icon: 'ph ph-flag-checkered', href: '/dashboard/races' }
         ]
           .filter(Boolean)
           .map((q) => (
@@ -304,10 +304,10 @@ function StudentCard() {
           <div className="text-[12px] font-medium leading-[1.4] text-neutral-200">Bible {b ? Math.ceil(b.bibleStreak / 7) + ' weeks' : 'Not started'}</div>
         </div>
       </div>
-      {d.challenges.length ? (
+      {challengesIn(d.challenges, d.config.weekNumber).length ? (
         <div className="flex flex-col gap-[7px] border-t border-divider pt-[11px]">
           <div className="text-[9.5px] font-semibold uppercase leading-none tracking-[.1em] text-neutral-500">This week</div>
-          {d.challenges.slice(0, 3).map((c) => (
+          {challengesIn(d.challenges, d.config.weekNumber).slice(0, 3).map((c) => (
             <div key={c.id} className="flex items-start gap-2">
               <Icon name="ph ph-target" className="mt-[2px] flex-none text-[13px] text-accent-400" />
               <div className="min-w-0 flex-1">

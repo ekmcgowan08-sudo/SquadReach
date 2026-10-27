@@ -10,6 +10,7 @@ import { InviteSheet } from '@/components/dashboard/invite-sheet';
 import { useStandings } from '@/components/dashboard/standings-list';
 import { Btn, Icon, PreviewStrip, Screen, ScreenHeader } from '@/components/ui';
 import { ago } from '@/lib/dates';
+import { challengesIn } from '@/lib/feeds';
 import { autoApproves, canEditRoster, canScore, canSwitchTeamView, isPreviewing } from '@/lib/permissions';
 import { deltaLabel, fmt, studentTotal } from '@/lib/scoring';
 import { bibleStats } from '@/lib/bible';
@@ -205,7 +206,7 @@ export function CaptainViewScreen() {
   const row = rows.find((r) => r.id === myId);
   const roster = teamRoster(d, myId);
   const missing = roster.filter((r) => !d.tonight.presence[r.name]);
-  const pushes = d.challenges.filter((c) => !c.team || c.team === myId);
+  const pushes = challengesIn(d.challenges, d.config.weekNumber).filter((c) => !c.team || c.team === myId);
   const earners = roster
     .map((r) => ({ name: r.name, pts: studentTotal(r.name, d.ledger, d.studentSeedPoints) }))
     .filter((r) => r.pts > 0)

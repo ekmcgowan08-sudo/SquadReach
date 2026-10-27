@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import { Sheet } from '@/components/sheet';
 import { Avatar, Btn, Icon, Screen, ScreenHeader, Switch2, initialsOf } from '@/components/ui';
 import { ago } from '@/lib/dates';
-import { creditChallenges } from '@/lib/feeds';
+import { challengesIn, creditChallenges } from '@/lib/feeds';
 import { wasHeld } from '@/lib/held';
 import { canApprove, canHuddle } from '@/lib/permissions';
 import { fmt, studentRanks } from '@/lib/scoring';
@@ -46,6 +46,7 @@ function SquadPushes() {
   const me = m.studentName ?? m.displayName;
   const subFor = (i: number) => (group ? d.deepSubs.find((x) => x.groupId === group.id && x.dayIdx === i && x.student === me) : undefined);
   const myTeam = myTeamId(m, d, coachTeam);
+  const running = challengesIn(d.challenges, d.config.weekNumber);
   const review = d.deepSubs.filter((x) => x.status === 'pending' && (canApprove(m.persona) || x.team === myTeam));
 
   const decide = (id: string, ok: boolean) => {
@@ -60,7 +61,7 @@ function SquadPushes() {
         r.decidedBy = m.displayName;
       }
       if (pays) {
-        const credit = creditChallenges(x.challenges, x.challengeCredit, sub.student, sub.team);
+        const credit = creditChallenges(challengesIn(x.challenges, x.config.weekNumber), x.challengeCredit, sub.student, sub.team);
         if (credit) x.challengeCredit = credit;
       }
     });
@@ -187,13 +188,13 @@ function SquadPushes() {
         </div>
       ) : null}
 
-      {!d.challenges.length ? (
+      {!running.length ? (
         <div className="flex flex-col items-start gap-[9px] rounded-lg border border-dashed border-neutral-700 px-4 py-5">
           <Icon name="ph ph-target" className="text-[20px] text-neutral-500" />
-          <div className="text-[12px] leading-[1.5] text-neutral-500 text-pretty">Nothing running this week. Challenges are set up in the web dashboard and can be scheduled to any week of the season.</div>
+          <div className="text-[12px] leading-[1.5] text-neutral-500 text-pretty">Nothing running this week. Leaders set challenges up in Console › Challenges, for any weeks of the season.</div>
         </div>
       ) : null}
-      {d.challenges.map((c) => {
+      {running.map((c) => {
         const rec = d.tonight.pushed[c.id];
         const pushed = !!rec;
         const credit = d.challengeCredit[c.id]?.length ?? 0;

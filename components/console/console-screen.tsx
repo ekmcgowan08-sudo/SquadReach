@@ -6,6 +6,7 @@ import { FILM_DEFAULTS } from '@/lib/types/model';
 import { DEFAULT_ZONE, ZONES } from '@/lib/time-zone';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { ChallengesTab } from '@/components/console/challenges-tab';
 import { HuddleTab } from '@/components/console/huddle-tab';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
 import { CycleSection } from '@/components/console/cycle-section';
@@ -26,6 +27,7 @@ const TABS = [
   { id: 'season', label: 'Season builder', icon: 'ph ph-map-trifold' },
   { id: 'teams', label: 'Squads', icon: 'ph ph-shield-check' },
   { id: 'scoring', label: 'Scoring', icon: 'ph ph-trophy' },
+  { id: 'challenges', label: 'Challenges', icon: 'ph ph-flag-checkered' },
   { id: 'people', label: 'People', icon: 'ph ph-users-three' },
   { id: 'huddle', label: 'Huddle sheet', icon: 'ph ph-clipboard-text' },
   { id: 'reports', label: 'Reports', icon: 'ph ph-file-arrow-down' },
@@ -54,7 +56,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
+        {tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );

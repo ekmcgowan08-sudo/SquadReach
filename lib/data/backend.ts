@@ -9,7 +9,7 @@
 import type { LiveAnswer, LiveRoom } from '@/lib/live';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
-  AccessRequest, ActivityLine, CareReminder, Category, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
+  AccessRequest, ActivityLine, CareReminder, Category, Challenge, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
   GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, PracticeRow,
   PrayerQueued, Rsvp, RsvpCount, Student, SwapRequest, Team, VolunteerInvite
 } from '@/lib/types/model';
@@ -58,6 +58,8 @@ export type SyncEvent =
   | { kind: 'nominee'; awardId: string; id: string; name: string }
   | { kind: 'event'; event: MinistryEvent }
   | { kind: 'eventRemove'; id: string }
+  | { kind: 'challenge'; challenge: Challenge }
+  | { kind: 'challengeRemove'; id: string }
   | { kind: 'studentRemove'; id: string }
   | { kind: 'person'; person: PersonRow }
   | { kind: 'personRemove'; id: string }

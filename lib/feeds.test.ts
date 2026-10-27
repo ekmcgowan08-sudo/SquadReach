@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { demoMinistry } from '@/lib/data/seed';
 import {
   attendanceRows, availableBench, bracketSeeds, bracketWinPayable, buildBracket, churchRows, churchSocials,
-  creditChallenges, nextBracketGame, settleFromClip, uncoveredPosts, type BracketState
+  challengesIn, creditChallenges, nextBracketGame, settleFromClip, uncoveredPosts, type BracketState
 } from '@/lib/feeds';
 
 const d = demoMinistry(0);
@@ -80,5 +80,17 @@ describe('huddle: uncovered posts are computed', () => {
     const h = { ...d.huddle, covered: { 'crew:c5': 'b1' } };
     expect(uncoveredPosts(h).map((p) => p.id)).toEqual(['op1']);
     expect(availableBench(h).map((b) => b.id)).not.toContain('b1');
+  });
+});
+
+describe('challenges by week', () => {
+  it('runs a challenge every week unless it names its weeks; an empty list pauses it', () => {
+    const cs = [
+      { ...d.challenges[0], id: 'all', weeks: undefined },
+      { ...d.challenges[0], id: 'some', weeks: [3, 4] },
+      { ...d.challenges[0], id: 'paused', weeks: [] }
+    ];
+    expect(challengesIn(cs, 3).map((c) => c.id)).toEqual(['all', 'some']);
+    expect(challengesIn(cs, 5).map((c) => c.id)).toEqual(['all']);
   });
 });

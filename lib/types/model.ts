@@ -147,6 +147,8 @@ export interface Challenge {
   team?: string;
   cat?: string;
   amount?: number;
+  /** Season weeks it runs in; absent means every week, empty means paused. */
+  weeks?: number[] | null;
 }
 
 export interface AccessRequest {

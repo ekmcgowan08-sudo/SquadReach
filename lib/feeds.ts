@@ -134,6 +134,9 @@ export function creditChallenges(
   return touched ? next : null;
 }
 
+/** The challenges running in a week: scheduled for it, or for every week. */
+export const challengesIn = (challenges: Challenge[], week: number) => challenges.filter((c) => !c.weeks || c.weeks.includes(week));
+
 /* ── Setup fields → the Home church card ─────────────────────────────────
    Blank fields disappear; nothing renders an empty row. */
 export interface ContactRow {

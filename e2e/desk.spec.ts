@@ -252,3 +252,24 @@ test('⌘K’s debrief action opens tonight’s night, not the season', async ({
   await ready(page);
   await expect(page.getByText('Service order')).toBeVisible();
 });
+
+test('a challenge set up in the console runs on the phone only in its weeks', async ({ page }) => {
+  await page.goto('/console?tab=challenges');
+  await ready(page);
+  await page.getByRole('button', { name: 'Add challenge' }).click();
+  const card = page.getByRole('region', { name: 'Challenge: New challenge' });
+  await card.getByLabel('Title').fill('Bring a parent night');
+  await card.getByLabel('Title').press('Enter');
+  const mine = page.getByRole('region', { name: 'Challenge: Bring a parent night' });
+  await mine.getByRole('button', { name: 'None' }).click();
+  await expect(mine.getByText('Runs: Paused')).toBeVisible();
+  await page.goto('/dashboard/races');
+  await ready(page);
+  await expect(page.getByText('Bring a parent night')).toHaveCount(0);
+  await page.goto('/console?tab=challenges');
+  await ready(page);
+  await page.getByRole('region', { name: 'Challenge: Bring a parent night' }).getByRole('button', { name: 'All' }).click();
+  await page.goto('/dashboard/races');
+  await ready(page);
+  await expect(page.getByText('Bring a parent night')).toBeVisible();
+});

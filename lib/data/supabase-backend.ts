@@ -376,6 +376,18 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         case 'eventRemove':
           await db.from('events').delete().eq('id', e.id);
           return;
+        case 'challenge': {
+          const c = e.challenge;
+          const r = await db.from('challenges').upsert({
+            id: c.id, org_id: org, kind: c.kind, title: c.title, body: c.body, points_label: c.pointsLabel, status: c.status, done: c.done,
+            team_id: c.team ?? null, category_key: c.cat ?? null, amount: c.amount ?? null, weeks: c.weeks ?? null
+          });
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'challengeRemove':
+          await db.from('challenges').delete().eq('id', e.id);
+          return;
         case 'practice':
           if (!membership.membershipId) return;
           await db.from('practice_log').upsert(
@@ -465,9 +477,9 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           iso: e.day, time: e.time_label, place: e.place, status: e.status, by: e.proposed_by, rsvpClosed: e.rsvp_closed
         })
       );
-      d.challenges = ((challenges.data ?? []) as { id: string; kind: 'Team' | 'Individual'; title: string; body: string; points_label: string; status: string; done: boolean; team_id: string | null; category_key: string | null; amount: number | null }[]).map((c) => ({
+      d.challenges = ((challenges.data ?? []) as { id: string; kind: 'Team' | 'Individual'; title: string; body: string; points_label: string; status: string; done: boolean; team_id: string | null; category_key: string | null; amount: number | null; weeks: number[] | null }[]).map((c) => ({
         id: c.id, kind: c.kind, title: c.title, body: c.body, pointsLabel: c.points_label, status: c.status, done: c.done,
-        team: c.team_id ?? undefined, cat: c.category_key ?? undefined, amount: c.amount ?? undefined
+        team: c.team_id ?? undefined, cat: c.category_key ?? undefined, amount: c.amount ?? undefined, weeks: c.weeks
       }));
       d.accessRequests = ((access.data ?? []) as { id: string; name: string; email: string; person_type: string; household: string; meta: string; requested_role: AccessRequest['requestedRole']; flagged: boolean; note: string; created_at: string }[]).map((r) => ({
         id: r.id, name: r.name, email: r.email, personType: r.person_type, household: r.household || 'No household on file', meta: r.meta,
