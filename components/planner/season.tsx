@@ -8,11 +8,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useCycle } from '@/components/cycle/use-cycle';
 import { PageHead, Panel, UndoButtons, usePlanSave } from '@/components/planner/kit';
+import { MonthView, SeasonOverview, monthsWithNights } from '@/components/planner/season-views';
 import { Btn, Icon, cx } from '@/components/ui';
 import { reminders, servePool, whoServes, when } from '@/lib/cycle';
 import { holyDaysBetween } from '@/lib/liturgical';
 import {
-  clockOf, laneColor, nextNight, orderOf, orderTimes, seasonsOf, teachingByNight, timings, yearLabel, yearOf, type GatheringPlan, type OrderBlock
+  MONTHS_FROM_AUG, clockOf, laneColor, monthIndex, nextNight, nightsOf, orderOf, orderTimes, seasonsOf, teachingByNight, timings, yearLabel, yearOf, type GatheringPlan, type OrderBlock
 } from '@/lib/plan';
 import { uid } from '@/lib/store/app-store';
 import { useAppApi } from '@/lib/store/provider';
@@ -30,6 +31,8 @@ export function SeasonNight() {
   const router = useRouter();
   const p = d.plan;
   const focus = params.get('night') ?? tonight;
+  const asked = params.get('view');
+  const view = asked === 'season' || asked === 'month' || asked === 'night' ? asked : params.get('night') ? 'night' : 'season';
   const [year, setYear] = useState(() => Math.max(0, Math.min(6, yearOf(p, focus))));
   const seasons = seasonsOf(p, year);
   const [seasonId, setSeasonId] = useState(() => seasons.find((s) => focus >= s.from && focus <= s.to)?.id ?? seasons[0]?.id);
@@ -40,6 +43,10 @@ export function SeasonNight() {
   const arc = season ? [...new Map(season.nights.filter((n) => teach[n]).map((n) => [teach[n].series.id, teach[n].series])).values()] : [];
   const alongside = season ? p.items.filter((it) => it.year === year && it.lane !== 'teach' && it.month !== undefined && seasonMonths(season.from, season.to).includes(it.month)) : [];
   const pickNight = (n: string) => router.replace('/planner/season?night=' + n);
+  const months = monthsWithNights(nightsOf(p, year));
+  const [month, setMonth] = useState(() => monthIndex(focus));
+  const mo = months.includes(month) ? month : (months.find((x) => x >= monthIndex(today)) ?? months[0]);
+  const go = (v: 'season' | 'month' | 'night') => router.replace('/planner/season?view=' + v + (v === 'night' && night ? '&night=' + night : ''));
 
   return (
     <>
@@ -62,21 +69,50 @@ export function SeasonNight() {
           </div>
         }
       />
-      <div className="mb-4 flex flex-wrap gap-2">
-        {seasons.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setSeasonId(s.id)}
-            aria-pressed={s.id === season?.id}
-            className="min-h-10 rounded-full border px-4 text-[12.5px] font-medium"
-            style={{ borderColor: s.id === season?.id ? 'var(--color-accent-500)' : 'var(--color-neutral-800)', color: s.id === season?.id ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}
-          >
-            {s.name} <span className="font-normal text-neutral-500">· {s.nights.length}</span>
-          </button>
-        ))}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="View" className="flex rounded-md border border-neutral-800 p-[3px]">
+          {(['season', 'month', 'night'] as const).map((v) => (
+            <button key={v} onClick={() => go(v)} aria-pressed={view === v} className={cx('min-h-9 rounded-[6px] px-4 text-[13.5px]', view === v ? 'bg-neutral-800 font-medium text-neutral-100' : 'text-neutral-400 hover:text-neutral-200')}>
+              {v === 'season' ? 'Season' : v === 'month' ? 'Month' : 'Night'}
+            </button>
+          ))}
+        </div>
+        {view === 'month' ? (
+          <div className="flex items-center gap-1">
+            <button aria-label="Previous month" disabled={months.indexOf(mo) <= 0} onClick={() => setMonth(months[months.indexOf(mo) - 1])} className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-300 disabled:opacity-30">
+              <Icon name="ph ph-caret-left" className="text-[13px]" />
+            </button>
+            {months.map((x) => (
+              <button key={x} onClick={() => setMonth(x)} aria-pressed={x === mo} className={cx('min-h-9 rounded-full px-3 text-[12.5px]', x === mo ? 'border border-accent-500 text-accent-100' : 'text-neutral-400')}>
+                {MONTHS_FROM_AUG[x]}
+              </button>
+            ))}
+            <button aria-label="Next month" disabled={months.indexOf(mo) >= months.length - 1} onClick={() => setMonth(months[months.indexOf(mo) + 1])} className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-300 disabled:opacity-30">
+              <Icon name="ph ph-caret-right" className="text-[13px]" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {seasons.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setSeasonId(s.id)}
+                aria-pressed={s.id === season?.id}
+                className="min-h-10 rounded-full border px-4 text-[12.5px] font-medium"
+                style={{ borderColor: s.id === season?.id ? 'var(--color-accent-500)' : 'var(--color-neutral-800)', color: s.id === season?.id ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}
+              >
+                {s.name} <span className="font-normal text-neutral-500">· {s.nights.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {season ? (
+      {view === 'month' && mo !== undefined ? (
+        <MonthView year={year} month={mo} onNight={pickNight} />
+      ) : view === 'season' && season ? (
+        <SeasonOverview season={season} year={year} alongside={alongside} onNight={pickNight} />
+      ) : season ? (
         <div className="grid items-start gap-5 xl:grid-cols-[360px_1fr]">
           <div className="flex flex-col gap-5">
             <Panel title={season.name} meta={season.nights.length ? fmtNight(season.nights[0]) + ' – ' + fmtNight(season.nights[season.nights.length - 1]) : 'no nights'}>

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useCycle, usePreviewPick } from '@/components/cycle/use-cycle';
+import { TitleSwitch } from '@/components/planner/kit';
 import { AttendanceTab, FollowupsTab, NotesTab } from '@/components/screens/night-recap';
 import { readyBy, useReminders } from '@/components/screens/prep-week';
 import { Btn, Icon, cx } from '@/components/ui';
@@ -15,41 +16,29 @@ import { attendanceStats, checkinOpen, clock, countdown, dayLabel, followups, is
 import { weekOf } from '@/lib/dates';
 import { teachingByNight, yearOf } from '@/lib/plan';
 
-type View = 'prep' | 'recap';
-
 export function PrepRecap() {
   const c = useCycle();
   const { d, iso, t, now } = c;
   const params = useSearchParams();
   const router = useRouter();
   const asked = params.get('view');
-  const view: View = asked === 'prep' || asked === 'recap' ? asked : isAfter(t, now) ? 'recap' : 'prep';
+  const view = asked === 'prep' || asked === 'recap' ? asked : isAfter(t, now) ? 'recap' : 'prep';
   const teach = teachingByNight(d.plan, yearOf(d.plan, iso))[iso];
   const week = weekOf(d.config.meetingDates, iso);
   const kicker = (teach ? teach.series.title + ' · week ' + teach.week : 'Week ' + week + (d.config.gameName ? ' · ' + d.config.gameName : '')) + ' · ' + dayLabel(t.setup);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-[.12em] text-neutral-500">{kicker}</div>
-          <h1 className="mt-2 flex items-baseline gap-4 text-[30px] font-medium leading-[1.1]">
-            {(['prep', 'recap'] as const).map((v, i) => (
-              <span key={v} className="flex items-baseline gap-4">
-                {i ? (
-                  <span aria-hidden className="font-normal text-neutral-600">
-                    /
-                  </span>
-                ) : null}
-                <button onClick={() => router.replace('/planner/prep?view=' + v)} aria-pressed={view === v} className={cx('transition-colors', view === v ? 'text-neutral-100' : 'text-neutral-500 hover:text-neutral-300')}>
-                  {v === 'prep' ? 'Prep week' : 'Recap'}
-                </button>
-              </span>
-            ))}
-          </h1>
-        </div>
-        {c.m.mode === 'demo' ? <PreviewBar t={t} stages={c.stages} current={c.preview?.id ?? null} onPick={() => asked && router.replace('/planner/prep')} /> : null}
-      </div>
+      <TitleSwitch
+        kicker={kicker}
+        value={view}
+        options={[
+          { id: 'prep', label: 'Prep week' },
+          { id: 'recap', label: 'Recap' }
+        ]}
+        onChange={(v) => router.replace('/planner/prep?view=' + v)}
+        right={c.m.mode === 'demo' ? <PreviewBar t={t} stages={c.stages} current={c.preview?.id ?? null} onPick={() => asked && router.replace('/planner/prep')} /> : null}
+      />
       {view === 'prep' ? <Prep /> : <Recap />}
     </div>
   );

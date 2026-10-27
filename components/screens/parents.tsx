@@ -15,10 +15,44 @@ import { uid } from '@/lib/store/app-store';
 import { useAppApi } from '@/lib/store/provider';
 import type { Family, PermissionSlip } from '@/lib/types/model';
 
-export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
-  const { d, m, iso, night, t, today } = useCycle();
+/** What a leader does for families: send a message, move pickup, mark a
+ *  paper slip signed. The phone and the desk share these. */
+export function useParentActions() {
+  const { d, m, iso, night } = useCycle();
   const api = useAppApi();
   const saveNight = useNightSave();
+  return {
+    send: (audience: string, body: string, quiet?: boolean) => {
+      const msg = newMessage(d, m.displayName, audience, body, nowMs(), uid());
+      if (!msg.kids.length) {
+        api().say('Nobody to send that to.');
+        return;
+      }
+      api().mutate((x) => void x.parentMsgs.unshift(msg));
+      api().emit({ kind: 'parentMsg', msg });
+      api().logActivity('Message to ' + audienceLabel(d, audience).toLowerCase() + ' (' + msg.kids.length + ' families) from ' + m.displayName);
+      if (!quiet) api().say('Sent to ' + msg.kids.length + (msg.kids.length === 1 ? ' family.' : ' families.') + ' It’s on each family’s link now.');
+      return msg;
+    },
+    shiftPickup: (by: number) => {
+      const shift = night.pickupShift + by;
+      saveNight(iso, (n) => void (n.pickupShift = shift));
+      api().emit({ kind: 'pickup', date: iso, shift });
+    },
+    paper: (slip: string, kid: string, signed: boolean) => {
+      const by = signed ? 'Paper slip · ' + m.displayName : null;
+      api().mutate((x) => {
+        if (by) x.slipSigned[slip + '|' + kid] = { by, at: nowMs() };
+        else delete x.slipSigned[slip + '|' + kid];
+      });
+      api().emit({ kind: 'slipSign', slip, student: kid, by });
+    }
+  };
+}
+
+export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
+  const { d, iso, night, t, today } = useCycle();
+  const { send, shiftPickup, paper } = useParentActions();
   const [to, setTo] = useState('all');
   const [text, setText] = useState('');
   const [whoOpen, setWhoOpen] = useState<string | null>(null);
@@ -30,31 +64,6 @@ export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
   const families = Object.keys(d.families).length;
   const base = t.pickup - night.pickupShift * 60_000;
 
-  const send = (audience: string, body: string, quiet?: boolean) => {
-    const msg = newMessage(d, m.displayName, audience, body, nowMs(), uid());
-    if (!msg.kids.length) {
-      api().say('Nobody to send that to.');
-      return;
-    }
-    api().mutate((x) => void x.parentMsgs.unshift(msg));
-    api().emit({ kind: 'parentMsg', msg });
-    api().logActivity('Message to ' + audienceLabel(d, audience).toLowerCase() + ' (' + msg.kids.length + ' families) from ' + m.displayName);
-    if (!quiet) api().say('Sent to ' + msg.kids.length + (msg.kids.length === 1 ? ' family.' : ' families.') + ' It’s on each family’s link now.');
-    return msg;
-  };
-  const shiftPickup = (by: number) => {
-    const shift = night.pickupShift + by;
-    saveNight(iso, (n) => void (n.pickupShift = shift));
-    api().emit({ kind: 'pickup', date: iso, shift });
-  };
-  const paper = (slip: string, kid: string, signed: boolean) => {
-    const by = signed ? 'Paper slip · ' + m.displayName : null;
-    api().mutate((x) => {
-      if (by) x.slipSigned[slip + '|' + kid] = { by, at: nowMs() };
-      else delete x.slipSigned[slip + '|' + kid];
-    });
-    api().emit({ kind: 'slipSign', slip, student: kid, by });
-  };
 
   const famList = useMemo(() => {
     const n = famQ.trim().toLowerCase();
@@ -209,7 +218,7 @@ export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
   );
 }
 
-function FamilySheet({ name, onClose }: { name: string | null; onClose: () => void }) {
+export function FamilySheet({ name, onClose }: { name: string | null; onClose: () => void }) {
   const d = useCycle().d;
   const api = useAppApi();
   const cur = name ? d.families[name] : undefined;
@@ -282,7 +291,7 @@ function FamilySheet({ name, onClose }: { name: string | null; onClose: () => vo
   );
 }
 
-function NewSlipSheet({ open, onClose, defaultDay }: { open: boolean; onClose: () => void; defaultDay: string }) {
+export function NewSlipSheet({ open, onClose, defaultDay }: { open: boolean; onClose: () => void; defaultDay: string }) {
   const { d, m } = useCycle();
   const api = useAppApi();
   const [title, setTitle] = useState('');

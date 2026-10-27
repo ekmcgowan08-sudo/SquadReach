@@ -178,3 +178,30 @@ test('Prep & recap turns to the recap once the night wraps, and the title turns 
   await expect(page).toHaveURL(/view=prep/);
   await expect(page.getByRole('heading', { name: 'Reminders' })).toBeVisible();
 });
+
+test('People: approve a proposed swap, then take a paper slip on the Parents side', async ({ page }) => {
+  await page.goto('/planner/people');
+  await ready(page);
+  await expect(page.getByRole('combobox', { name: 'Game lead on Wed, Nov 4' })).toHaveValue('Marcus Hall');
+  await page.getByRole('button', { name: 'Approve · Jordan P. takes it' }).click();
+  await expect(page.getByText('Marcus H. can’t do game lead')).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Game lead on Wed, Nov 4' })).toHaveValue('Jordan Pike');
+
+  await page.getByRole('button', { name: 'Parents', exact: true }).click();
+  await expect(page).toHaveURL(/tab=parents/);
+  await expect(page.getByText('2 of 6 signed')).toBeVisible();
+  await page.getByRole('button', { name: 'Mark a paper slip for Isaac Smith' }).first().click();
+  await expect(page.getByText('3 of 6 signed')).toBeVisible();
+});
+
+test('Season & night opens on the season, and a month card opens its night', async ({ page }) => {
+  await page.goto('/planner/season');
+  await ready(page);
+  await expect(page.getByText('Teaching arc')).toBeVisible();
+  await expect(page.getByText('Gatherings', { exact: true })).toBeVisible();
+  await page.getByRole('group', { name: 'View' }).getByRole('button', { name: 'Month' }).click();
+  await expect(page.getByText(/^\d+ of \d+ Wednesdays in play/)).toBeVisible();
+  await page.getByRole('button', { name: /^October 21/ }).click();
+  await expect(page).toHaveURL(/night=2026-10-21/);
+  await expect(page.getByText('Service order')).toBeVisible();
+});

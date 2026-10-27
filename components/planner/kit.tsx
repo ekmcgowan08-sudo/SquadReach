@@ -419,6 +419,32 @@ export function Panel({ title, meta, right, children, className }: { title: Reac
   );
 }
 
+/** A page whose title is its own switch: "Prep week / Recap". */
+export function TitleSwitch<T extends string>({ kicker, value, options, onChange, right }: { kicker: string; value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; right?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-end gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] font-semibold uppercase tracking-[.12em] text-neutral-500">{kicker}</div>
+        <h1 className="mt-2 flex items-baseline gap-4 text-[30px] font-medium leading-[1.1]">
+          {options.map((o, i) => (
+            <span key={o.id} className="flex items-baseline gap-4">
+              {i ? (
+                <span aria-hidden className="font-normal text-neutral-600">
+                  /
+                </span>
+              ) : null}
+              <button onClick={() => onChange(o.id)} aria-pressed={value === o.id} className={cx('transition-colors', value === o.id ? 'text-neutral-100' : 'text-neutral-500 hover:text-neutral-300')}>
+                {o.label}
+              </button>
+            </span>
+          ))}
+        </h1>
+      </div>
+      {right}
+    </div>
+  );
+}
+
 export function PageHead({ kicker, title, sub, right }: { kicker?: string; title: string; sub?: ReactNode; right?: ReactNode }) {
   return (
     <div className="mb-5 flex flex-wrap items-end gap-4">

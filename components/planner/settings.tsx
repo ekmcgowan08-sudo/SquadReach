@@ -9,7 +9,8 @@ import { useSaveConfig } from '@/components/console/kit';
 import { PageHead, Panel, Toggle, UndoButtons, usePlanSave } from '@/components/planner/kit';
 import { Btn, Icon, cx } from '@/components/ui';
 import { advent1, addDays, easter } from '@/lib/liturgical';
-import { BLOCK_DEFAULTS, DEBRIEF_DEFAULTS, HUES, LANE_DEFAULTS, SEASON_DEFAULTS, laneColor, nightsOf, seasonsOf, yearLabel, type SeasonAnchor, TRANSLATIONS } from '@/lib/plan';
+import { isoDay } from '@/lib/dates';
+import { BLOCK_DEFAULTS, DEBRIEF_DEFAULTS, HUES, LANE_DEFAULTS, SEASON_DEFAULTS, clockOf, laneColor, nightsOf, orderOf, orderTimes, seasonsOf, yearLabel, yearOf, type Plan, type SeasonAnchor, TRANSLATIONS } from '@/lib/plan';
 import { uid } from '@/lib/store/app-store';
 import { useApp } from '@/lib/store/provider';
 
@@ -24,35 +25,66 @@ const PANELS = [
 type PanelId = (typeof PANELS)[number]['id'];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+/** This year's nights, and which of them run the template rather than an
+ *  order of their own — what a change to the blocks actually reaches. */
+function templateReach(p: Plan) {
+  const today = isoDay(new Date());
+  const y = Math.max(0, Math.min(6, yearOf(p, today)));
+  const nights = nightsOf(p, y);
+  const own = nights.filter((n) => p.gatherings[n]?.order);
+  return { y, nights, own, today };
+}
+
 export function PlannerSettings() {
   const p = useApp((s) => s.data.plan);
+  const roles = useApp((s) => s.data.config.cycle.serveRoles);
   const [panel, setPanel] = useState<PanelId>('basics');
+  const counts: Record<PanelId, number | null> = {
+    basics: null,
+    lanes: p.lanes.filter((l) => l.on).length,
+    blocks: p.blocks.filter((b) => b.on).length,
+    seasons: p.seasons.filter((x) => x.on).length,
+    debrief: p.debriefQs.filter((q) => q.on).length,
+    roles: roles.length
+  };
   return (
     <>
       <PageHead kicker={p.settings.name} title="Settings" sub="Changes apply for everyone on staff. The season builder wrote the starting values; this is where they live now." right={<UndoButtons />} />
       <div className="grid items-start gap-5 lg:grid-cols-[220px_1fr_300px]">
         <nav className="flex flex-col gap-1" aria-label="Settings">
           {PANELS.map((x) => (
-            <button key={x.id} onClick={() => setPanel(x.id)} aria-current={panel === x.id ? 'page' : undefined} className="min-h-10 rounded-md px-3 text-left text-[13px] font-medium" style={{ background: panel === x.id ? 'color-mix(in srgb, var(--color-accent) 16%, transparent)' : 'transparent', color: panel === x.id ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}>
-              {x.label}
+            <button
+              key={x.id}
+              onClick={() => setPanel(x.id)}
+              aria-current={panel === x.id ? 'page' : undefined}
+              className="relative flex min-h-10 items-center rounded-md px-3 text-left text-[13.5px] font-medium"
+              style={{ background: panel === x.id ? 'color-mix(in srgb, var(--color-accent) 16%, transparent)' : 'transparent', color: panel === x.id ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}
+            >
+              {panel === x.id ? <span aria-hidden className="absolute inset-y-[9px] left-0 w-[3px] rounded-full bg-accent-400" /> : null}
+              <span className="flex-1">{x.label}</span>
+              {counts[x.id] != null ? <span className="tabular text-[12px] font-normal text-neutral-500">{counts[x.id]}</span> : null}
             </button>
           ))}
+          <div className="mt-3 border-t border-divider pt-3 text-[12px] leading-[1.6] text-neutral-500">Every change is one undo step and lands in Recent changes, with who made it.</div>
         </nav>
         <div>
           {panel === 'basics' ? <Basics /> : panel === 'lanes' ? <Lanes /> : panel === 'blocks' ? <Blocks /> : panel === 'seasons' ? <Seasons /> : panel === 'debrief' ? <Debrief /> : <Roles />}
         </div>
-        <Panel title="Recent changes">
-          {!p.changes.length ? <div className="text-[12px] text-neutral-500">Nothing changed yet.</div> : null}
-          {p.changes.slice(0, 12).map((c) => (
-            <div key={c.id} className="border-t border-divider pt-2 text-[12px] first:border-t-0 first:pt-0">
-              <div className="text-neutral-200">{c.line}</div>
-              <div className="text-[11px] text-neutral-500">
-                {c.by} · {new Date(c.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+        <div className="flex flex-col gap-5">
+          {panel === 'blocks' ? <BlocksPreview /> : null}
+          <Panel title="Recent changes">
+            {!p.changes.length ? <div className="text-[12px] text-neutral-500">Nothing changed yet.</div> : null}
+            {p.changes.slice(0, 12).map((c) => (
+              <div key={c.id} className="border-t border-divider pt-2 text-[12px] first:border-t-0 first:pt-0">
+                <div className="text-neutral-200">{c.line}</div>
+                <div className="text-[11px] text-neutral-500">
+                  {c.by} · {new Date(c.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </div>
               </div>
-            </div>
-          ))}
-          <div className="text-[11px] text-neutral-500">Undo steps back through every change you made this session (⌘Z).</div>
-        </Panel>
+            ))}
+            <div className="text-[11px] text-neutral-500">Undo steps back through every change you made this session (⌘Z).</div>
+          </Panel>
+        </div>
       </div>
     </>
   );
@@ -203,8 +235,10 @@ function Blocks() {
   const save = usePlanSave();
   const set = (id: string, patch: Partial<(typeof p.blocks)[number]>, line: string, merge?: string) => save((x) => void (x.blocks = x.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b))), line, { log: true, merge });
   const total = p.blocks.filter((b) => b.on).reduce((n, b) => n + b.mins, 0);
+  const { y, nights } = templateReach(p);
+  const inUse = (id: string) => nights.filter((n) => orderOf(p, n).some((b) => b.id === id)).length;
   return (
-    <Panel title="Gathering blocks" meta={total + ' min a night'} right={<Btn variant="ghost" className="px-3 text-[12px]" onClick={() => save((x) => void (x.blocks = BLOCK_DEFAULTS.map((b) => ({ ...b }))), 'Reset the gathering blocks', { log: true })}>Reset to preset</Btn>}>
+    <Panel title="Gathering blocks" meta={p.blocks.filter((b) => b.on).length + ' of ' + p.blocks.length + ' on · ' + total + ' min a night'} right={<Btn variant="ghost" className="px-3 text-[12px]" onClick={() => save((x) => void (x.blocks = BLOCK_DEFAULTS.map((b) => ({ ...b }))), 'Reset the gathering blocks', { log: true })}>Reset to preset</Btn>}>
       <div className="text-[12px] leading-[1.5] text-neutral-500">The pieces a night is built from, and the template every night starts with. Turn off what you never run; rename anything to match what your team calls it out loud. Nights you already planned keep their own order.</div>
       {p.blocks.map((b, i) => (
         <Row key={b.id} off={!b.on}>
@@ -222,12 +256,79 @@ function Blocks() {
             </button>
             <Toggle on={b.on} onChange={(v) => set(b.id, { on: v }, (v ? 'Turned on ' : 'Turned off ') + b.name)} label={'Use ' + b.name} />
           </div>
+          <div className="pl-1 text-[11.5px] text-neutral-500">
+            {(() => {
+              const n = inUse(b.id);
+              return !n ? (b.on ? 'Not on any night yet in ' : 'Off · on no nights in ') + yearLabel(p.settings.startYear, y) : n === nights.length ? 'On all ' + n + ' nights in ' + yearLabel(p.settings.startYear, y) : 'On ' + n + ' of ' + nights.length + ' nights in ' + yearLabel(p.settings.startYear, y);
+            })()}
+          </div>
         </Row>
       ))}
       <Btn variant="secondary" className="self-start px-3" onClick={() => save((x) => void x.blocks.push({ id: uid(), name: 'New block', note: '', mins: 10, seg: 'main', on: true }), 'Added a block', { log: true })}>
         + Block
       </Btn>
     </Panel>
+  );
+}
+
+/** The template laid on a real night, so a change to the blocks shows where
+ *  it lands — and how many nights it reaches. */
+function BlocksPreview() {
+  const p = useApp((s) => s.data.plan);
+  const setupAt = useApp((s) => s.data.config.cycle.setupAt);
+  const { nights, own, today } = templateReach(p);
+  const ahead = nights.filter((n) => n >= today);
+  const night = ahead.find((n) => !p.gatherings[n]?.order) ?? ahead[0] ?? nights[nights.length - 1];
+  const onTemplate = night && !p.gatherings[night]?.order;
+  const timed = orderTimes(night ? orderOf(p, night) : [], setupAt);
+  const total = timed.reduce((n, b) => n + b.mins, 0);
+  const off = onTemplate ? p.blocks.filter((b) => !b.on) : [];
+  return (
+    <>
+      <Panel title="Preview" meta="live">
+        <div className="text-[12px] leading-[1.5] text-neutral-500">Shown against a real night, so you can see the change land.</div>
+        {night ? (
+          <div className="flex flex-col rounded-md border border-neutral-800 px-4 py-3">
+            <div className="text-[14px] font-medium text-neutral-100">{new Date(night + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+            <div className="mb-2 text-[11.5px] text-neutral-500">{onTemplate ? 'Runs the template' : 'Has its own order — the template won’t change it'}</div>
+            {timed.map((b) => (
+              <div key={b.id} className="grid grid-cols-[52px_1fr_auto] items-start gap-2 py-[5px]">
+                <span className="tabular text-[11.5px] text-neutral-500">{clockOf(b.start)}</span>
+                <span className="border-l-2 pl-2 text-[12.5px] leading-[1.3] text-neutral-100" style={{ borderColor: b.seg === 'main' ? 'var(--color-accent-400)' : 'var(--color-neutral-700)' }}>
+                  {b.kind}
+                  {b.lead ? <span className="block text-[11px] text-neutral-500">{b.lead}</span> : null}
+                </span>
+                <span className="text-[11.5px] text-neutral-500">{b.mins}m</span>
+              </div>
+            ))}
+            {off.map((b) => (
+              <div key={b.id} className="grid grid-cols-[52px_1fr_auto] gap-2 py-[5px] text-neutral-600">
+                <span />
+                <span className="border-l-2 border-neutral-800 pl-2 text-[12.5px] line-through">{b.name}</span>
+                <span className="text-[11.5px]">off</span>
+              </div>
+            ))}
+            <div className="mt-2 flex justify-between border-t border-divider pt-2 text-[12.5px]">
+              <span className="text-neutral-400">Total</span>
+              <span className="text-neutral-100">
+                {Math.floor(total / 60)}h {total % 60}m
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </Panel>
+      <Panel title="Also affected">
+        {[
+          ['Nights on the template', nights.length - own.length],
+          ['Nights with their own order', own.length]
+        ].map(([k, v]) => (
+          <div key={k} className="flex justify-between border-t border-divider pt-2 text-[12.5px] first:border-t-0 first:pt-0">
+            <span className="text-neutral-300">{k}</span>
+            <span className="tabular text-neutral-100">{v}</span>
+          </div>
+        ))}
+      </Panel>
+    </>
   );
 }
 
