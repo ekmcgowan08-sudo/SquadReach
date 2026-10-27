@@ -27,7 +27,7 @@ import { readHeld, removeHeld, writeHeld, writeHeldSync } from '@/lib/store/held
 import { autoApproves, canApprove, canEditRoster, canScore } from '@/lib/permissions';
 import { attendanceRows } from '@/lib/feeds';
 import { selfCheckin } from '@/lib/cycle';
-import { fmt, pointBase, standings } from '@/lib/scoring';
+import { fmt, pointBase, signed, standings } from '@/lib/scoring';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   ActivityLine, EntryDetail, HeldOp, LedgerEntry, Membership, MinistryData, CheckinVia
@@ -499,6 +499,14 @@ export function createAppStore(backend: Backend, membership: Membership, initial
             return;
           }
           get().award({ team: target.team, cat: target.cat, amount: -target.amount, why: 'reversal of ' + (target.why || 'last entry'), by: me + ' · reversal', reverses: target.id, student: target.student });
+          /* After the night closed, leaders already have a report with this
+             in it: the reversal reaches them as a correction notice. */
+          const h = get().data.huddle;
+          if (h.nightClosed && h.closedAt && target.at <= h.closedAt && target.status === 'approved') {
+            get().logActivity('Correction notice: ' + signed(-target.amount) + ' ' + (get().data.cats.find((c) => c.id === target.cat)?.label ?? target.cat) + ' for ' + (get().data.teams.find((t) => t.id === target.team)?.name ?? 'a squad') + ' after the night’s report');
+            get().sayPosted('Reversal posted. The night’s report already went out, so leaders get a correction notice.', 'Reversal held until you have signal — the correction notice goes with it.');
+            return;
+          }
           get().sayPosted('Reversal posted. Original entry stays in the ledger.', 'Reversal held until you have signal. The original entry stays in the ledger.');
         },
 

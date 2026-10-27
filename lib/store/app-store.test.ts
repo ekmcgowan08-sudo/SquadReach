@@ -154,3 +154,20 @@ describe('an audit line the database writes itself', () => {
     expect(sent.flatMap((e) => (e.kind === 'activity' ? [e.line.line] : []))).toEqual(['Edited the run sheet']);
   });
 });
+
+describe('an undo after the night closed', () => {
+  it('reaches leaders as a correction notice', async () => {
+    const { backend } = flaky();
+    const d = demoMinistry();
+    const store = createAppStore(backend, leader, d);
+    store.getState().award({ team: d.teams[0].id, cat: d.cats[0].id, amount: 300, why: 'won the relay', by: 'Pastor Mike' });
+    store.getState().mutate((x) => {
+      x.huddle.nightClosed = true;
+      x.huddle.closedAt = Date.now() + 1;
+    });
+    await new Promise((r) => setTimeout(r, 5));
+    store.getState().undoLast();
+    expect(store.getState().data.activityLog[0].line).toMatch(/^Correction notice: −300 /);
+    expect(store.getState().toast?.msg).toMatch(/correction notice/);
+  });
+});

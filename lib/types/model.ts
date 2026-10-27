@@ -379,6 +379,9 @@ export interface HuddleState {
   note: string;
   debriefNotes: { id: string; text: string; week: number; at: number }[];
   nightClosed: boolean;
+  /** When the night was closed — the moment leader reports went out. An
+   *  undo of anything from before it posts a correction notice. */
+  closedAt?: number | null;
   /** Tonight's ready check — the Home Tonight card and the huddle share it. */
   ready: { id: string; label: string; who: string; done: boolean }[];
   /** "Needs you" rows a leader has cleared for tonight. */

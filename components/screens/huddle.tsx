@@ -218,6 +218,7 @@ export function HuddleScreen() {
     }
     save((x) => {
       x.nightClosed = true;
+      x.closedAt = nowMs();
     });
     api().logActivity('Night closed at debrief');
     api().say('Night closed. Leader reports are going now; parents get theirs on the schedule.');

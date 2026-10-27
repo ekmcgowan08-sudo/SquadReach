@@ -1,5 +1,6 @@
 /* Derived values the screens share. Pure functions of the store's state, so
    two screens can never disagree about the same number. */
+import { corrections } from '@/lib/corrections';
 import { uncoveredPosts } from '@/lib/feeds';
 import { fmt, pointBase } from '@/lib/scoring';
 import { canApprove, canCoordinateServing, canHuddle, canMessageParents, canNightRecap, canPrepWeek, holdsSheet } from '@/lib/permissions';
@@ -109,6 +110,8 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
       list.push({ icon: 'ph ph-calendar-plus', label: 'New event proposal: ' + e.title, meta: e.by ?? e.date, href: '/dashboard/calendar', trigger: 'event' });
     }
     if (d.prayerQueue.length) list.push({ icon: 'ph ph-hands-praying', label: d.prayerQueue.length + (d.prayerQueue.length === 1 ? ' prayer request' : ' prayer requests') + ' to review', meta: 'Nothing is public until you post it', href: '/dashboard/follow-ups', trigger: 'prayer' });
+    for (const c of corrections(d))
+      list.push({ icon: 'ph ph-arrow-counter-clockwise', label: 'Correction: ' + c.line, meta: 'Sent after the night’s report went out', href: '/dashboard/audit', trigger: 'weeklySummary' });
     for (const f of openChatFlags(d))
       list.push({ icon: 'ph ph-flag', label: f.by + ' flagged the ' + f.threadName + ' thread', meta: 'Read it, then mark it read', href: '/dashboard/chat?t=' + encodeURIComponent(f.thread), trigger: 'chatFlag' });
   }

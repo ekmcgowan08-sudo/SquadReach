@@ -262,6 +262,11 @@ Where the prototype left a call open, the build took the safer default:
 - **Direct messages.** Adults can message each other privately. Any thread
   with a student in it is an open door: leaders can read it but not post in
   it. Students can’t message each other.
+- **An undo after the night closes comes with a correction.** Leader
+  reports go out when the night is closed at the debrief; reversing a point
+  from before that posts a correction notice to leaders (and the audit
+  log). Corrections aren't stored — they're reversals after the close of
+  entries from before it, read off the ledger (`lib/corrections.ts`).
 - **Anyone can flag a chat thread for a leader.** The flag carries their
   name (stamped by the database), every leader and owner is notified, and
   a leader can read a flagged thread from then on — even two adults’

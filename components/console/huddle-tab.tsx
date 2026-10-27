@@ -151,6 +151,7 @@ export function HuddleTab() {
                 x.runIdx = 0;
                 x.runDone = {};
                 x.nightClosed = false;
+                x.closedAt = null;
                 x.runAdvancedAt = nowMs();
               })
             }
