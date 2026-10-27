@@ -116,6 +116,17 @@ export const ROSTER: Student[] = ROSTER_ROWS.map(([name, team, grade, f], i) => 
   ...(f.includes('n') ? { newInDb: true } : {})
 }));
 
+/** Signed up this fall and not on a squad yet: the draft pool. Kept out of
+ *  ROSTER so none of the seeded points, RSVPs or families count them. */
+const DRAFT_POOL: Student[] = [
+  ['Marcus Webb', '9'],
+  ['Chloe Sanborn', '11'],
+  ['Devon Ruiz', '9'],
+  ['Priya Nair', '10'],
+  ['Owen Kessler', '6'],
+  ['Maya Ostrander', '11']
+].map(([name, grade], i) => ({ id: 'np' + (i + 1), name, team: null, grade }));
+
 /** FNV-style string hash — deterministic demo numbers, same as the design. */
 export function hashStr(str: string): number {
   let h = 2166136261;
@@ -384,7 +395,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
       { id: 'games', label: 'Games', color: '#0D9488', icon: 'ph ph-trophy', hint: 'Placement, stopwatch, penalties' },
       { id: 'media', label: 'Media', color: '#65A30D', icon: 'ph ph-video-camera', hint: 'Commercial, chant, mascot story' }
     ],
-    roster: ROSTER.map((r) => ({ ...r })),
+    roster: [...ROSTER.map((r) => ({ ...r })), ...DRAFT_POOL.map((r) => ({ ...r }))],
     ledger: seedLedger(now),
     studentSeedPoints: seedStudentPoints(),
     prayers: [

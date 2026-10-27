@@ -287,3 +287,20 @@ test('a drill switched off in the console leaves the phone’s Bible screen', as
   await expect(page.getByRole('button', { name: 'Flashcards', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Scramble', exact: true })).toHaveCount(0);
 });
+
+test('draft day puts one squad on the clock at a time, and a trade is kept in the history', async ({ page }) => {
+  await page.goto('/console?tab=draft');
+  await ready(page);
+  await page.getByRole('button', { name: 'Start the draft' }).click();
+  await expect(page.getByText('On the clock: Yellow')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Draft Marcus Webb on Red' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Draft Marcus Webb on Yellow' }).click();
+  await expect(page.getByText('On the clock: Red')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Place Marcus Webb' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'End the draft' }).click();
+  await expect(page.getByRole('button', { name: 'Start the draft' })).toBeVisible();
+
+  await page.getByLabel('Student to trade').selectOption({ label: 'Marcus Webb' });
+  await page.getByRole('button', { name: 'Confirm trade' }).click();
+  await expect(page.getByText('Marcus Webb to Red')).toBeVisible();
+});

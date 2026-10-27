@@ -5,6 +5,7 @@
 import type { MembershipRole, Persona, ScoreEntryStatus } from './domain';
 import type { SavedSeason } from '@/lib/season';
 import type { Plan } from '@/lib/plan';
+import type { DraftSettings, TradeRecord } from '@/lib/draft';
 
 export interface Team {
   id: string;
@@ -206,6 +207,10 @@ export interface MinistryConfig {
   /** Categories that attendance posting also pays, beyond General. */
   checkinAutoCats: Record<string, boolean>;
   memoryVerses: MemoryVerse[];
+  /** Draft day (Console › Draft & trades); absent until it's first set. */
+  draft?: DraftSettings;
+  /** Every squad move made as a trade, newest first. */
+  trades?: TradeRecord[];
   /** Memory drills by week (lib/bible drillsIn): absent means every week. */
   drillWeeks?: Partial<Record<'flashcard' | 'firstletter' | 'blank' | 'type' | 'say' | 'scramble', number[]>>;
   penalties: Penalty[];

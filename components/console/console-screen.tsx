@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { BibleTab } from '@/components/console/bible-tab';
 import { ChallengesTab } from '@/components/console/challenges-tab';
+import { DraftTab } from '@/components/console/draft-tab';
 import { HuddleTab } from '@/components/console/huddle-tab';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
 import { CycleSection } from '@/components/console/cycle-section';
@@ -27,6 +28,7 @@ const TABS = [
   { id: 'setup', label: 'Setup', icon: 'ph ph-sliders-horizontal' },
   { id: 'season', label: 'Season builder', icon: 'ph ph-map-trifold' },
   { id: 'teams', label: 'Squads', icon: 'ph ph-shield-check' },
+  { id: 'draft', label: 'Draft & trades', icon: 'ph ph-arrows-left-right' },
   { id: 'scoring', label: 'Scoring', icon: 'ph ph-trophy' },
   { id: 'challenges', label: 'Challenges', icon: 'ph ph-flag-checkered' },
   { id: 'bible', label: 'Bible & memory', icon: 'ph ph-book-open-text' },
@@ -58,7 +60,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
+        {tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );
