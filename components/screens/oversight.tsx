@@ -11,13 +11,13 @@ import { AccessRow } from '@/components/screens/role-views';
 import { Sheet } from '@/components/sheet';
 import { startTour } from '@/components/shell/tour';
 import { Btn, EmptyNote, Icon, Screen, ScreenHeader } from '@/components/ui';
+import { decidedRequests, decisionLine } from '@/lib/access';
 import { ago } from '@/lib/dates';
 import { canApprove } from '@/lib/permissions';
 import { HOME_SECTIONS, NOTIF_TRIGGERS, notifOn, setPrefs, usePrefs } from '@/lib/prefs';
 import { fmt, signed } from '@/lib/scoring';
 import { catOf, computeNotifications, teamOf } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
-import { personaDef } from '@/lib/types/domain';
 import type { LedgerEntry } from '@/lib/types/model';
 
 const kicker = 'text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-neutral-500';
@@ -283,7 +283,7 @@ export function AccessRequestsScreen() {
   const d = useApp((s) => s.data);
   const [invite, setInvite] = useState(false);
   const pending = d.accessRequests.filter((r) => r.status === 'pending');
-  const decided = d.accessRequests.filter((r) => r.status !== 'pending').slice(-10).reverse();
+  const decided = decidedRequests(d.accessRequests, 10);
   return (
     <Screen label="Access requests">
       <ScreenHeader title="Access requests" back="/dashboard/more" />
@@ -320,7 +320,7 @@ export function AccessRequestsScreen() {
               <div key={r.id} className="flex items-center gap-[11px] border-t border-divider px-[15px] py-[11px] first:border-t-0">
                 <div className="min-w-0 flex-1">
                   <div className="text-[12.5px] font-medium leading-[1.2] text-neutral-200">{r.name}</div>
-                  <div className="mt-[3px] text-[10.5px] leading-[1.3] text-neutral-500">{personaDef(r.requestedRole).label}</div>
+                  <div className="mt-[3px] text-[10.5px] leading-[1.3] text-neutral-500">{decisionLine(r)}</div>
                 </div>
                 <span className="text-[10px] font-semibold uppercase leading-none tracking-[.08em]" style={{ color: r.status === 'approved' ? 'var(--color-accent-300)' : 'var(--color-out)' }}>
                   {r.status}

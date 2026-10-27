@@ -3,7 +3,7 @@
    value is escaped; nothing from the ministry's data is trusted as HTML. */
 import type { ReportResult } from '@/lib/report-builder';
 
-const esc = (v: unknown) =>
+export const esc = (v: unknown) =>
   String(v ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

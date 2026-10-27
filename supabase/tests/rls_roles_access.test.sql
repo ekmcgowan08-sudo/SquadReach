@@ -47,3 +47,16 @@ select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
 select public.decide_access(:'req_pat', true, 'scorekeeper');
 select pg_temp.check((select role from memberships where user_id = '00000000-0000-0000-0000-000000000022') = 'scorekeeper', 'an owner changes and approves too');
 reset role;
+
+-- The decision keeps the decider's name, and only the server can list who
+-- hears about a new request.
+select pg_temp.check((select decided_by from access_requests where id = :'req_pat') = 'Pastor Mike', 'a decided request keeps who decided it');
+insert into auth.users values ('00000000-0000-0000-0000-000000000023', 'sam@example.org') on conflict do nothing;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000023');
+select public.request_access(:'code', 'coach', 'Sam Ortiz', 'I run the sound board') as req_sam \gset
+select pg_temp.denied(format('select * from public.access_notice_emails(%L)', :'req_sam'), 'nobody signed in can list who gets the notice');
+reset role;
+select pg_temp.check((select count(*) from public.access_notice_emails(:'req_sam')) >= 2, 'the notice goes to every leader and owner with an email');
+select pg_temp.check((select bool_and(name = 'Sam Ortiz' and requested_role = 'coach' and note = 'I run the sound board') from public.access_notice_emails(:'req_sam')), 'and carries the request itself');
+select pg_temp.check(not exists (select 1 from public.access_notice_emails(:'req_sam') where to_email = 'pat@example.org'), 'not to a scorekeeper');
+select pg_temp.check((select count(*) from public.access_notice_emails(:'req_pat')) = 0, 'and a decided request sends nothing');

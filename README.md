@@ -86,6 +86,7 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261027100000_challenge_weeks.sql` | The weeks each challenge runs in |
    | `20261027110000_award_windows.sql` | `award_vote_open`: votes and nominations only inside an award's voting window |
    | `20261027120000_access_role.sql` | `decide_access` can approve someone as a different role than they asked for (owner only by an owner), kept as `granted_role` |
+   | `20261027130000_access_notice.sql` | A decided request keeps who decided it (`decided_by`); `access_notice_emails`, which only the server may call, lists the leaders and owners to tell about a new one |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -96,7 +97,9 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    - create a ministry and become its owner; or
    - ask to join one with an invite code or a `/join/<code>` link. A leader
      approves the request under **Access requests** (on the phone, or
-     Console › People), as asked or as the role that fits.
+     Console › People), as asked or as the role that fits. With report
+     emails set up (below), every leader and owner with an email on file is
+     emailed when someone asks; the request card shows that email.
 
 Set both variables or neither. With only one set, the app stays in demo mode.
 
@@ -136,6 +139,10 @@ so the job running twice never sends twice, and a period more than a day
 overdue is skipped rather than sent late. Recipients are matched to the
 email on their account by name. The console shows who had no email on file.
 “Send now” emails through the same path.
+
+The same email setup tells a ministry's leaders and owners when someone
+asks to join (right after the request is filed). It's best effort: the
+request stands whether or not the mail goes.
 
 ### Planning Center (optional)
 

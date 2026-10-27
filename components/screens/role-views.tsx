@@ -471,6 +471,8 @@ export function useDecideAccess() {
       if (!r) return;
       r.status = approve ? 'approved' : 'denied';
       if (changed) r.grantedRole = role;
+      r.decidedBy = m.displayName;
+      r.decidedAt = Date.now();
     });
     api().emit({ kind: 'accessDecide', request: q, approve, role: changed ? role : undefined });
     api().logActivity(approve ? 'Approved ' + q.name + ' as ' + personaDef(role).label + (changed ? ' (asked for ' + personaDef(q.requestedRole).label + ')' : '') : 'Denied ' + q.name + ' as ' + personaDef(q.requestedRole).label);

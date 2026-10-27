@@ -415,7 +415,7 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         db.from('care_notes').select('*').eq('org_id', org).eq('done', false).order('created_at', { ascending: false }),
         db.from('events').select('*').eq('org_id', org).order('created_at'),
         db.from('challenges').select('*').eq('org_id', org).order('created_at'),
-        db.from('access_requests').select('*').eq('org_id', org).eq('status', 'pending').order('created_at'),
+        db.from('access_requests').select('*').eq('org_id', org).or('status.eq.pending,decided_at.gte.' + new Date(Date.now() - 30 * 86_400_000).toISOString()).order('created_at'),
         db.from('activity_log').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(200),
         db.from('ministry_docs').select('key, value, rev').eq('org_id', org),
         db.from('practice_log').select('*').eq('org_id', org).gte('day', isoDay(since)).order('day', { ascending: false }).limit(5000),
@@ -481,9 +481,17 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         id: c.id, kind: c.kind, title: c.title, body: c.body, pointsLabel: c.points_label, status: c.status, done: c.done,
         team: c.team_id ?? undefined, cat: c.category_key ?? undefined, amount: c.amount ?? undefined, weeks: c.weeks
       }));
-      d.accessRequests = ((access.data ?? []) as { id: string; name: string; email: string; person_type: string; household: string; meta: string; requested_role: AccessRequest['requestedRole']; flagged: boolean; note: string; created_at: string }[]).map((r) => ({
+      d.accessRequests = (
+        (access.data ?? []) as {
+          id: string; name: string; email: string; person_type: string; household: string; meta: string; requested_role: AccessRequest['requestedRole']; flagged: boolean; note: string; created_at: string;
+          status: AccessRequest['status']; granted_role: AccessRequest['requestedRole'] | null; decided_by: string | null; decided_at: string | null;
+        }[]
+      ).map((r) => ({
         id: r.id, name: r.name, email: r.email, personType: r.person_type, household: r.household || 'No household on file', meta: r.meta,
-        requestedRole: r.requested_role, flagged: r.flagged, note: r.note, at: new Date(r.created_at).getTime(), status: 'pending'
+        requestedRole: r.requested_role, flagged: r.flagged, note: r.note, at: new Date(r.created_at).getTime(), status: r.status,
+        ...(r.granted_role && r.granted_role !== r.requested_role ? { grantedRole: r.granted_role } : {}),
+        ...(r.decided_by ? { decidedBy: r.decided_by } : {}),
+        ...(r.decided_at ? { decidedAt: new Date(r.decided_at).getTime() } : {})
       }));
       d.activityLog = ((log.data ?? []) as { id: string; line: string; created_at: string }[]).map((l) => ({ id: l.id, line: l.line, at: new Date(l.created_at).getTime() }));
 

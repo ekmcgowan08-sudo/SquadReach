@@ -200,6 +200,9 @@ export interface AccessRequest {
   status: 'pending' | 'approved' | 'denied';
   /** When a leader approved them as something other than they asked. */
   grantedRole?: Persona;
+  /** Who decided, and when. */
+  decidedBy?: string;
+  decidedAt?: number;
 }
 
 export interface ActivityLine {

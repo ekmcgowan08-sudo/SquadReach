@@ -464,9 +464,13 @@ test('console access requests: change and approve as another role, or deny', asy
   await page.goto('/console?tab=people');
   await ready(page);
   const chris = page.getByRole('group', { name: 'Request from Chris Sandoval' });
+  /* The email leaders get, in the same words the server sends. */
+  await chris.getByRole('button', { name: 'See the email notification' }).click();
+  await expect(chris.getByText('Access request: Chris Sandoval (Coach) at Grace Community Students')).toBeVisible();
+  await expect(chris.getByText(/On a live ministry this goes to every leader and owner/)).toBeVisible();
   await chris.getByLabel('Or assign Chris Sandoval as').selectOption({ label: 'Scorekeeper' });
   await chris.getByRole('button', { name: 'Change & approve Chris Sandoval as Scorekeeper' }).click();
-  await expect(page.getByText('Scorekeeper (asked for Coach)')).toBeVisible();
+  await expect(page.getByText(/^Approved as Scorekeeper \(asked for Coach\) by .+ · [A-Z][a-z]{2} \d{1,2}, \d{1,2}:\d{2} [AP]M$/)).toBeVisible();
   await page.getByRole('group', { name: 'Request from Renee Boyd' }).getByRole('button', { name: 'Deny Renee Boyd' }).click();
   await expect(page.getByText('Nothing pending right now.')).toBeVisible();
   await expect(page.getByText('Denied', { exact: true })).toBeVisible();

@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { Section } from '@/components/console/kit';
 import { grantableRoles, useDecideAccess } from '@/components/screens/role-views';
 import { Btn, Icon, initialsOf } from '@/components/ui';
+import { decidedRequests, decisionLine } from '@/lib/access';
+import { renderAccessNotice } from '@/lib/email/access';
 import { useApp } from '@/lib/store/provider';
 import { personaDef, type Persona } from '@/lib/types/domain';
 import type { AccessRequest } from '@/lib/types/model';
@@ -25,6 +27,10 @@ function RequestCard({ q }: { q: AccessRequest }) {
   const decide = useDecideAccess();
   const roles = grantableRoles(q, me).filter((r) => r !== q.requestedRole);
   const [as, setAs] = useState<Persona>(roles[0] ?? q.requestedRole);
+  const [mail, setMail] = useState(false);
+  const mode = useApp((s) => s.membership.mode);
+  /* The same words the server mails, so the preview is what was sent. */
+  const notice = renderAccessNotice({ ministry: c.ministryName, name: q.name, role: personaDef(q.requestedRole).label, email: q.email, note: q.note, appUrl: '', to: '' });
   const rows: [string, string][] = [
     ['Ministry', c.ministryName],
     ['Requested', personaDef(q.requestedRole).label],
@@ -54,6 +60,24 @@ function RequestCard({ q }: { q: AccessRequest }) {
           </div>
         ))}
       </dl>
+      <div>
+        <button onClick={() => setMail((v) => !v)} aria-expanded={mail} className="flex min-h-11 items-center gap-[6px] text-[12.5px] font-medium text-accent-300">
+          <Icon name="ph ph-envelope-simple" className="text-[14px]" />
+          {mail ? 'Hide the email leaders got' : 'See the email notification'}
+        </button>
+        {mail ? (
+          <div className="flex flex-col gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-3 text-[12.5px] leading-[1.55] text-neutral-300">
+            <div className="text-[11.5px] text-neutral-500">{mode === 'demo' ? 'On a live ministry this goes to every leader and owner with an email on file.' : 'Sent to every leader and owner with an email on file.'}</div>
+            <div className="font-medium text-neutral-100">{notice.subject}</div>
+            {notice.text
+              .split('\n\n')
+              .slice(0, -1)
+              .map((para) => (
+                <p key={para}>{para}</p>
+              ))}
+          </div>
+        ) : null}
+      </div>
       {q.flagged ? (
         <div className="flex items-start gap-2 rounded-md bg-neutral-900 px-3 py-2 text-[12.5px] text-neutral-200">
           <Icon name="ph ph-info" className="mt-[2px] text-[14px] text-accent-300" />
@@ -92,7 +116,7 @@ function RequestCard({ q }: { q: AccessRequest }) {
 export function AccessSection() {
   const d = useApp((s) => s.data);
   const pending = d.accessRequests.filter((r) => r.status === 'pending');
-  const decided = d.accessRequests.filter((r) => r.status !== 'pending').slice(-6).reverse();
+  const decided = decidedRequests(d.accessRequests, 6);
   return (
     <div id="access-requests" className="contents">
       <Section
@@ -108,9 +132,9 @@ export function AccessSection() {
           <div className="flex flex-col">
             <span className="sr-label">Decided</span>
             {decided.map((r) => (
-              <div key={r.id} className="flex items-center gap-3 border-t border-divider py-2 text-[13px] first:border-t-0">
-                <span className="flex-1 text-neutral-200">{r.name}</span>
-                <span className="text-neutral-400">{personaDef(r.grantedRole ?? r.requestedRole).label}{r.grantedRole ? ' (asked for ' + personaDef(r.requestedRole).label + ')' : ''}</span>
+              <div key={r.id} className="flex items-baseline gap-3 border-t border-divider py-2 text-[13px] first:border-t-0">
+                <span className="w-[160px] flex-none text-neutral-200">{r.name}</span>
+                <span className="flex-1 text-neutral-400">{decisionLine(r)}</span>
                 <span className={r.status === 'approved' ? 'text-accent-300' : 'text-neutral-400'}>{r.status === 'approved' ? 'Approved' : 'Denied'}</span>
               </div>
             ))}
