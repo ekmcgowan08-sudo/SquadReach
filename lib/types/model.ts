@@ -7,6 +7,7 @@ import type { SavedSeason } from '@/lib/season';
 import type { Plan } from '@/lib/plan';
 import type { DraftSettings, TradeRecord } from '@/lib/draft';
 import type { OverlaySettings } from '@/lib/scorebug';
+import type { GameFormat } from '@/lib/game-format';
 
 export interface Team {
   id: string;
@@ -249,6 +250,11 @@ export interface MinistryConfig {
   /** Spots to film or play on the night: mascot bits, commercials, hype
    *  videos. Weeks as for challenges: absent means every week. */
   mediaSpots?: MediaSpot[];
+  /** Places games are played, as the ministry named them; picking one in
+   *  Scoring adds it to a game. Absent means the common six. */
+  savedSpaces?: string[];
+  /** Games saved to run again (Console › Scoring). */
+  gameTemplates?: GameTemplate[];
   /** How each season finished, newest first (Console › Season builder). */
   seasonResults?: SeasonResult[];
   /** Small-group guides saved to start new ones from (Console › Small
@@ -303,6 +309,17 @@ export interface GameSetup {
   markupDataUrl: string | null;
   /** Weeks a game runs; null means every week. */
   gameWeeks: number[] | null;
+  /** Rounds, quarters, halves…: lib/game-format. */
+  format?: Partial<GameFormat>;
+  /** Who reads the rules on Game rules. Absent or null: everyone. */
+  rulesAudience?: AudienceId[] | null;
+}
+
+/** A game kept to run again: its name and its whole setup. */
+export interface GameTemplate {
+  id: string;
+  name: string;
+  setup: GameSetup;
 }
 
 /* ── The 6:15 huddle ─────────────────────────────────────────────────── */

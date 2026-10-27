@@ -1,9 +1,10 @@
 'use client';
-import Link from 'next/link';
 /* Scoring rules: the categories points land in, which of them check-in
    pays, and the game players see on Game rules — down to a field map. */
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
+import { GameFormatEditor, GamePlaces, GameTemplates, RulesAudience } from '@/components/console/game-setup';
 import { Bracket } from '@/components/game/bracket';
 import { Btn, Icon } from '@/components/ui';
 import { CHECKIN_PRESENT_PTS } from '@/lib/scoring';
@@ -12,7 +13,6 @@ import type { Category } from '@/lib/types/model';
 
 const ICONS = ['ph ph-user-check', 'ph ph-t-shirt', 'ph ph-book-bookmark', 'ph ph-book-open-text', 'ph ph-user-plus', 'ph ph-trophy', 'ph ph-video-camera', 'ph ph-hand-heart', 'ph ph-music-notes', 'ph ph-star'];
 const COLORS = ['#EA580C', '#DB2777', '#0891B2', '#968ae0', '#7C3AED', '#0D9488', '#65A30D', '#CA8A04', '#DC2626', '#2563EB'];
-const FIELDS = ['Gym Court', 'Outdoor field', 'Parking lot', 'Fellowship hall', 'Classroom', 'Offsite'];
 
 export function ScoringTab() {
   const d = useApp((s) => s.data);
@@ -123,19 +123,8 @@ export function ScoringTab() {
           <Field label="How-to video (YouTube link)" value={gs.rulesVideoUrl} onSave={(v) => save((cc) => ({ gameSetup: { ...cc.gameSetup, rulesVideoUrl: v.trim() } }))} />
           <Field label="Offsite address (overrides the home venue)" value={gs.offsiteAddress} onSave={(v) => save((cc) => ({ gameSetup: { ...cc.gameSetup, offsiteAddress: v.trim() } }))} />
         </div>
-        <div>
-          <div className="sr-label mb-2">Where it’s played</div>
-          <div className="flex flex-wrap gap-2">
-            {FIELDS.map((f) => {
-              const on = gs.fieldTypes.includes(f);
-              return (
-                <button key={f} aria-pressed={on} onClick={() => save((cc) => ({ gameSetup: { ...cc.gameSetup, fieldTypes: on ? cc.gameSetup.fieldTypes.filter((x) => x !== f) : [...cc.gameSetup.fieldTypes, f] } }))} className="min-h-11 rounded-full border px-3 text-[12.5px] font-medium" style={{ borderColor: on ? 'var(--color-accent-500)' : 'var(--color-neutral-800)', color: on ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}>
-                  {f}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <GamePlaces />
+        <GameFormatEditor />
         <div>
           <div className="sr-label mb-2">Weeks with a game</div>
           <div className="flex flex-wrap gap-2">
@@ -164,6 +153,8 @@ export function ScoringTab() {
           </div>
         </div>
         <FieldMap />
+        <RulesAudience />
+        <GameTemplates />
         <div className="text-[11.5px] text-neutral-500">
           Penalty and bonus buttons are in{' '}
           <Link href="/console?tab=live" className="text-accent-300 underline underline-offset-2">

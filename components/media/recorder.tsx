@@ -15,6 +15,7 @@ import { Icon } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
 import { advanceBracket, bracketSeeds, bracketWinPayable, settleFromClip } from '@/lib/feeds';
 import { bracketOf } from '@/lib/game';
+import { formatOf, periodKeys, periodName } from '@/lib/game-format';
 import { putBlob } from '@/lib/media-store';
 import { canScore } from '@/lib/permissions';
 import { fmt, pointBase } from '@/lib/scoring';
@@ -27,7 +28,6 @@ import { abbr, drawScorebug, overlayOf } from '@/lib/scorebug';
 
 const W = 1280;
 const H = 720;
-const PERIODS = ['1', '2', '3', '4', 'OT'];
 const LOOKBACK = 30;
 
 const clockText = (sec: number) => {
@@ -65,7 +65,11 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
   const [tally, setTally] = useState<Record<string, number>>({});
   const [lastTap, setLastTap] = useState<{ team: string; val: number; awarded: boolean } | null>(null);
   const [source, setSource] = useState<'app' | 'tally'>(scorer ? 'app' : 'tally');
-  const [clock, setClock] = useState<Clock>({ base: 0, startedAt: null, mode: 'up', target: 600 });
+  const fmtGame = d.config.gameSetup.format;
+  const [clock, setClock] = useState<Clock>(() => {
+    const f = formatOf(fmtGame);
+    return f.ends === 'clock' ? { base: 0, startedAt: null, mode: 'down', target: f.minutes * 60 } : { base: 0, startedAt: null, mode: 'up', target: 600 };
+  });
   const [period, setPeriod] = useState('1');
   const [overlayOn, setOverlayOn] = useState(true);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
@@ -81,15 +85,15 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
   const chunks = useRef<Blob[]>([]);
   const pinsRef = useRef<number[]>([]);
   const overlay = useMemo(() => overlayOf(d.config.overlay), [d.config.overlay]);
-  const drawState = useRef({ teams: [] as Team[], tally: {} as Record<string, number>, clock, period, overlayOn, brand: d.config.ministryName, week: d.config.weekNumber, last: '', overlay, recording: false });
+  const drawState = useRef({ teams: [] as Team[], tally: {} as Record<string, number>, clock, period, periodName: '', overlayOn, brand: d.config.ministryName, week: d.config.weekNumber, last: '', overlay, recording: false });
 
   const teams = useMemo(() => d.teams.filter((t) => floor.includes(t.id)), [d.teams, floor]);
   const goal = d.config.goalValue || 25;
   const now = useNow(open && (clock.startedAt != null || !!rec), 250);
 
   useEffect(() => {
-    drawState.current = { teams, tally, clock, period, overlayOn, brand: d.config.ministryName, week: d.config.weekNumber, last: lastEvent, overlay, recording: !!rec };
-  }, [teams, tally, clock, period, overlayOn, d.config.ministryName, d.config.weekNumber, lastEvent, overlay, rec]);
+    drawState.current = { teams, tally, clock, period, periodName: periodName(fmtGame, period).toUpperCase(), overlayOn, brand: d.config.ministryName, week: d.config.weekNumber, last: lastEvent, overlay, recording: !!rec };
+  }, [teams, tally, clock, period, fmtGame, overlayOn, d.config.ministryName, d.config.weekNumber, lastEvent, overlay, rec]);
 
   /* Camera: ask once per open (and again when flipped). Without one the
      scoreboard still records over a plain backdrop. */
@@ -163,7 +167,7 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
         ctx.fillStyle = 'rgba(181,171,252,.8)';
         ctx.fillText('RISE', W - 40, 44);
         ctx.textAlign = 'left';
-        if (st.overlayOn) drawScorebug(ctx, W, H, { teams: st.teams, tally: st.tally, clock: clockText(clockSec(st.clock, Date.now())), period: st.period, brand: st.brand, week: st.week, last: / scores/.test(st.last) ? st.last : '' }, st.overlay);
+        if (st.overlayOn) drawScorebug(ctx, W, H, { teams: st.teams, tally: st.tally, clock: clockText(clockSec(st.clock, Date.now())), period: st.period, periodName: st.periodName, brand: st.brand, week: st.week, last: / scores/.test(st.last) ? st.last : '' }, st.overlay);
         if (st.recording) {
           ctx.fillStyle = '#ef4444';
           ctx.beginPath();
@@ -451,10 +455,10 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
                 ))}
                 <div className="flex w-[118px] flex-none flex-col items-center gap-[6px]">
                   <div className="text-[13px] leading-none" style={{ color: dark + '.8)' }}>
-                    Period
+                    {periodName(fmtGame, '1').replace(/ \d+$/, '')}
                   </div>
                   <div className="flex flex-wrap justify-center gap-[5px]">
-                    {PERIODS.map((p) => (
+                    {periodKeys(fmtGame).map((p) => (
                       <button key={p} onClick={() => setPeriod(p)} aria-pressed={period === p} className="min-h-11 min-w-11 rounded-lg border text-[11px] font-medium" style={{ borderColor: period === p ? 'var(--color-accent)' : dark + '.18)', background: period === p ? 'color-mix(in srgb, var(--color-accent) 22%, transparent)' : 'transparent' }}>
                         {p}
                       </button>

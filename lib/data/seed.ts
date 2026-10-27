@@ -384,6 +384,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
           'Each squad lines up behind its start cone. One player at a time carries water from the bucket to the far tube using only the pipe sections — no hands on the water.\n\nThe whole squad must touch the pipe before it moves. Spill and you start the carry over.\n\nFirst squad to fill its tube to the line stops the clock. Penalties and bonuses from the timekeeper add or take seconds, so the fastest raw run does not always win.',
         rulesVideoUrl: '',
         fieldTypes: ['Gym Court'],
+        format: { segment: 'heats', count: 3, minutes: 5, ends: 'leader', scoring: 'placement', toWin: null, maxPlayers: 8 },
         offsiteAddress: '',
         markupDataUrl: null,
         gameWeeks: null

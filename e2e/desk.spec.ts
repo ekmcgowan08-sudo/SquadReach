@@ -591,3 +591,26 @@ test('past seasons: record how this season finished, and it shows in Reports', a
   await expect(view.getByRole('cell', { name: 'Spring 2026' })).toBeVisible();
   await expect(view.getByRole('cell', { name: 'Fall 2026' })).toBeVisible();
 });
+
+test('game setup: the format in a line, a saved place, who reads the rules, and a game kept to run again', async ({ page, context, baseURL }) => {
+  await page.goto('/console?tab=scoring');
+  await ready(page);
+  await page.getByRole('group', { name: 'Segments per game' }).getByRole('button', { name: 'Rounds' }).click();
+  await page.getByRole('group', { name: 'What ends a round' }).getByRole('button', { name: 'Time on the clock' }).click();
+  await page.getByRole('button', { name: 'More: Points to win' }).click();
+  await expect(page.getByText(/3 rounds × 5 min — the scoreboard runs a clock · first to 1 · 8 on the field/)).toBeVisible();
+
+  await page.getByLabel('Or type a new one').fill('North gym');
+  await page.getByRole('button', { name: 'Save place' }).click();
+  await expect(page.getByRole('button', { name: 'Remove North gym from this game' })).toBeVisible();
+
+  await page.getByRole('group', { name: 'The rules are visible to' }).getByRole('button', { name: 'Students' }).click();
+  await page.getByRole('button', { name: 'Save this game to run again' }).click();
+  await expect(page.getByLabel('Load a saved game')).toBeVisible();
+
+  await as(context, 'member', baseURL!);
+  await page.goto('/dashboard/game-rules');
+  await ready(page);
+  await expect(page.getByText(/3 rounds × 5 min/)).toBeVisible();
+  await expect(page.getByText(/sharing the full rules with/)).toBeVisible();
+});

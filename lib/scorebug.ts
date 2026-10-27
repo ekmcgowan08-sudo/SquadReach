@@ -22,6 +22,8 @@ export interface ScorebugState {
   clock: string;
   /** "1"…"4" or "OT". */
   period: string;
+  /** What the game calls it ("ROUND 2", "HALF 1"); defaults to "PERIOD n". */
+  periodName?: string;
   brand: string;
   week: number;
   /** The last thing that happened, e.g. "Blue scored". */
@@ -106,7 +108,7 @@ export function drawScorebug(ctx: CanvasRenderingContext2D, W: number, H: number
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
-    const label = s.period === 'OT' ? 'OVERTIME' : 'PERIOD ' + s.period;
+    const label = s.periodName || (s.period === 'OT' ? 'OVERTIME' : 'PERIOD ' + s.period);
     if (o.show.clock && o.show.period) {
       ctx.font = '700 24px Inter, sans-serif';
       ctx.fillText(s.clock, cx + 64, head + 30);

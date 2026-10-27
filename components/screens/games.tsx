@@ -6,15 +6,18 @@ import Link from 'next/link';
 import { useState, type CSSProperties } from 'react';
 import { Bracket } from '@/components/game/bracket';
 import { GoalPanel } from '@/components/game/goal-panel';
+import { AUDIENCE_LABELS } from '@/components/screens/calendar';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, tint } from '@/components/ui';
 import {
   activeTeams, clock, emptyLane, flipNote, heatRows, laneOf, laneSec, placementAwards, soloSec, startLane, stopLane, withEffect, bracketOf
 } from '@/lib/game';
 import { nowMs } from '@/lib/dates';
+import { formatSummary } from '@/lib/game-format';
 import { postedLabel, wasHeld } from '@/lib/held';
 import { canApprove } from '@/lib/permissions';
 import { fmt, pointBase } from '@/lib/scoring';
+import { audienceOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { GameState, Penalty } from '@/lib/types/model';
@@ -443,8 +446,11 @@ export function ytEmbedUrl(url: string): string {
 /* ── GAME RULES — what anyone playing needs: when, where, how ──────────── */
 export function GameRulesScreen() {
   const d = useApp((s) => s.data);
+  const persona = useApp((s) => s.membership.persona);
   const c = d.config;
   const gs = c.gameSetup;
+  const me = audienceOf(persona);
+  const readsRules = canApprove(persona) || !gs.rulesAudience?.length || (!!me && gs.rulesAudience.includes(me));
   const now = c.weekNumber;
   const [pick, setPick] = useState(now);
   const weeks = c.meetingDates.length ? c.meetingDates : Array.from({ length: c.seasonWeeks }, () => '');
@@ -501,7 +507,14 @@ export function GameRulesScreen() {
         </div>
       </div>
 
-      {video ? (
+      {runs(pick) ? (
+        <div className="flex items-start gap-[10px] rounded-md bg-surface px-[13px] py-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
+          <Icon name="ph ph-timer" className="mt-[1px] flex-none text-[17px] text-accent-300" />
+          <div className="text-[12.5px] leading-[1.5] text-neutral-200 text-pretty">{formatSummary(gs.format)}</div>
+        </div>
+      ) : null}
+
+      {video && readsRules ? (
         <div>
           <div className={kick}>How it works</div>
           <div className="aspect-video w-full overflow-hidden rounded-md bg-black">
@@ -539,7 +552,9 @@ export function GameRulesScreen() {
 
       <div>
         <div className={kick}>The rules</div>
-        <div className="whitespace-pre-wrap text-[13px] leading-[1.6] text-neutral-300 text-pretty">{gs.rulesText || 'Nothing posted yet — check back closer to game time.'}</div>
+        <div className="whitespace-pre-wrap text-[13px] leading-[1.6] text-neutral-300 text-pretty">
+          {readsRules ? gs.rulesText || 'Nothing posted yet — check back closer to game time.' : 'The pastor is sharing the full rules with ' + (gs.rulesAudience ?? []).map((a) => AUDIENCE_LABELS[a].label.toLowerCase()).join(', ') + ' — they’ll walk you through it on the night.'}
+        </div>
       </div>
     </Screen>
   );
