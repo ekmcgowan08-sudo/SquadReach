@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { PageHead, Panel, Toggle, usePlanSave } from '@/components/planner/kit';
 import { cx } from '@/components/ui';
 import { isoDay } from '@/lib/dates';
-import { addDays, churchYear, type HolyDay } from '@/lib/liturgical';
+import { addDays, churchYear, easter, type HolyDay } from '@/lib/liturgical';
 import { inBlackout, nightsOf, yearBounds, yearLabel, yearOf } from '@/lib/plan';
 import { useApp } from '@/lib/store/provider';
 
@@ -181,6 +181,20 @@ function Wheel({ from, to, days, nights, today }: { from: string; to: string; da
             <title>Ordinary Time</title>
           </path>
         ))}
+      {/* Each season named along its own arc, turned so it never reads upside down. */}
+      {seasons
+        .filter((s) => ang(addDays(s.until ?? s.date, 1)) - ang(s.date) > 0.32)
+        .map((s) => {
+          const mid = (ang(s.date) + ang(addDays(s.until ?? s.date, 1))) / 2;
+          const [x, y] = pt(mid, 128);
+          let deg = (mid * 180) / Math.PI + 90;
+          if (deg > 90 && deg < 270) deg += 180;
+          return (
+            <text key={'l' + s.id + s.date} x={x} y={y} transform={`rotate(${deg} ${x} ${y})`} textAnchor="middle" dominantBaseline="middle" fontSize={8.5} fill="var(--color-neutral-100)" fillOpacity={0.9} pointerEvents="none">
+              {s.id === 'christmastide' ? 'Christmas' : s.id === 'eastertide' ? 'Easter' : s.name}
+            </text>
+          );
+        })}
       {nights.map((n) => {
         const [x0, y0_] = pt(ang(n), 100);
         const [x1, y1] = pt(ang(n), 108);
@@ -218,10 +232,13 @@ function Wheel({ from, to, days, nights, today }: { from: string; to: string; da
           return <line x1={x0} y1={y0_} x2={x1} y2={y1} stroke="var(--color-accent-400)" strokeWidth={1.5} />;
         })()
       ) : null}
-      <text x={C} y={C - 6} textAnchor="middle" fontSize={13} fill="var(--color-neutral-100)" fontWeight={500}>
+      <text x={C} y={C - 14} textAnchor="middle" fontSize={13} fill="var(--color-neutral-100)" fontWeight={500}>
         {from.slice(0, 4)}–{to.slice(2, 4)}
       </text>
-      <text x={C} y={C + 12} textAnchor="middle" fontSize={9.5} fill="var(--color-neutral-500)">
+      <text x={C} y={C + 4} textAnchor="middle" fontSize={9.5} fill="var(--color-neutral-400)">
+        Easter falls {fmt(easter(y0 + 1)).replace(/^\w+, /, '')} · {nights.length} nights
+      </text>
+      <text x={C} y={C + 19} textAnchor="middle" fontSize={9.5} fill="var(--color-neutral-500)">
         {inYear ? 'Today ' + fmt(today).replace(/^\w+, /, '') : 'Ministry year'}
       </text>
     </svg>

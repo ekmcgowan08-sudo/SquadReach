@@ -5,10 +5,12 @@
    answer stays editable in Settings, and creating it is one undo step. */
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useSaveConfig } from '@/components/console/kit';
 import { PageHead, Toggle, usePlanSave } from '@/components/planner/kit';
 import { Btn, Icon, cx } from '@/components/ui';
 import { LANE_DEFAULTS, TRADITIONS, TRANSLATIONS, laneColor, nightsOf, yearLabel, type PlanLane } from '@/lib/plan';
 import { nowMs } from '@/lib/dates';
+import { DEFAULT_ZONE, ZONES } from '@/lib/time-zone';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
@@ -27,6 +29,8 @@ interface Draft {
   name: string;
   campus: string;
   startYear: number;
+  /** The ministry's clock: report deliveries and reminders run on it. */
+  timeZone: string;
   groups: { id: string; name: string; low: number; high: number }[];
   gatherDay: number;
   breaks: { id: string; label: string; from: string; to: string }[];
@@ -48,6 +52,7 @@ function draftFrom(fallback: { name: string; year: number }): Draft {
     name: fallback.name,
     campus: 'Main campus',
     startYear: y,
+    timeZone: DEFAULT_ZONE,
     groups: [
       { id: 'g1', name: 'Middle school', low: 6, high: 8 },
       { id: 'g2', name: 'High school', low: 9, high: 12 }
@@ -78,6 +83,8 @@ function draftFrom(fallback: { name: string; year: number }): Draft {
 export function PlanSetup() {
   const p = useApp((s) => s.data.plan);
   const ministry = useApp((s) => s.data.config.ministryName);
+  const zone = useApp((s) => s.data.config.timeZone);
+  const saveConfig = useSaveConfig();
   const api = useAppApi();
   const save = usePlanSave();
   const router = useRouter();
@@ -90,6 +97,7 @@ export function PlanSetup() {
     return {
       ...base,
       campus: st.campus || base.campus,
+      timeZone: zone || base.timeZone,
       groups: st.groups ? st.groups.map((g, i) => ({ ...g, id: 'g' + i })) : st.entryGrade !== 6 ? [{ id: 'g0', name: 'Students', low: st.entryGrade, high: 12 }] : base.groups,
       gatherDay: st.gatherDay,
       breaks: st.blackouts.length ? st.blackouts.map(([from, to], i) => ({ id: 'b' + i, label: 'Break ' + (i + 1), from, to })) : base.breaks,
@@ -149,6 +157,7 @@ export function PlanSetup() {
       p.settings.setupAt ? 'Run the plan setup again' : 'Set up the plan',
       { log: true }
     );
+    if (d.timeZone !== (zone || DEFAULT_ZONE)) saveConfig({ timeZone: d.timeZone }, 'Time zone is now ' + d.timeZone);
     api().logActivity('Set up the seven-year plan · ' + yearLabel(d.startYear, 0) + ' – ' + yearLabel(d.startYear, 6));
     setDone(true);
   };
@@ -212,8 +221,20 @@ export function PlanSetup() {
                 })}
               </select>
             </Field>
-            <div className="flex flex-col justify-end text-[12.5px] leading-[1.5] text-neutral-400">
-              Seven ministry years, each August to July. A student who starts in year one graduates in year seven.
+            <Field label="Time zone">
+              <select className="input" value={d.timeZone} onChange={(e) => set({ timeZone: e.target.value })}>
+                {[...new Set([d.timeZone, ...ZONES])].map((z) => (
+                  <option key={z} value={z}>
+                    {z.split('/').pop()!.replace(/_/g, ' ')} · {z}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="rounded-md bg-neutral-900 px-4 py-3 md:col-span-2">
+              <div className="text-[13.5px] font-medium text-neutral-100">Range</div>
+              <div className="mt-1 text-[13px] leading-[1.55] text-neutral-400">
+                Seven ministry years, August {d.startYear} through July {d.startYear + 7}. A{entry === 8 || entry === 11 ? 'n' : ''} {ord(entry)} grader starting in year one {exit - entry >= 6 ? 'graduates at the end of it' : 'moves on after ' + ord(exit) + ' grade, in year ' + (exit - entry + 1)}. Reminders and report emails run on {d.timeZone.split('/').pop()!.replace(/_/g, ' ')} time.
+              </div>
             </div>
           </div>
         ) : null}

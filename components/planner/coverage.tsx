@@ -8,7 +8,7 @@ import { DismissBox, HEALTH, PageHead, Panel, usePlanSave } from '@/components/p
 import { Icon, cx } from '@/components/ui';
 import { isoDay } from '@/lib/dates';
 import { COVERAGE_CATS, COVERAGE_GROUPS, assessCoverage, cohortYears, cohorts, type CoverageCell } from '@/lib/plan-insights';
-import { teachingOf, yearLabel, yearOf } from '@/lib/plan';
+import { ordinal, teachingOf, yearLabel, yearOf } from '@/lib/plan';
 import { useApp } from '@/lib/store/provider';
 
 const STATE = { received: 'Received', current: 'This year', planned: 'Planned' } as const;
@@ -27,6 +27,13 @@ export function Coverage() {
   for (const r of grid) for (const c of r.cells) tally[c.dismissed ? 'dismissed' : c.status]++;
   const cell = sel ? assessCoverage(p, sel.cat, sel.c, nowYear) : null;
   const untagged = p.items.filter((i) => i.kind === 'series' && i.lane === 'teach' && !i.tags.length);
+  /* What to look at first: gaps before attention, the class leaving soonest first. */
+  const first = grid
+    .flatMap((r) => r.cells)
+    .filter((c) => c.status !== 'healthy' && !c.dismissed && cohortYears(p, c.cohort).some((y) => y.inPlan && y.year >= nowYear))
+    .sort((a, b) => Number(b.status === 'gap') - Number(a.status === 'gap') || a.cohort - b.cohort)
+    .slice(0, 5);
+  const gradeNow = (c: number) => 12 - (c - 1 - nowYear);
 
   return (
     <>
@@ -68,6 +75,9 @@ export function Coverage() {
                       <button onClick={() => setJourney(c)} className={cx('rounded px-1 text-[12px] font-medium', journey === c ? 'text-accent-200' : 'text-neutral-100')}>
                         Class of {c}
                       </button>
+                      <div className="text-[10px] font-normal text-neutral-500">
+                        {gradeNow(c) > 12 ? 'graduated' : gradeNow(c) < p.settings.entryGrade ? 'joins ' + (c - 1 - (12 - p.settings.entryGrade)) : ordinal(gradeNow(c)) + ' grade now'}
+                      </div>
                       <div className="text-[10px] font-normal text-neutral-500">{ys} years here</div>
                     </th>
                   );
@@ -94,7 +104,7 @@ export function Coverage() {
                       <td className="sticky left-0 z-10 bg-surface px-3 py-[6px] text-[12.5px] text-neutral-200">{r.cat.name}</td>
                       {r.cells.map((c) => (
                         <td key={c.cohort} className="border-l border-neutral-800 p-[3px]">
-                          <CellButton c={c} on={sel?.cat === c.cat.id && sel.c === c.cohort} onClick={() => setSel({ cat: c.cat.id, c: c.cohort })} />
+                          <CellButton c={c} years={cohortYears(p, c.cohort).filter((y) => y.inPlan).map((y) => y.year)} on={sel?.cat === c.cat.id && sel.c === c.cohort} onClick={() => setSel({ cat: c.cat.id, c: c.cohort })} />
                         </td>
                       ))}
                     </tr>
@@ -152,9 +162,23 @@ export function Coverage() {
               ) : null}
             </Panel>
           ) : (
-            <Panel title="Read a cell">
-              <div className="text-[12.5px] leading-[1.55] text-neutral-400">Pick any square to see why it reads the way it does, what that class receives and when, and to set it aside with a reason if it’s covered somewhere the plan can’t see.</div>
-            </Panel>
+            <>
+              <Panel title="Read a cell">
+                <div className="text-[12.5px] leading-[1.55] text-neutral-400">Pick any square to see why it reads the way it does, what that class receives and when, and to set it aside with a reason if it’s covered somewhere the plan can’t see. The marks under each count are the class’s years here, filled where it comes up.</div>
+              </Panel>
+              {first.length ? (
+                <Panel title="Worth looking at first">
+                  {first.map((c) => (
+                    <button key={c.key} data-wraps onClick={() => setSel({ cat: c.cat.id, c: c.cohort })} className="flex flex-col gap-1 rounded-md border border-neutral-800 px-3 py-[10px] text-left hover:border-neutral-700" style={{ boxShadow: 'inset 3px 0 0 ' + HEALTH[c.status].color }}>
+                      <span className="text-[13px] font-medium text-neutral-100">
+                        {c.cat.name} · class of {c.cohort}
+                      </span>
+                      <span className="text-[12px] leading-[1.5] text-neutral-400 text-pretty">{c.reason}</span>
+                    </button>
+                  ))}
+                </Panel>
+              ) : null}
+            </>
           )}
           <Journey c={journey} nowYear={nowYear} onPick={setJourney} />
         </div>
@@ -163,11 +187,20 @@ export function Coverage() {
   );
 }
 
-function CellButton({ c, on, onClick }: { c: CoverageCell; on: boolean; onClick: () => void }) {
+function CellButton({ c, years, on, onClick }: { c: CoverageCell; years: number[]; on: boolean; onClick: () => void }) {
   const h = HEALTH[c.dismissed ? 'dismissed' : c.status];
   return (
-    <button onClick={onClick} aria-pressed={on} aria-label={c.total + '/' + c.target + ', ' + c.cat.name + ', class of ' + c.cohort + ': ' + h.label} title={c.reason} className={cx('flex h-[30px] w-full items-center justify-center rounded text-[11px] font-medium', on && 'ring-2 ring-accent-400')} style={{ background: 'color-mix(in srgb, ' + h.color + (c.status === 'healthy' && !c.dismissed ? ' 26%' : ' 40%') + ', transparent)', color: 'var(--color-neutral-100)' }}>
-      {c.total}/{c.target}
+    <button onClick={onClick} aria-pressed={on} aria-label={c.total + '/' + c.target + ', ' + c.cat.name + ', class of ' + c.cohort + ': ' + h.label} title={c.reason} className={cx('flex h-[36px] w-full flex-col items-center justify-center gap-[3px] rounded text-[11px] font-medium', on && 'ring-2 ring-accent-400')} style={{ background: 'color-mix(in srgb, ' + h.color + (c.status === 'healthy' && !c.dismissed ? ' 26%' : ' 40%') + ', transparent)', color: 'var(--color-neutral-100)' }}>
+      <span className="leading-none">
+        {c.total}/{c.target}
+      </span>
+      {/* A mark a year the class is here: solid where it comes up, faint where it's only planned. */}
+      <span aria-hidden className="flex gap-[2px]">
+        {years.map((y) => {
+          const e = c.entries.filter((x) => x.year === y);
+          return <span key={y} className="h-[3px] w-[7px] rounded-full" style={{ background: e.length ? 'var(--color-neutral-100)' : 'color-mix(in srgb, var(--color-neutral-100) 22%, transparent)', opacity: e.length && e.every((x) => x.state === 'planned') ? 0.55 : 1 }} />;
+        })}
+      </span>
     </button>
   );
 }

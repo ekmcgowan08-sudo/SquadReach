@@ -217,3 +217,14 @@ test('Roadmap follows one class down the plan, a repeated grade taking two years
   await page.getByRole('button', { name: 'Board', exact: true }).click();
   await expect(page.getByTitle('The class of 2033 is in 9th grade')).toBeVisible();
 });
+
+test('Ministry time: duplicate an activity, then turn the copy into a this-or-that', async ({ page }) => {
+  await page.goto('/planner/live');
+  await ready(page);
+  await expect(page.getByText('Activities').locator('..').getByText('5', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Duplicate' }).click();
+  await expect(page.getByText('Activities').locator('..').getByText('6', { exact: true })).toBeVisible();
+  await page.getByRole('group', { name: 'Activity' }).getByRole('button', { name: 'This or that' }).click();
+  await expect(page.getByText('2. This or that')).toBeVisible();
+  await expect(page.getByRole('textbox').first()).toHaveValue('Who wrote the letter to the Ephesians?');
+});

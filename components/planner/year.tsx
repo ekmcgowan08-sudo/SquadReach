@@ -169,7 +169,7 @@ export function YearBoard() {
       <PageHead
         kicker={p.settings.name}
         title={'Ministry year ' + yearLabel(sy, y)}
-        sub={'Year ' + (y + 1) + ' of 7 · ' + nights.length + ' ' + ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][p.settings.gatherDay] + ' nights · ' + Object.keys(byNight).length + ' taught · ' + p.items.filter((i) => i.year === y).length + ' items'}
+        sub={'Year ' + (y + 1) + ' of 7 · ' + nights.length + ' ' + ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][p.settings.gatherDay] + ' nights · ' + Object.keys(byNight).length + ' taught · ' + p.items.filter((i) => i.year === y).length + ' items' + (p.items.some((i) => i.year === y && i.status === 'draft') ? ' · ' + p.items.filter((i) => i.year === y && i.status === 'draft').length + ' still draft' : '')}
         right={
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 rounded-full border border-neutral-800 p-1">
@@ -257,11 +257,15 @@ export function YearBoard() {
             const tracks = Math.max(1, ...bars.map((b) => b.track + 1));
             const any = p.items.filter((i) => i.year === y && i.lane === l.id && i.month === undefined);
             const anyCell = l.id + '|any';
+            const count = p.items.filter((i) => i.year === y && i.lane === l.id).length;
             return (
               <div key={l.id} className="contents">
                 <div className="sticky left-0 z-10 flex items-start gap-2 border-b border-neutral-800 bg-surface px-3 py-2">
                   <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: laneColor(l.hue) }} />
-                  <span className="text-[12px] leading-[1.3] text-neutral-300">{l.name}</span>
+                  <span>
+                    <span className="block text-[12px] leading-[1.3] text-neutral-300">{l.name}</span>
+                    <span className="block text-[10.5px] text-neutral-500">{count === 1 ? '1 item' : count + ' items'}</span>
+                  </span>
                 </div>
                 <div
                   className="relative border-b border-l border-neutral-800"

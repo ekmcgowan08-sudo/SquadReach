@@ -121,6 +121,24 @@ export function LiveSetup({ night }: { night: string }) {
             edit((xs) => xs.filter((x) => x.id !== sel.id), 'Remove ' + liveType(sel.type).label.toLowerCase());
             setSel(null);
           }}
+          duplicate={() => {
+            const copy = { ...structuredClone(sel), id: uid() };
+            edit((xs) => {
+              const i = xs.findIndex((x) => x.id === sel.id);
+              return [...xs.slice(0, i + 1), copy, ...xs.slice(i + 1)];
+            }, 'Duplicate ' + liveType(sel.type).label.toLowerCase());
+            setSel(copy.id);
+          }}
+          retype={(k) => {
+            /* Keep what carries over: the prompt, the timer, and answers between trivia and this-or-that. */
+            const t = LIVE_TEMPLATES[k]();
+            const keepOpts = (k === 'trivia' || k === 'this') && (sel.type === 'trivia' || sel.type === 'this') && sel.options?.length;
+            patch(
+              sel.id,
+              { ...t, prompt: sel.prompt.trim() ? sel.prompt : t.prompt, timer: sel.timer, options: keepOpts ? (k === 'this' ? sel.options!.map(({ l }) => ({ l })) : sel.options) : t.options, verse: k === 'verse' ? (sel.verse ?? t.verse) : undefined },
+              'Make it ' + (k === 'this' ? 'a this-or-that' : 'a ' + liveType(k).label.toLowerCase())
+            );
+          }}
         />
       ) : (
         <Panel title="Pick an activity">
@@ -174,7 +192,7 @@ function withMinistry(p: Plan, night: string) {
   return [...order.slice(0, at + 1), block, ...order.slice(at + 1)];
 }
 
-function Editor({ a, i, n, settings, translation, patch, move, remove }: { a: LiveActivity; i: number; n: number; settings: LiveSettings; translation: string; patch: (ch: Partial<LiveActivity>, label: string, merge?: string) => void; move: (d: number) => void; remove: () => void }) {
+function Editor({ a, i, n, settings, translation, patch, move, remove, duplicate, retype }: { a: LiveActivity; i: number; n: number; settings: LiveSettings; translation: string; patch: (ch: Partial<LiveActivity>, label: string, merge?: string) => void; move: (d: number) => void; remove: () => void; duplicate: () => void; retype: (k: LiveKind) => void }) {
   const t = liveType(a.type);
   const issue = problem(a);
   const opts = a.options ?? [];
@@ -195,12 +213,28 @@ function Editor({ a, i, n, settings, translation, patch, move, remove }: { a: Li
           <button onClick={() => move(1)} disabled={i === n - 1} aria-label="Later" className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-800 text-neutral-400 disabled:opacity-30">
             <Icon name="ph ph-arrow-down" className="text-[12px]" />
           </button>
+          <button onClick={duplicate} aria-label="Duplicate" title="Duplicate" className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-800 text-neutral-400">
+            <Icon name="ph ph-copy" className="text-[12px]" />
+          </button>
           <button onClick={remove} aria-label="Remove" className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-800 text-neutral-400">
             <Icon name="ph ph-trash" className="text-[12px]" />
           </button>
         </div>
       }
     >
+      <div className="flex flex-wrap gap-1" role="group" aria-label="Activity">
+        {LIVE_TYPES.map((k) => (
+          <button
+            key={k.id}
+            onClick={() => k.id !== a.type && retype(k.id)}
+            aria-pressed={k.id === a.type}
+            className="min-h-8 rounded-full border px-3 text-[11.5px]"
+            style={{ borderColor: k.id === a.type ? 'var(--color-accent-500)' : 'var(--color-neutral-800)', background: k.id === a.type ? 'color-mix(in srgb, var(--color-accent) 16%, transparent)' : 'transparent', color: k.id === a.type ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
       <div className="text-[12px] leading-[1.5] text-neutral-500">{t.note}</div>
       <label className="flex flex-col gap-1">
         <span className="sr-label">Prompt</span>

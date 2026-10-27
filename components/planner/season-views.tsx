@@ -136,7 +136,7 @@ export function MonthView({ year, month, onNight }: { year: number; month: numbe
           past ? (g?.debrief ? { label: 'Debriefed', strong: false } : { label: 'Needs a debrief', strong: true }) : null
         ].filter((x): x is { label: string; strong: boolean } => !!x);
         return (
-          <button key={n} onClick={() => onNight(n)} className="sr-card flex flex-col gap-2 px-5 py-4 text-left transition-colors hover:border-accent-700" style={{ boxShadow: 'inset 3px 0 0 ' + color }}>
+          <button key={n} data-wraps onClick={() => onNight(n)} className="sr-card flex flex-col gap-2 px-5 py-4 text-left transition-colors hover:border-accent-700" style={{ boxShadow: 'inset 3px 0 0 ' + color }}>
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="text-[17px] font-medium text-neutral-100">{fmt(n, { month: 'long', day: 'numeric' })}</span>
               <span className="text-[13px] text-neutral-500">{t ? t.series.title + ' · week ' + t.week : 'No teaching planned'}</span>
