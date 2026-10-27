@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { demoBackend } from '@/lib/data/demo-backend';
 import { demoMinistry } from '@/lib/data/seed';
 import type { Backend, SyncEvent } from '@/lib/data/backend';
+import { sendNightReports } from '@/lib/store/actions';
 import { createAppStore } from '@/lib/store/app-store';
 import type { Membership } from '@/lib/types/model';
 
@@ -169,5 +170,20 @@ describe('an undo after the night closed', () => {
     store.getState().undoLast();
     expect(store.getState().data.activityLog[0].line).toMatch(/^Correction notice: −300 /);
     expect(store.getState().toast?.msg).toMatch(/correction notice/);
+  });
+});
+
+describe('closing the night', () => {
+  it('sends the night-close reports once, however many times it is closed', () => {
+    const { backend } = flaky();
+    const d = demoMinistry();
+    d.deliveries = [
+      { id: 'c1', report: 'standings', audience: 'leaders', scope: 'all', cadence: 'close', day: 0, time: '21:00', on: true },
+      { id: 'w1', report: 'roster', audience: 'leaders', scope: 'all', cadence: 'weekly', day: 4, time: '09:00', on: true }
+    ];
+    const store = createAppStore(backend, { ...leader, mode: 'demo' }, d);
+    expect(sendNightReports(store.getState)).toBe(1);
+    expect(store.getState().data.reportSendLog[0]).toMatchObject({ delivery: 'c1', period: 'c:' + d.tonight.date });
+    expect(sendNightReports(store.getState)).toBe(0);
   });
 });

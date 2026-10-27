@@ -142,6 +142,11 @@ overdue is skipped rather than sent late. Recipients are matched to the
 email on their account by name. The console shows who had no email on file.
 “Send now” emails through the same path.
 
+A delivery can go "when the night closes": tapping End the night at the
+debrief sends it straight away (into notifications, and by email through
+the same claimed path, once per night), and the 15-minute job sends it if
+that phone couldn't.
+
 The same email setup tells a ministry's leaders and owners when someone
 asks to join (right after the request is filed). It's best effort: the
 request stands whether or not the mail goes.

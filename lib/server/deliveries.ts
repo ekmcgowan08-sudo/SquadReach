@@ -113,15 +113,23 @@ export async function runDueDeliveries(now: number, appUrl: string, given?: Deps
     const config = (org.data?.config ?? {}) as MinistryConfig;
     const local = ministryNow(config, now);
     const lite = { config: { ...config, meetingDates: config.meetingDates ?? [] } } as MinistryData;
+    /* A night-close report needs the night itself (when it was closed), so
+       only those ministries are loaded in full here; its time is a real
+       moment, not a wall-clock one, so it's measured against the real now. */
+    const full = list.some((dl) => dl.cadence === 'close') ? await deps.load(db, row.org_id) : null;
     const due = list
-      .map((dl) => ({ dl, at: deliveryDue(lite, dl, local) }))
-      .filter((x): x is { dl: Delivery; at: { at: number; period: string } } => !!x.at && local >= x.at.at && local - x.at.at < GRACE);
+      .map((dl) => ({ dl, at: dl.cadence === 'close' ? (full ? deliveryDue(full, dl, now) : null) : deliveryDue(lite, dl, local) }))
+      .filter((x): x is { dl: Delivery; at: { at: number; period: string } } => {
+        if (!x.at) return false;
+        const clock = x.dl.cadence === 'close' ? now : local;
+        return clock >= x.at.at && clock - x.at.at < GRACE;
+      });
     if (!due.length) continue;
     const sent = await db.from('report_sends').select('delivery_id, period').eq('org_id', row.org_id).in('period', [...new Set(due.map((x) => x.at.period))]);
     const done = new Set(((sent.data ?? []) as { delivery_id: string; period: string }[]).map((s) => s.delivery_id + '|' + s.period));
     const todo = due.filter((x) => !done.has(x.dl.id + '|' + x.at.period));
     if (!todo.length) continue;
-    const d = await deps.load(db, row.org_id);
+    const d = full ?? (await deps.load(db, row.org_id));
     for (const { dl, at } of todo) {
       const r = await sendDelivery(deps, d, row.org_id, dl, at.period, 'Schedule', appUrl, now);
       results.push({ ...r, org: row.org_id, label: deliverySentence(d, dl) });

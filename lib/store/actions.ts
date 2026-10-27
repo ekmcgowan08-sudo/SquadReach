@@ -186,3 +186,26 @@ export function sendRsvp(get: Get, eventId: string, name: string, rec: Rsvp): vo
     })
   );
 }
+
+/** Closing the night sends the reports set to go "when the night closes":
+ *  into each leader's notifications at once and, on a live ministry, by
+ *  email through the server (claimed once per night, so closing it again
+ *  sends nothing; the scheduled job sends it if this phone can't).
+ *  Returns how many went. */
+export function sendNightReports(get: Get): number {
+  const s = get();
+  const list = s.data.deliveries.filter((dl) => dl.on && dl.cadence === 'close');
+  if (!list.length) return 0;
+  const period = 'c:' + (s.data.tonight.date || new Date().toISOString().slice(0, 10));
+  const fresh = list.filter((dl) => !s.data.reportSendLog.some((x) => x.delivery === dl.id && x.period === period));
+  if (!fresh.length) return 0;
+  const at = Date.now();
+  const log = [...fresh.map((dl) => ({ id: uid(), delivery: dl.id, period, at, by: s.membership.displayName })), ...s.data.reportSendLog].slice(0, 100);
+  s.mutate((x) => void (x.reportSendLog = log));
+  s.emit({ kind: 'doc', key: 'reportSendLog', value: log });
+  if (s.membership.mode === 'supabase' && !s.offline()) {
+    for (const dl of fresh)
+      void fetch('/api/deliveries/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: dl.id, close: true, period }) }).catch(() => undefined);
+  }
+  return fresh.length;
+}

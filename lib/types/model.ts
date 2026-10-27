@@ -879,7 +879,8 @@ export interface Delivery {
   audience: DeliveryAudience;
   /** 'own': each squad gets its own copy. 'all': one copy of everything. */
   scope: 'own' | 'all';
-  cadence: 'weekly' | 'nightAfter' | 'monthly';
+  /** 'close': the moment the night is closed at the debrief. */
+  cadence: 'weekly' | 'nightAfter' | 'monthly' | 'close';
   /** Day of the week (0 = Sunday) for weekly; day of the month for monthly. */
   day: number;
   time: string;

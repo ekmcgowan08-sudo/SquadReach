@@ -264,7 +264,8 @@ export const AUDIENCES: { id: DeliveryAudience; label: string }[] = [
 export const CADENCES = [
   { id: 'weekly', label: 'Weekly' },
   { id: 'nightAfter', label: 'The day after each night' },
-  { id: 'monthly', label: 'Monthly' }
+  { id: 'monthly', label: 'Monthly' },
+  { id: 'close', label: 'When the night closes' }
 ] as const;
 
 export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -309,6 +310,13 @@ export function deliveryRecipientGroups(d: MinistryData, dl: Delivery): Recipien
  *  period's key — (delivery, period) is the idempotency key, so a retry can
  *  never send twice. Null when nothing is due in this period. */
 export function deliveryDue(d: MinistryData, dl: Delivery, now: number): { at: number; period: string } | null {
+  /* Leader reports go out the moment the night is closed at the debrief —
+     once per night, whoever closes it and however many times. */
+  if (dl.cadence === 'close') {
+    const h = d.huddle;
+    if (!h?.nightClosed || !h.closedAt) return null;
+    return { at: h.closedAt, period: 'c:' + (d.tonight?.date || isoDay(new Date(h.closedAt))) };
+  }
   const today = new Date(now);
   const [h, m] = dl.time.split(':').map((x) => Number(x) || 0);
   if (dl.cadence === 'weekly') {
@@ -340,7 +348,8 @@ export function deliverySent(d: MinistryData, dl: Delivery, now: number): boolea
 export function deliveriesDueToday(d: MinistryData, now: number): Delivery[] {
   const today = isoDay(new Date(now));
   return d.deliveries.filter((dl) => {
-    if (!dl.on) return false;
+    /* A night-close report has no clock time to announce: it goes at the debrief. */
+    if (!dl.on || dl.cadence === 'close') return false;
     const due = deliveryDue(d, dl, now);
     return !!due && isoDay(new Date(due.at)) === today && now < due.at;
   });
@@ -349,9 +358,10 @@ export function deliveriesDueToday(d: MinistryData, now: number): Delivery[] {
 export function deliverySentence(d: MinistryData, dl: Delivery): string {
   const rep = reportSpec(d, dl.report)?.label ?? 'A report';
   const aud = AUDIENCES.find((a) => a.id === dl.audience)?.label.toLowerCase() ?? '';
+  const who = rep + ' to ' + aud + (dl.scope === 'own' ? ', each their own squad,' : '');
+  if (dl.cadence === 'close') return who + ' as soon as the night closes';
   const when = dl.cadence === 'weekly' ? 'every ' + DAYS[dl.day] : dl.cadence === 'monthly' ? 'on day ' + dl.day + ' of each month' : 'the day after each night';
-  const t = clock12(dl.time);
-  return rep + ' to ' + aud + (dl.scope === 'own' ? ', each their own squad,' : '') + ' ' + when + ' at ' + t;
+  return who + ' ' + when + ' at ' + clock12(dl.time);
 }
 
 export const clock12 = (hhmm: string) => {

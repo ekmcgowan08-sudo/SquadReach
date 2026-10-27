@@ -68,3 +68,19 @@ describe('deliveries', () => {
     expect(deliverySent(d, off, atLocal('2026-10-29', '09:30'))).toBe(false);
   });
 });
+
+describe('a delivery that goes when the night closes', () => {
+  it('is due the moment the night closes, once for that night', () => {
+    const d = demoMinistry();
+    const dl = { id: 'c1', report: 'standings', audience: 'leaders' as const, scope: 'all' as const, cadence: 'close' as const, day: 0, time: '21:00', on: true };
+    d.deliveries = [dl];
+    d.huddle.nightClosed = false;
+    expect(deliveryDue(d, dl, Date.now())).toBeNull();
+    expect(deliverySent(d, dl, Date.now())).toBe(false);
+    d.huddle.nightClosed = true;
+    d.huddle.closedAt = 1_000;
+    expect(deliveryDue(d, dl, 2_000)).toEqual({ at: 1_000, period: 'c:' + d.tonight.date });
+    expect(deliverySent(d, dl, 2_000)).toBe(true);
+    expect(deliveriesDueToday(d, 500).some((x) => x.id === 'c1')).toBe(false);
+  });
+});

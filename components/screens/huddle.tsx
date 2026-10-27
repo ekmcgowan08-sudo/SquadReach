@@ -16,6 +16,7 @@ import { longDate, nowMs } from '@/lib/dates';
 import { uncoveredPosts } from '@/lib/feeds';
 import { canApprove, canEditRoster, holdsSheet } from '@/lib/permissions';
 import { openFollowups, runMinutes, teamOf } from '@/lib/selectors';
+import { sendNightReports } from '@/lib/store/actions';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { CrewMember, CrewState, HuddleState } from '@/lib/types/model';
@@ -220,8 +221,13 @@ export function HuddleScreen() {
       x.nightClosed = true;
       x.closedAt = nowMs();
     });
-    api().logActivity('Night closed at debrief');
-    api().say('Night closed. Leader reports are going now; parents get theirs on the schedule.');
+    const sent = sendNightReports(api);
+    api().logActivity('Night closed at debrief' + (sent ? ' · ' + sent + (sent === 1 ? ' report' : ' reports') + ' to leaders' : ''));
+    api().say(
+      sent
+        ? 'Night closed. ' + sent + (sent === 1 ? ' report is' : ' reports are') + ' on the way to leaders now; families see tonight on their link.'
+        : 'Night closed. No report is set to go out when a night closes — add one in Console › Reports.'
+    );
   };
 
   const clock = new Date(now).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(' ', '').replace('m', '');

@@ -630,7 +630,8 @@ function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 's
     deliveries: [
       { id: 'dl1', report: 'roster', audience: 'squadLeads', scope: 'own', cadence: 'weekly', day: 4, time: '09:00', on: true },
       { id: 'dl2', report: 'roster', audience: 'leaders', scope: 'all', cadence: 'weekly', day: 4, time: '09:00', on: true },
-      { id: 'dl3', report: 'visitors', audience: 'leaders', scope: 'all', cadence: 'nightAfter', day: 0, time: '08:00', on: true }
+      { id: 'dl3', report: 'visitors', audience: 'leaders', scope: 'all', cadence: 'nightAfter', day: 0, time: '08:00', on: true },
+      { id: 'dl4', report: 'standings', audience: 'leaders', scope: 'all', cadence: 'close', day: 0, time: '21:00', on: true }
     ],
     reportSendLog: [],
     plan: demoPlan(now)

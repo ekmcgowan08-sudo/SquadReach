@@ -226,3 +226,16 @@ test('a trip waits on signed forms and tracks money until the office counts it',
   await cash.getByRole('button', { name: 'Count $85 from Hannah Duff' }).click();
   await expect(cash).toContainText('$210 counted · $85 waiting to be counted');
 });
+
+test('closing the night sends the reports set to go when it closes', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/huddle');
+  await ready(page);
+  const end = page.getByRole('button', { name: 'End the night' });
+  for (let i = 0; i < 20 && !(await end.isVisible()); i++) await page.getByRole('button', { name: /^Next · / }).click();
+  await end.click();
+  await expect(page.getByText('Night closed. 1 report is on the way to leaders now', { exact: false })).toBeVisible();
+  await page.goto('/console?tab=reports');
+  await ready(page);
+  await expect(page.getByText('Went out when tonight closed')).toBeVisible();
+});

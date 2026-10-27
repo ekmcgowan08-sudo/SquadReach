@@ -113,3 +113,19 @@ describe('scheduled report emails', () => {
     expect(tables.report_sends[0].status).toBe('failed');
   });
 });
+
+describe('a report that goes out when the night closes', () => {
+  it('waits for the close, then goes once per night — the scheduled job is the backstop', async () => {
+    const { d, sent, deps, tables } = setup([{ cadence: 'close' }]);
+    expect((await runDueDeliveries(THU_10AM, 'u', deps)).results).toHaveLength(0);
+    d.huddle.nightClosed = true;
+    d.huddle.closedAt = THU_10AM - 60_000;
+    const out = await runDueDeliveries(THU_10AM, 'u', deps);
+    expect(out.results[0]).toMatchObject({ status: 'sent' });
+    expect(tables.report_sends[0].period).toBe('c:' + d.tonight.date);
+    expect(out.results[0].label).toContain('as soon as the night closes');
+    const n = sent.length;
+    expect((await runDueDeliveries(THU_10AM + 15 * 60_000, 'u', deps)).results).toHaveLength(0);
+    expect(sent).toHaveLength(n);
+  });
+});

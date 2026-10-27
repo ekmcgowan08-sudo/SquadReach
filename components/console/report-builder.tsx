@@ -377,14 +377,30 @@ export function DeliveriesSection() {
                 </select>
               ) : dl.cadence === 'monthly' ? (
                 <input className="input !min-h-9 !py-0" type="number" min={1} max={28} value={dl.day} onChange={(e) => patch(dl.id, { day: Math.max(1, Math.min(28, Number(e.target.value) || 1)) })} aria-label="Day of month" />
+              ) : dl.cadence === 'close' ? (
+                <span className="self-center text-[11px] text-neutral-500">at the debrief</span>
               ) : (
                 <span className="self-center text-[11px] text-neutral-500">after each night</span>
               )}
-              <input className="input !min-h-9 !py-0" type="time" value={dl.time} onChange={(e) => e.target.value && patch(dl.id, { time: e.target.value })} aria-label="Time" />
+              {dl.cadence === 'close' ? (
+                <span className="self-center text-[11px] leading-[1.35] text-neutral-500">the moment someone taps End the night</span>
+              ) : (
+                <input className="input !min-h-9 !py-0" type="time" value={dl.time} onChange={(e) => e.target.value && patch(dl.id, { time: e.target.value })} aria-label="Time" />
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0 flex-1 text-[11.5px] text-neutral-400">
-                {dl.on ? (sent ? 'Went out for this period' : due ? 'Next: ' + new Date(due.at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Waiting for the first night') : 'Paused'}
+                {dl.on
+                  ? sent
+                    ? dl.cadence === 'close'
+                      ? 'Went out when tonight closed'
+                      : 'Went out for this period'
+                    : due
+                      ? 'Next: ' + new Date(due.at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                      : dl.cadence === 'close'
+                        ? 'Goes out when tonight closes'
+                        : 'Waiting for the first night'
+                  : 'Paused'}
                 {' · '}
                 {groups.reduce((n, g) => n + g.names.length, 0)} people
               </div>
