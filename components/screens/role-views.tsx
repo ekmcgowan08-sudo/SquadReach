@@ -475,7 +475,8 @@ export function useDecideAccess() {
       r.decidedAt = Date.now();
     });
     api().emit({ kind: 'accessDecide', request: q, approve, role: changed ? role : undefined });
-    api().logActivity(approve ? 'Approved ' + q.name + ' as ' + personaDef(role).label + (changed ? ' (asked for ' + personaDef(q.requestedRole).label + ')' : '') : 'Denied ' + q.name + ' as ' + personaDef(q.requestedRole).label);
+    /* decide_access writes the audit line on a live ministry. */
+    api().logActivity(approve ? 'Approved ' + q.name + ' as ' + personaDef(role).label + (changed ? ' (asked for ' + personaDef(q.requestedRole).label + ')' : '') : 'Denied ' + q.name + ' as ' + personaDef(q.requestedRole).label, true);
     api().say(approve ? q.name + ' is in as ' + personaDef(role).label + '.' : 'Denied. ' + q.name + ' was told.');
   };
 }

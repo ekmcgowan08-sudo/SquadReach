@@ -142,3 +142,15 @@ describe('keeping the data', () => {
     expect(snaps[snaps.length - 1]).toContain('Renamed the game');
   });
 });
+
+describe('an audit line the database writes itself', () => {
+  it('shows on the phone but isn’t sent twice on a live ministry', async () => {
+    const { backend, sent } = flaky();
+    const store = createAppStore(backend, leader, demoMinistry());
+    store.getState().logActivity('Approved Sam Ortiz as Coach', true);
+    store.getState().logActivity('Edited the run sheet');
+    await Promise.resolve();
+    expect(store.getState().data.activityLog.slice(0, 2).map((l) => l.line)).toEqual(['Edited the run sheet', 'Approved Sam Ortiz as Coach']);
+    expect(sent.flatMap((e) => (e.kind === 'activity' ? [e.line.line] : []))).toEqual(['Edited the run sheet']);
+  });
+});

@@ -100,7 +100,9 @@ export interface AppState {
   sayPosted(onlineMsg: string, offlineMsg: string): void;
   doneFlag(): 'posted' | 'held';
   firePush(title: string, body: string, href?: string): void;
-  logActivity(line: string): void;
+  /** An audit line. `serverWrites`: the database function behind this
+   *  action logs it itself, so on Supabase it's only shown here, not sent. */
+  logActivity(line: string, serverWrites?: boolean): void;
   emit(e: SyncEvent): void;
   /** Save again any document whose save couldn't go (offline or failed). */
   saveUnsavedDocs(): void;
@@ -338,13 +340,13 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           if (pushT) clearTimeout(pushT);
           pushT = setTimeout(() => set((s) => { s.push = null; }), 4600);
         },
-        logActivity(line) {
+        logActivity(line, serverWrites = false) {
           const entry: ActivityLine = { id: uid(), line, at: Date.now() };
           set((s) => {
             s.data.activityLog.unshift(entry);
             if (s.data.activityLog.length > 200) s.data.activityLog.length = 200;
           });
-          get().emit({ kind: 'activity', line: entry });
+          if (!(serverWrites && get().backend.mode === 'supabase')) get().emit({ kind: 'activity', line: entry });
         },
         emit(e) {
           /* Documents (the plan, reports, small groups…) and the ministry's
