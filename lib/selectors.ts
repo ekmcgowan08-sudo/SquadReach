@@ -115,6 +115,15 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
     for (const f of openChatFlags(d))
       list.push({ icon: 'ph ph-flag', label: f.by + ' flagged the ' + f.threadName + ' thread', meta: 'Read it, then mark it read', href: '/dashboard/chat?t=' + encodeURIComponent(f.thread), trigger: 'chatFlag' });
   }
+  /* Asked from the huddle to cover a post that's still open. */
+  {
+    const meName = servingName(d, m);
+    for (const u of uncoveredPosts(d.huddle))
+      for (const id of d.huddle.subAsks[u.id] ?? []) {
+        if (d.huddle.bench.find((b) => b.id === id)?.name !== meName) continue;
+        list.push({ icon: 'ph ph-hand-waving', label: 'Can you cover ' + u.post + ' tonight?', meta: u.why + ' — tell the leader yes or no', href: '/dashboard/huddle', trigger: 'runSheet' });
+      }
+  }
   const next = d.events.find((e) => eventVisible(e, p));
   if (next) list.push({ icon: 'ph ph-calendar-dots', label: 'Upcoming: ' + next.title, meta: next.date + ' · ' + next.meta, href: '/dashboard/events/' + next.id, trigger: 'event' });
   list.push({ icon: 'ph ph-chart-line-up', label: 'Week ' + d.config.weekNumber + ' summary ready', meta: fmt(pointBase(d.config)) + ' pt base · standings updated', href: '/dashboard', trigger: 'weeklySummary' });

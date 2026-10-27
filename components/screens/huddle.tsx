@@ -156,7 +156,7 @@ export function HuddleScreen() {
       x.subAsks[benchFor] = [...(x.subAsks[benchFor] ?? []), bid];
     });
     api().logActivity('Asked ' + (b?.name ?? 'a volunteer') + ' to cover ' + post);
-    api().say((b?.name.split(' ')[0] ?? 'They') + ' asked to cover ' + post + '.');
+    api().say('Asked. ' + (b?.name.split(' ')[0] ?? 'They') + ' sees it in their notifications if they’re in SquadRise — confirm here once they say yes.');
   };
   const confirm = (bid: string) => {
     if (!benchFor) return;
@@ -459,22 +459,21 @@ export function HuddleScreen() {
                     <Btn variant="ghost" className="px-3" onClick={() => setCrew(c.id, 'out')}>
                       Not coming
                     </Btn>
-                    <Btn
-                      variant="secondary"
-                      className="px-3"
+                    {/* SquadRise sends no texts and keeps no numbers: this opens the
+                        phone's own messages app with the text written, and the
+                        leader picks who it goes to. */}
+                    <a
+                      className="btn btn-secondary px-3"
+                      href={'sms:?&body=' + encodeURIComponent('Hi ' + c.name.split(' ')[0] + ' — are you still on for tonight? You’re on ' + c.post + (c.job ? ' (' + c.job.toLowerCase() + ')' : '') + '. — ' + m.firstName)}
                       onClick={() => {
-                        if (offline) {
-                          api().say('No signal — a text needs a connection.');
-                          return;
-                        }
-                        api().logActivity('Texted ' + c.name + ' about tonight');
-                        api().say(c.name.split(' ')[0] + ' got a text.');
+                        api().logActivity('Opened a text to ' + c.name + ' about tonight');
                         setOpenCrew(null);
                       }}
+                      aria-label={'Text ' + c.name + ' from your phone'}
                     >
                       <Icon name="ph ph-chat-teardrop-text" className="text-[13px]" />
                       Text
-                    </Btn>
+                    </a>
                   </div>
                 </div>
               ) : null}

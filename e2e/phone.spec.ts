@@ -239,3 +239,13 @@ test('closing the night sends the reports set to go when it closes', async ({ pa
   await ready(page);
   await expect(page.getByText('Went out when tonight closed')).toBeVisible();
 });
+
+test('texting a volunteer opens the phone’s own messages, with the text written', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/huddle');
+  await ready(page);
+  const card = page.locator('.sr-card').filter({ has: page.getByRole('button', { name: /( is here| — mark here)$/ }) }).first();
+  await card.locator('button[aria-expanded]').click();
+  const text = page.getByRole('link', { name: /^Text .+ from your phone$/ });
+  await expect(text).toHaveAttribute('href', /^sms:\?&body=Hi%20/);
+});

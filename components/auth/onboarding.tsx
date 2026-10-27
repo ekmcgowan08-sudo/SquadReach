@@ -12,7 +12,9 @@ const ROLES = [
   { id: 'leader', label: 'Ministry leader / staff' }
 ];
 
-export function Onboarding({ code, email, pending }: { code?: string; email: string; pending: { ministry: string; role: string; at: string }[] }) {
+type Asked = { ministry: string; role: string; at: string };
+
+export function Onboarding({ code, email, pending, denied = [] }: { code?: string; email: string; pending: Asked[]; denied?: Asked[] }) {
   const [tab, setTab] = useState<'join' | 'create'>(code || pending.length ? 'join' : 'create');
   const [joinState, join, joining] = useActionState<FormState, FormData>(requestToJoin, {});
   const [createState, create, creating] = useActionState<FormState, FormData>(createMinistry, {});
@@ -29,6 +31,14 @@ export function Onboarding({ code, email, pending }: { code?: string; email: str
           <div className="text-[11.5px] leading-[1.5] text-neutral-500">Once someone approves you, reload this page and you’re in.</div>
         </div>
       ) : null}
+      {denied.map((p, i) => (
+        <div key={'d' + i} role="status" className="flex flex-col gap-1 rounded-lg border border-neutral-700 px-4 py-3">
+          <div className="text-[13px] font-medium leading-[1.3] text-neutral-100">{p.ministry} said no to this request</div>
+          <div className="text-[12px] leading-[1.5] text-neutral-400">
+            You asked to join as {ROLES.find((r) => r.id === p.role)?.label ?? p.role}; a leader turned it down on {p.at}. If that’s a mistake, talk to someone who leads there — you can ask again with their invite code.
+          </div>
+        </div>
+      ))}
       <div className="flex gap-1 self-start rounded-full border border-neutral-800 bg-neutral-900 p-[3px]">
         {(['join', 'create'] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)} aria-pressed={tab === t} className="min-h-11 rounded-full px-[15px] text-[12.5px] font-medium leading-none" style={{ background: tab === t ? 'color-mix(in srgb, var(--color-accent) 22%, transparent)' : 'transparent', color: tab === t ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' }}>
