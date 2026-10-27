@@ -206,6 +206,8 @@ export interface MinistryConfig {
   /** Categories that attendance posting also pays, beyond General. */
   checkinAutoCats: Record<string, boolean>;
   memoryVerses: MemoryVerse[];
+  /** Memory drills by week (lib/bible drillsIn): absent means every week. */
+  drillWeeks?: Partial<Record<'flashcard' | 'firstletter' | 'blank' | 'type' | 'say' | 'scramble', number[]>>;
   penalties: Penalty[];
   gameSetup: GameSetup;
   /** What the public parent board (/b/[parentCode]) shows. */

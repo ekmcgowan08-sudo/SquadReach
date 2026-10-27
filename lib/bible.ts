@@ -22,6 +22,29 @@ export const LICENSE_STATUS: Record<string, string> = {
   NIV: 'Needs license · Biblica'
 };
 
+/** The six ways to drill a memory verse. */
+export const DRILLS = [
+  { id: 'flashcard', label: 'Flashcards' },
+  { id: 'firstletter', label: 'First Letters' },
+  { id: 'blank', label: 'Fill-in-the-Blank' },
+  { id: 'type', label: 'Type from Memory' },
+  { id: 'say', label: 'Say it' },
+  { id: 'scramble', label: 'Scramble' }
+] as const;
+export type DrillId = (typeof DRILLS)[number]['id'];
+
+/** The drills running in a week. A drill with no list runs every week; a
+ *  list names its weeks; an empty list switches it off. If a ministry's
+ *  settings leave a week with none, Flashcards stays so there is always
+ *  a way to practise. */
+export function drillsIn(drillWeeks: Partial<Record<DrillId, number[]>> | undefined, week: number): (typeof DRILLS)[number][] {
+  const on = DRILLS.filter((x) => {
+    const w = drillWeeks?.[x.id];
+    return !w || w.includes(week);
+  });
+  return on.length ? on : [DRILLS[0]];
+}
+
 /** Translations the chapter reader can fetch (bible-api.com, public domain). */
 export const READER_TRANSLATIONS: Record<string, string> = { KJV: 'kjv', ASV: 'asv' };
 

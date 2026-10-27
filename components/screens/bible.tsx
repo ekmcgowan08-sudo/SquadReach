@@ -6,8 +6,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf, tint } from '@/components/ui';
 import {
-  BOOKS, LANGS, LICENSE_STATUS, READER_TRANSLATIONS, bibleStats, blankIdxs, fetchChapter, firstLetters, markAttempt, markSpoken, norm, shuffled,
-  verseForWeek, words, type ChapterVerse, type LangId
+  BOOKS, LANGS, LICENSE_STATUS, READER_TRANSLATIONS, bibleStats, blankIdxs, drillsIn, fetchChapter, firstLetters, markAttempt, markSpoken, norm, shuffled,
+  verseForWeek, words, type ChapterVerse, type DrillId, type LangId
 } from '@/lib/bible';
 import { isoDay } from '@/lib/dates';
 import { holdsSheet } from '@/lib/permissions';
@@ -16,15 +16,7 @@ import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { PracticeRow } from '@/lib/types/model';
 
-type Mode = 'flashcard' | 'firstletter' | 'blank' | 'type' | 'say' | 'scramble';
-const MODES: { id: Mode; label: string }[] = [
-  { id: 'flashcard', label: 'Flashcards' },
-  { id: 'firstletter', label: 'First Letters' },
-  { id: 'blank', label: 'Fill-in-the-Blank' },
-  { id: 'type', label: 'Type from Memory' },
-  { id: 'say', label: 'Say it' },
-  { id: 'scramble', label: 'Scramble' }
-];
+type Mode = DrillId;
 
 /* The verse card runs a touch brighter than the page, as the design has it. */
 const CARD_VARS = {
@@ -58,7 +50,7 @@ export function BibleScreen() {
   const [lang, setLang] = useState<LangId>('en');
   const [version, setVersion] = useState<string>('KJV');
   const [menu, setMenu] = useState(false);
-  const [mode, setMode] = useState<Mode>('flashcard');
+  const [modePick, setMode] = useState<Mode>('flashcard');
   const [hidden, setHidden] = useState<number[]>([]);
   const [revealed, setRevealed] = useState(false);
   const [blanks, setBlanks] = useState<Record<number, string>>({});
@@ -78,6 +70,9 @@ export function BibleScreen() {
   const arr = words(shown);
   const blankSet = new Set(blankIdxs(shown));
   const stats = myBible(d, m);
+  /* Only the drills the ministry runs this week; a pick that was switched off falls back to the first. */
+  const modes = drillsIn(d.config.drillWeeks, d.config.weekNumber);
+  const mode: Mode = modes.some((x) => x.id === modePick) ? modePick : modes[0].id;
 
   const reset = () => {
     setHidden([]);
@@ -220,7 +215,7 @@ export function BibleScreen() {
       </div>
 
       <div className="flex flex-wrap gap-[6px]">
-        {MODES.map((x) => (
+        {modes.map((x) => (
           <button key={x.id} onClick={() => pickMode(x.id)} aria-pressed={mode === x.id} className="min-h-11 rounded-md border px-3 text-[11.5px] font-medium leading-[1.2]" style={pill(mode === x.id)}>
             {x.label}
           </button>

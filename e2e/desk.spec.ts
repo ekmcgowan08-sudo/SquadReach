@@ -273,3 +273,17 @@ test('a challenge set up in the console runs on the phone only in its weeks', as
   await ready(page);
   await expect(page.getByText('Bring a parent night')).toBeVisible();
 });
+
+test('a drill switched off in the console leaves the phone’s Bible screen', async ({ page }) => {
+  await page.goto('/dashboard/bible');
+  await ready(page);
+  await expect(page.getByRole('button', { name: 'Scramble', exact: true })).toBeVisible();
+  await page.goto('/console?tab=bible');
+  await ready(page);
+  await page.getByRole('checkbox', { name: 'Scramble' }).uncheck();
+  await expect(page.getByText('5 of 6 run this week.', { exact: false })).toBeVisible();
+  await page.goto('/dashboard/bible');
+  await ready(page);
+  await expect(page.getByRole('button', { name: 'Flashcards', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Scramble', exact: true })).toHaveCount(0);
+});
