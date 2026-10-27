@@ -22,13 +22,13 @@ import { useApp, useAppApi } from '@/lib/store/provider';
 import type { Team } from '@/lib/types/model';
 import { useNow } from '@/lib/use-now';
 import { useOverlayHost } from '@/lib/use-overlay-host';
+import { abbr, drawScorebug, overlayOf } from '@/lib/scorebug';
 
 const W = 1280;
 const H = 720;
 const PERIODS = ['1', '2', '3', '4', 'OT'];
 const LOOKBACK = 30;
 
-export const abbr = (name: string) => name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || '—';
 const clockText = (sec: number) => {
   const t = Math.max(0, Math.floor(sec));
   return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
@@ -40,11 +40,6 @@ function pickMime(): string {
     if (MediaRecorder.isTypeSupported(m)) return m;
   }
   return '';
-}
-
-function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
 }
 
 interface Clock {
@@ -84,15 +79,16 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
   const recRef = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const pinsRef = useRef<number[]>([]);
-  const drawState = useRef({ teams: [] as Team[], tally: {} as Record<string, number>, clock, period, overlayOn, brand: d.config.ministryName, recording: false });
+  const overlay = useMemo(() => overlayOf(d.config.overlay), [d.config.overlay]);
+  const drawState = useRef({ teams: [] as Team[], tally: {} as Record<string, number>, clock, period, overlayOn, brand: d.config.ministryName, week: d.config.weekNumber, last: '', overlay, recording: false });
 
   const teams = useMemo(() => d.teams.filter((t) => floor.includes(t.id)), [d.teams, floor]);
   const goal = d.config.goalValue || 25;
   const now = useNow(open && (clock.startedAt != null || !!rec), 250);
 
   useEffect(() => {
-    drawState.current = { teams, tally, clock, period, overlayOn, brand: d.config.ministryName, recording: !!rec };
-  }, [teams, tally, clock, period, overlayOn, d.config.ministryName, rec]);
+    drawState.current = { teams, tally, clock, period, overlayOn, brand: d.config.ministryName, week: d.config.weekNumber, last: lastEvent, overlay, recording: !!rec };
+  }, [teams, tally, clock, period, overlayOn, d.config.ministryName, d.config.weekNumber, lastEvent, overlay, rec]);
 
   /* Camera: ask once per open (and again when flipped). Without one the
      scoreboard still records over a plain backdrop. */
@@ -166,40 +162,7 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
         ctx.fillStyle = 'rgba(181,171,252,.8)';
         ctx.fillText('RISE', W - 40, 44);
         ctx.textAlign = 'left';
-        if (st.overlayOn && st.teams.length) {
-          const n = st.teams.length;
-          const cell = 132;
-          const bw = n * cell + 150;
-          const x0 = 36;
-          const y0 = H - 104;
-          rr(ctx, x0, y0, bw, 68, 12);
-          ctx.fillStyle = 'rgba(10,11,20,.82)';
-          ctx.fill();
-          st.teams.forEach((t, i) => {
-            const x = x0 + i * cell;
-            ctx.fillStyle = t.color;
-            ctx.fillRect(x + 12, y0 + 14, 6, 40);
-            ctx.font = '600 20px Inter, sans-serif';
-            ctx.fillStyle = 'rgba(233,233,237,.8)';
-            ctx.fillText(abbr(t.name), x + 28, y0 + 34);
-            ctx.font = '700 30px Inter, sans-serif';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'right';
-            ctx.fillText(String(st.tally[t.id] ?? 0), x + cell - 8, y0 + 35);
-            ctx.textAlign = 'left';
-          });
-          const cx = x0 + n * cell + 10;
-          ctx.fillStyle = 'rgba(145,132,217,.9)';
-          rr(ctx, cx, y0 + 12, 128, 44, 8);
-          ctx.fill();
-          ctx.font = '700 24px Inter, sans-serif';
-          ctx.fillStyle = '#ffffff';
-          ctx.textAlign = 'center';
-          ctx.fillText(clockText(clockSec(st.clock, Date.now())), cx + 64, y0 + 30);
-          ctx.font = '600 12px Inter, sans-serif';
-          ctx.fillText(st.period === 'OT' ? 'OVERTIME' : 'PERIOD ' + st.period, cx + 64, y0 + 49);
-          ctx.textAlign = 'left';
-        }
+        if (st.overlayOn) drawScorebug(ctx, W, H, { teams: st.teams, tally: st.tally, clock: clockText(clockSec(st.clock, Date.now())), period: st.period, brand: st.brand, week: st.week, last: / scores/.test(st.last) ? st.last : '' }, st.overlay);
         if (st.recording) {
           ctx.fillStyle = '#ef4444';
           ctx.beginPath();

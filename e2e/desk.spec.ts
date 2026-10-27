@@ -304,3 +304,15 @@ test('draft day puts one squad on the clock at a time, and a trade is kept in th
   await page.getByRole('button', { name: 'Confirm trade' }).click();
   await expect(page.getByText('Marcus Webb to Red')).toBeVisible();
 });
+
+test('the recording overlay settings move the scoreboard on the preview and stick', async ({ page }) => {
+  await page.goto('/console?tab=overlay');
+  await ready(page);
+  await expect(page.getByRole('img', { name: /bottom, 100% size/ })).toBeVisible();
+  await page.getByRole('group', { name: 'Where it sits' }).getByRole('button', { name: 'Top' }).click();
+  await page.getByRole('checkbox', { name: 'Game clock' }).uncheck();
+  await page.reload();
+  await ready(page);
+  await expect(page.getByRole('img', { name: /top, 100% size/ })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Game clock' })).not.toBeChecked();
+});

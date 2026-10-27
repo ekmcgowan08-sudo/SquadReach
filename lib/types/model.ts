@@ -6,6 +6,7 @@ import type { MembershipRole, Persona, ScoreEntryStatus } from './domain';
 import type { SavedSeason } from '@/lib/season';
 import type { Plan } from '@/lib/plan';
 import type { DraftSettings, TradeRecord } from '@/lib/draft';
+import type { OverlaySettings } from '@/lib/scorebug';
 
 export interface Team {
   id: string;
@@ -211,6 +212,8 @@ export interface MinistryConfig {
   draft?: DraftSettings;
   /** Every squad move made as a trade, newest first. */
   trades?: TradeRecord[];
+  /** What the scoreboard burned into game film shows (lib/scorebug). */
+  overlay?: Partial<OverlaySettings>;
   /** Memory drills by week (lib/bible drillsIn): absent means every week. */
   drillWeeks?: Partial<Record<'flashcard' | 'firstletter' | 'blank' | 'type' | 'say' | 'scramble', number[]>>;
   penalties: Penalty[];
