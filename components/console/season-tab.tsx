@@ -5,12 +5,14 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Section, useSaveConfig } from '@/components/console/kit';
+import { PastSeasons } from '@/components/console/past-seasons';
 import { Btn, Icon } from '@/components/ui';
 import { isoDay, nowMs } from '@/lib/dates';
 import {
   SEASON_GROUPS, SEASON_QUESTIONS, answerLabel, answerOf, nextSeasonName, seasonAnswered, seasonSettings, type SavedSeason, type SeasonAnswer,
   type SeasonAnswers
 } from '@/lib/season';
+import { seasonResult, withResult } from '@/lib/season-results';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
@@ -29,7 +31,10 @@ export function SeasonTab() {
   };
   const makeLive = (s: SavedSeason) => {
     const set = seasonSettings(s.answers, d.config, today);
-    if (!window.confirm('Make ' + s.name + ' the live season? Meeting nights become ' + set.meetingDates!.length + ' weeks from ' + set.meetingDates![0] + '. Points already on the board stay where they are.')) return;
+    const current = d.config.seasonName;
+    const record = current && current !== s.name && !(d.config.seasonResults ?? []).some((r) => r.name === current);
+    if (!window.confirm('Make ' + s.name + ' the live season? Meeting nights become ' + set.meetingDates!.length + ' weeks from ' + set.meetingDates![0] + '. Points already on the board stay where they are.' + (record ? ' How ' + current + ' finished is recorded in Past seasons first.' : ''))) return;
+    if (record) saveConfig((c) => ({ seasonResults: withResult(c.seasonResults, seasonResult(api().data, today)) }), 'Recorded how ' + current + ' finished');
     saveConfig(set, 'Made ' + s.name + ' the live season');
     saveSeasons(d.seasons.map((x) => ({ ...x, active: x.id === s.id })));
     api().say(s.name + ' is live. ' + set.meetingDates!.length + ' nights are on the calendar.');
@@ -104,6 +109,7 @@ export function SeasonTab() {
           ))}
         </div>
       </Section>
+      <PastSeasons />
     </>
   );
 }

@@ -342,6 +342,11 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     config: {
       ministryName: 'Grace Community Students',
       seasonName: 'Fall 2026',
+      seasonResults: [
+        { name: 'Spring 2026', ended: '2026-05-13', champion: 'Blue', championPts: 9240, topScorer: 'Janelle Owen', topPts: 4390, students: 76 },
+        { name: 'Fall 2025', ended: '2025-11-19', champion: 'Red', championPts: 10110, topScorer: 'Isaac Smith', topPts: 4820, students: 82 },
+        { name: 'Fall 2024', ended: '2024-11-20', champion: 'Yellow', championPts: 9875, topScorer: 'Ellison Reid', topPts: 5110, students: 71 }
+      ],
       mediaSpots: [
         { id: 'sp1', kind: 'Mascot bit', title: 'Blaze intro dance', note: '30 seconds, opens the night', color: '#e0a23f' },
         { id: 'sp2', kind: 'Commercial', title: 'Fall retreat promo', note: 'Plays during halftime', color: '#5a9fd6', weeks: [6, 7, 8, 9] },

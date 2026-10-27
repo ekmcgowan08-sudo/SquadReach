@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { WeekBars } from '@/components/charts/week-bars';
 import { Section } from '@/components/console/kit';
+import { PastSeasonsTable } from '@/components/console/past-seasons';
 import { Icon, cx } from '@/components/ui';
 import { isoDay } from '@/lib/dates';
 import { playerStats } from '@/lib/goals';
@@ -19,6 +20,7 @@ import { catOf, computeBadges, eventLabel, teamOf } from '@/lib/selectors';
 import { useApp } from '@/lib/store/provider';
 
 const VIEWS = [
+  { id: 'past', label: 'Past seasons', icon: 'ph ph-clock-counter-clockwise' },
   { id: 'rosters', label: 'Squad rosters', icon: 'ph ph-users-three' },
   { id: 'players', label: 'Player stats', icon: 'ph ph-soccer-ball' },
   { id: 'attendance', label: 'Attendance', icon: 'ph ph-chart-bar' },
@@ -92,6 +94,12 @@ export function ReportViews() {
           ))}
         </div>
       </Section>
+
+      {on('past') ? (
+        <Section title="Past seasons" sub="Champions and top scorers, season by season.">
+          <PastSeasonsTable />
+        </Section>
+      ) : null}
 
       {on('rosters') ? (
         <Section title="Squad rosters" sub="Who is on each squad after the draft and any trades since.">

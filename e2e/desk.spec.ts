@@ -575,3 +575,19 @@ test('reports at a glance: views turn off and stay off, and a week shows its val
   await expect(page.getByRole('heading', { name: 'Squad rosters' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Squad trends' })).toBeVisible();
 });
+
+test('past seasons: record how this season finished, and it shows in Reports', async ({ page }) => {
+  await page.goto('/console?tab=season');
+  await ready(page);
+  const past = page.locator('section', { has: page.getByRole('heading', { name: 'Past seasons' }) });
+  await expect(past.getByRole('cell', { name: 'Fall 2026' })).toHaveCount(0);
+  await past.getByRole('button', { name: 'Record how it finished' }).click();
+  await expect(past.getByRole('cell', { name: 'Fall 2026' })).toBeVisible();
+  await expect(past.getByRole('button', { name: 'Update the record' })).toBeVisible();
+
+  await page.goto('/console?tab=reports');
+  await ready(page);
+  const view = page.locator('section', { has: page.getByRole('heading', { name: 'Past seasons' }) });
+  await expect(view.getByRole('cell', { name: 'Spring 2026' })).toBeVisible();
+  await expect(view.getByRole('cell', { name: 'Fall 2026' })).toBeVisible();
+});

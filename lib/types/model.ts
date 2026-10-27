@@ -249,6 +249,8 @@ export interface MinistryConfig {
   /** Spots to film or play on the night: mascot bits, commercials, hype
    *  videos. Weeks as for challenges: absent means every week. */
   mediaSpots?: MediaSpot[];
+  /** How each season finished, newest first (Console › Season builder). */
+  seasonResults?: SeasonResult[];
   /** Small-group guides saved to start new ones from (Console › Small
    *  groups), beside the built-in templates in lib/small-groups. */
   sgTemplates?: SmallGroupTemplate[];
@@ -452,6 +454,19 @@ export interface SmallGroupScreen {
   items?: string[];
   videoUrl?: string;
   timerSeconds?: number;
+}
+
+/** A season's final standings, kept when the next season goes live (the
+ *  ledger carries on, so this is the record of where it stood). */
+export interface SeasonResult {
+  name: string;
+  /** YYYY-MM-DD the record was made. */
+  ended: string;
+  champion: string;
+  championPts: number;
+  topScorer: string | null;
+  topPts: number;
+  students: number;
 }
 
 export interface SmallGroupTemplate {
