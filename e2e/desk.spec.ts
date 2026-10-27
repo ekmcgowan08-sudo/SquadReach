@@ -632,3 +632,17 @@ test('a category with its own starting base scores at its own number', async ({ 
   await page.getByRole('button', { name: /^General/ }).click();
   await expect(page.getByRole('button', { name: '+1,476' })).toBeVisible();
 });
+
+test('game rules drafted from notes are shown first and used only on request', async ({ page }) => {
+  await page.route('**/api/game/rules-draft', (route) =>
+    route.fulfill({ json: { title: 'Sock wars', rules: 'Each squad starts behind its line.\n\nHit below the shoulders and they sit out.', format: { segment: 'rounds', count: 3, minutes: 4, ends: 'clock', scoring: 'goals', toWin: null, maxPlayers: 8 } } })
+  );
+  await page.goto('/console?tab=scoring');
+  await ready(page);
+  await page.getByLabel('Notes about the game').fill('Throw rolled-up socks. Three rounds of four minutes. Eight a side.');
+  await page.getByRole('button', { name: 'Draft the rules' }).click();
+  await expect(page.getByText('Suggested format: 3 rounds × 4 min')).toBeVisible();
+  await page.getByRole('button', { name: 'Use these rules and format' }).click();
+  await expect(page.getByRole('textbox', { name: /^Rules/ })).toHaveValue(/Each squad starts behind its line/);
+  await expect(page.getByText(/3 rounds × 4 min — the scoreboard runs a clock · 8 on the field\. Players see this/)).toBeVisible();
+});

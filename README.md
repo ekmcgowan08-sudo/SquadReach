@@ -105,8 +105,10 @@ Set both variables or neither. With only one set, the app stays in demo mode.
 Set `ANTHROPIC_API_KEY` on the server. Leaders then get “Ask Claude for
 ideas” on Planner › Roadmap › Suggestions (`/api/planner/suggest`, one ask per
 leader every 30 seconds), and Console › Small groups gets “Build from this
-week’s lesson” (`/api/small-groups/draft`, same limit). The demo is off for
-both unless `PLANNER_AI_IN_DEMO=1`.
+week’s lesson” (`/api/small-groups/draft`, same limit), and Console ›
+Scoring gets “Draft the rules from written material”
+(`/api/game/rules-draft`). The demo is off for all three unless
+`PLANNER_AI_IN_DEMO=1`.
 
 ### Report emails (optional)
 

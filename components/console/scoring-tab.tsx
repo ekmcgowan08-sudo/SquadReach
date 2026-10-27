@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
-import { GameFormatEditor, GamePlaces, GameTemplates, RulesAudience } from '@/components/console/game-setup';
+import { GameFormatEditor, GamePlaces, GameTemplates, RulesAudience, RulesDraft } from '@/components/console/game-setup';
 import { Bracket } from '@/components/game/bracket';
 import { Btn, Icon } from '@/components/ui';
 import { CHECKIN_PRESENT_PTS, fmt, pointBase } from '@/lib/scoring';
@@ -116,6 +116,7 @@ export function ScoringTab() {
       </Section>
 
       <Section title="The game" sub="What players see on Game rules: when, where, how, and the field map.">
+        <RulesDraft />
         <label className="field">
           <span className="sr-label">Rules</span>
           <textarea className="input !min-h-32" defaultValue={gs.rulesText} key={'rules-' + gs.rulesText.length} onBlur={(e) => e.target.value !== gs.rulesText && save((cc) => ({ gameSetup: { ...cc.gameSetup, rulesText: e.target.value } }), 'Updated the game rules')} placeholder="How it works, how it’s scored, what gets a penalty." />

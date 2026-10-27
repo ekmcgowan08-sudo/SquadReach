@@ -207,3 +207,85 @@ export function GameTemplates() {
     </div>
   );
 }
+
+/** Draft the rules from a leader's notes or a rules file, with Claude. The
+ *  draft shows beside what's there; nothing changes until "Use this". */
+export function RulesDraft() {
+  const c = useApp((s) => s.data.config);
+  const save = useSaveConfig();
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [draft, setDraft] = useState<{ title: string; rules: string; format: GameFormat } | null>(null);
+  const go = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const r = await fetch('/api/game/rules-draft', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ notes, gameName: c.gameName }) });
+      const j = await r.json();
+      if (!r.ok || j.error) setError(j.error ?? 'Something went wrong.');
+      else setDraft(j);
+    } catch {
+      setError('The server couldn’t be reached. Try again when you’re online.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-accent-800 p-3" style={{ background: 'color-mix(in srgb, var(--color-accent) 5%, transparent)' }}>
+      <div className="flex items-center gap-2 text-[13px] font-medium text-neutral-100">
+        <Icon name="ph ph-sparkle" className="text-[14px] text-accent-300" />
+        Draft the rules from written material
+      </div>
+      {!draft ? (
+        <>
+          <textarea aria-label="Notes about the game" className="input min-h-[80px] py-2 text-[13px]" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Paste rules, notes, or a description of how it’s played…" />
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="field">
+              <span className="sr-label">Or load a rules file (.txt, .md)</span>
+              <input
+                type="file"
+                accept=".txt,.md,text/plain,text/markdown"
+                className="input py-2"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  if (f.size > 60_000) return setError('That file is too long. Paste the main points instead.');
+                  setNotes(await f.text());
+                }}
+              />
+            </label>
+            <Btn variant="secondary" className="ml-auto px-4" disabled={busy || notes.trim().length < 10} onClick={go}>
+              {busy ? 'Drafting…' : 'Draft the rules'}
+            </Btn>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-[12px] text-neutral-400">Suggested format: {formatSummary(draft.format)}</p>
+          <div className="whitespace-pre-wrap rounded-md bg-neutral-900 p-3 text-[13px] leading-[1.6] text-neutral-200">{draft.rules}</div>
+          <div className="flex flex-wrap gap-2">
+            <Btn
+              className="px-4"
+              onClick={() => {
+                save((cc) => ({ gameSetup: { ...cc.gameSetup, rulesText: draft.rules, format: draft.format } }), 'Used drafted rules for ' + (c.gameName || 'the game'));
+                setDraft(null);
+                setNotes('');
+              }}
+            >
+              Use these rules and format
+            </Btn>
+            <Btn variant="ghost" className="px-3" onClick={() => setDraft(null)}>
+              Discard
+            </Btn>
+          </div>
+        </>
+      )}
+      {error ? (
+        <p role="alert" className="text-[12.5px] text-[#e0a3a3]">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
