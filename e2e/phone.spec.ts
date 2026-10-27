@@ -144,3 +144,29 @@ test('a leader tours the app, previews a brand-new season, and resets the demo',
   await ready(page);
   await expect(page.getByRole('button', { name: /^Preview a brand-new season/ })).toBeVisible();
 });
+
+test('a small group screen starts from an idea, and its picture plays behind the words', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/season-plan?tab=groups');
+  await ready(page);
+  await page.getByRole('button', { name: 'New small group' }).click();
+  const editor = page.getByRole('dialog', { name: 'Small group editor' });
+  await editor.getByLabel('Title').fill('Week 9 · Courage');
+  await editor.getByRole('group', { name: 'Add a screen' }).getByRole('button', { name: /Scripture/ }).click();
+  await editor.getByRole('region', { name: 'Scripture ideas' }).getByRole('button', { name: /^Do not fear/ }).click();
+  await expect(editor.getByLabel('Headline')).toHaveValue('Do not fear');
+  await expect(editor.getByLabel('Reference')).toHaveValue('Joshua 1:9');
+  await editor.getByRole('button', { name: 'Add a picture' }).click();
+  await editor.getByLabel('Search pictures').fill('camp');
+  await editor.getByRole('button', { name: 'Campfire circle' }).click();
+  await editor.getByRole('group', { name: 'Where the picture goes' }).getByRole('button', { name: 'Behind' }).click();
+  await expect(editor.getByText('Fade, so the words stay readable')).toBeVisible();
+  await editor.getByRole('group', { name: 'Add a screen' }).getByRole('button', { name: /Prayer requests/ }).click();
+  await editor.getByRole('button', { name: 'Start blank' }).click();
+  await expect(editor.getByLabel('Headline')).toHaveCount(2);
+  await editor.getByRole('button', { name: 'Save guide' }).click();
+  await page.getByRole('button', { name: /^Play · 2/ }).last().click();
+  const player = page.getByRole('dialog', { name: 'Week 9 · Courage' });
+  await expect(player.getByText('Joshua 1:9')).toBeVisible();
+  await expect(player.getByRole('img', { name: 'Campfire circle' })).toBeVisible();
+});

@@ -477,6 +477,23 @@ export interface SmallGroupScreen {
   items?: string[];
   videoUrl?: string;
   timerSeconds?: number;
+  /** A picture on the screen: a drawn tile from the bank or a shrunk photo. */
+  image?: SmallGroupImage | null;
+}
+
+export interface SmallGroupImage {
+  /** A photo as a data URL; null when it's a bank tile. */
+  src: string | null;
+  bankId: string | null;
+  /** Behind the words (filling the screen), above the headline, or below the words. */
+  layer: 'behind' | 'above' | 'below';
+  /** Where the photo sits in its frame, 0–100 each way. */
+  posX: number;
+  posY: number;
+  /** Percent, 50–160. */
+  scale: number;
+  /** Percent, 20–100 — only used behind the words, so they stay readable. */
+  opacity: number;
 }
 
 /** A season's final standings, kept when the next season goes live (the

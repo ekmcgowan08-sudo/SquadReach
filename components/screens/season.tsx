@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ytEmbedUrl } from '@/components/screens/games';
+import { PictureEditor, PictureFill, PictureFrame } from '@/components/screens/sg-picture';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf, tint } from '@/components/ui';
 import { kindOf } from '@/lib/library';
+import { ideasFor, screenFrom } from '@/lib/small-group-ideas';
 import { sgForTeam } from '@/lib/small-groups';
 import { challengesIn, runningIn } from '@/lib/feeds';
 import { canApprove, canScore } from '@/lib/permissions';
@@ -249,7 +251,12 @@ function Player({ group, onClose }: { group: SmallGroup; onClose: () => void }) 
   const last = i === group.screens.length - 1;
   return createPortal(
     <div className="sr-dark absolute inset-0 z-[90] flex flex-col" style={{ background: ty.bg }} role="dialog" aria-label={group.title}>
-      <div className="flex items-center gap-[10px] px-[18px] pt-4">
+      {sc.image?.layer === 'behind' ? (
+        <div key={'bg-' + sc.id} className="pointer-events-none absolute inset-0 overflow-hidden">
+          <PictureFill image={sc.image} fade iconSize={96} />
+        </div>
+      ) : null}
+      <div className="relative flex items-center gap-[10px] px-[18px] pt-4">
         <button aria-label="Close" onClick={onClose} className="flex h-11 w-11 flex-none items-center justify-center rounded-full border border-neutral-700 text-neutral-200" style={{ background: 'rgba(0,0,0,.25)' }}>
           <Icon name="ph ph-x" className="text-[14px]" />
         </button>
@@ -258,16 +265,17 @@ function Player({ group, onClose }: { group: SmallGroup; onClose: () => void }) 
           {i + 1} / {group.screens.length}
         </div>
       </div>
-      <div className="mx-[18px] mt-3 flex gap-1">
+      <div className="relative mx-[18px] mt-3 flex gap-1">
         {group.screens.map((_, k) => (
           <span key={k} className="h-[3px] flex-1 rounded-full" style={{ background: k <= i ? ty.color : 'rgba(255,255,255,.14)' }} />
         ))}
       </div>
-      <div key={sc.id} className="flex flex-1 animate-[sr-rise_.25s_ease_both] flex-col items-center justify-center gap-[18px] overflow-auto px-[26px] py-6 text-center">
+      <div key={sc.id} className="relative flex flex-1 animate-[sr-rise_.25s_ease_both] flex-col items-center justify-center gap-[18px] overflow-auto px-[26px] py-6 text-center">
         <div className="flex items-center gap-2 rounded-full border px-[14px] py-[6px]" style={{ borderColor: ty.color, color: ty.color }}>
           <Icon name={ty.icon} className="text-[15px]" />
           <div className="text-[10.5px] font-semibold uppercase leading-none tracking-[.1em]">{ty.label}</div>
         </div>
+        {sc.image?.layer === 'above' ? <PictureFrame image={sc.image} /> : null}
         <div className="max-w-[420px] text-[24px] font-medium leading-[1.3] text-neutral-100 text-pretty">{sc.title}</div>
         {sc.type === 'scripture' ? (
           <>
@@ -278,8 +286,9 @@ function Player({ group, onClose }: { group: SmallGroup; onClose: () => void }) 
           <div className="max-w-[460px] text-[16px] leading-[1.5] text-neutral-300 text-pretty">{sc.body}</div>
         ) : null}
         <Interactive sc={sc} color={ty.color} />
+        {sc.image?.layer === 'below' ? <PictureFrame image={sc.image} /> : null}
       </div>
-      <div className="flex gap-[10px] px-[18px] pb-7">
+      <div className="relative flex gap-[10px] px-[18px] pb-7">
         <Btn variant="ghost" className="min-h-12 flex-1 justify-center" onClick={() => setI((x) => Math.max(0, x - 1))} disabled={i === 0}>
           Back
         </Btn>
@@ -330,7 +339,8 @@ function Interactive({ sc, color }: { sc: SmallGroupScreen; color: string }) {
       </div>
     );
   }
-  if (sc.type === 'checklist' && sc.items?.length) {
+  /* A prayer list is ticked off the same way, one request at a time. */
+  if ((sc.type === 'checklist' || sc.type === 'prayer') && sc.items?.length) {
     const done = sc.items.filter((_, k) => checked[k]).length;
     return (
       <div className="flex w-full max-w-[340px] flex-col gap-2">
@@ -345,7 +355,7 @@ function Interactive({ sc, color }: { sc: SmallGroupScreen; color: string }) {
           </button>
         ))}
         <div className="mt-[2px] text-[11px] font-medium leading-none text-neutral-400">
-          {done} of {sc.items.length} done
+          {done} of {sc.items.length} {sc.type === 'prayer' ? 'prayed for' : 'done'}
         </div>
       </div>
     );
@@ -539,17 +549,18 @@ export function GroupForm({ group, onDone }: { group: SmallGroup; onDone: () => 
             <textarea className="input !min-h-14" value={s.body} onChange={(e) => patchScreen(k, { body: e.target.value })} placeholder={s.type === 'scripture' ? 'The verse text' : 'What to say or ask'} aria-label="Body" />
             {s.type === 'scripture' ? <input className="input" value={s.ref ?? ''} onChange={(e) => patchScreen(k, { ref: e.target.value })} placeholder="Ephesians 2:10" aria-label="Reference" /> : null}
             {s.type === 'poll' || s.type === 'wyr' ? <textarea className="input !min-h-14" value={(s.options ?? []).join('\n')} onChange={(e) => patchScreen(k, { options: lines(e.target.value) })} placeholder="One option per line" aria-label="Options" /> : null}
-            {s.type === 'checklist' || s.type === 'spinner' ? <textarea className="input !min-h-14" value={(s.items ?? []).join('\n')} onChange={(e) => patchScreen(k, { items: lines(e.target.value) })} placeholder={s.type === 'spinner' ? 'One name per line' : 'One step per line'} aria-label="Items" /> : null}
+            {s.type === 'checklist' || s.type === 'spinner' || s.type === 'prayer' ? (
+              <textarea className="input !min-h-14" value={(s.items ?? []).join('\n')} onChange={(e) => patchScreen(k, { items: lines(e.target.value) })} placeholder={s.type === 'spinner' ? 'One name per line' : s.type === 'prayer' ? 'One request per line' : 'One step per line'} aria-label="Items" />
+            ) : null}
             {s.type === 'video' ? <input className="input" value={s.videoUrl ?? ''} onChange={(e) => patchScreen(k, { videoUrl: e.target.value })} placeholder="YouTube link" aria-label="Video link" /> : null}
             {s.type === 'timer' ? (
               <input className="input" type="number" min={10} step={10} value={s.timerSeconds ?? 120} onChange={(e) => patchScreen(k, { timerSeconds: Math.max(10, Number(e.target.value) || 120) })} aria-label="Seconds" />
             ) : null}
+            <PictureEditor image={s.image} onChange={(img) => patchScreen(k, { image: img })} />
           </div>
         );
       })}
-      <Btn variant="secondary" className="justify-center" onClick={() => setG({ ...g, screens: [...g.screens, { id: uid(), type: 'thought', title: '', body: '' }] })}>
-        + Add a screen
-      </Btn>
+      <AddScreen onAdd={(sc) => setG({ ...g, screens: [...g.screens, sc] })} />
       <div className="flex gap-2">
         <Btn variant="ghost" className="min-h-12 flex-1 justify-center" onClick={onDone}>
           Cancel
@@ -559,6 +570,56 @@ export function GroupForm({ group, onDone }: { group: SmallGroup; onDone: () => 
         </Btn>
       </div>
     </>
+  );
+}
+
+/* Add a screen by what kind it is, then start from an idea or blank. */
+function AddScreen({ onAdd }: { onAdd: (sc: SmallGroupScreen) => void }) {
+  const [type, setType] = useState<string | null>(null);
+  const ty = type ? typeOf(type) : null;
+  const add = (sc: SmallGroupScreen) => {
+    onAdd(sc);
+    setType(null);
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Add a screen</div>
+      <div className="flex flex-wrap gap-[6px]" role="group" aria-label="Add a screen">
+        {SG_TYPES.map((t) => (
+          <button
+            key={t.id}
+            aria-pressed={type === t.id}
+            onClick={() => setType(type === t.id ? null : t.id)}
+            className="flex min-h-11 items-center gap-[6px] rounded-full border px-3 text-[12px] font-medium leading-none"
+            style={{ borderColor: type === t.id ? t.color : 'var(--color-neutral-800)', color: type === t.id ? 'var(--color-neutral-100)' : 'var(--color-neutral-400)', background: type === t.id ? 'color-mix(in srgb, ' + t.color + ' 16%, transparent)' : 'transparent' }}
+          >
+            <Icon name={t.icon} className="text-[14px]" style={{ color: t.color }} />+ {t.label}
+          </button>
+        ))}
+      </div>
+      {ty ? (
+        <div className="flex flex-col gap-[6px] rounded-lg border border-neutral-800 p-[10px]" role="region" aria-label={ty.label + ' ideas'}>
+          <div className="flex items-center gap-2">
+            <Icon name={ty.icon} className="text-[15px]" style={{ color: ty.color }} />
+            <div className="flex-1 text-[13px] font-medium text-neutral-100">{ty.label} · start from an idea</div>
+            <button aria-label="Close ideas" onClick={() => setType(null)} className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-400">
+              <Icon name="ph ph-x" className="text-[13px]" />
+            </button>
+          </div>
+          {ideasFor(ty.id).map((idea, n) => (
+            <button key={n} onClick={() => add(screenFrom(ty.id, uid(), idea))} className="flex min-h-11 flex-col items-start gap-[3px] rounded-md border border-neutral-800 px-3 py-[9px] text-left sr-hover">
+              <span className="text-[12.5px] font-medium leading-[1.3] text-neutral-100">{idea.title}</span>
+              {idea.body || idea.options || idea.items ? (
+                <span className="text-[11.5px] leading-[1.4] text-neutral-500">{idea.body || (idea.options ?? idea.items ?? []).join(' · ')}</span>
+              ) : null}
+            </button>
+          ))}
+          <Btn variant="ghost" className="justify-center" onClick={() => add(screenFrom(ty.id, uid()))}>
+            Start blank
+          </Btn>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
