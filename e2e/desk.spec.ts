@@ -205,3 +205,15 @@ test('Season & night opens on the season, and a month card opens its night', asy
   await expect(page).toHaveURL(/night=2026-10-21/);
   await expect(page.getByText('Service order')).toBeVisible();
 });
+
+test('Roadmap follows one class down the plan, a repeated grade taking two years', async ({ page }) => {
+  await page.goto('/planner/roadmap?view=journey');
+  await ready(page);
+  await expect(page.getByRole('heading', { name: 'The class of 2033' })).toBeVisible();
+  await expect(page.getByText('7 years inside the plan · 6th through 12th')).toBeVisible();
+  await page.getByText('Repeats a grade').locator('..').getByRole('button', { name: '8th' }).click();
+  await expect(page.getByText('repeating 8th')).toBeVisible();
+  await expect(page.getByText('7 years inside the plan · 6th through 11th')).toBeVisible();
+  await page.getByRole('button', { name: 'Board', exact: true }).click();
+  await expect(page.getByTitle('The class of 2033 is in 9th grade')).toBeVisible();
+});

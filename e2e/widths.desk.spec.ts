@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 import { as, ready } from './helpers';
 
 const DESK = [
-  '/planner', '/planner/prep', '/planner/prep?view=recap', '/planner/people', '/planner/roadmap', '/planner/roadmap?view=checks', '/planner/year', '/planner/season', '/planner/season?view=month', '/planner/season?view=night', '/planner/coverage',
+  '/planner', '/planner/prep', '/planner/prep?view=recap', '/planner/people', '/planner/roadmap', '/planner/roadmap?view=journey', '/planner/roadmap?density=one', '/planner/roadmap?view=checks', '/planner/year', '/planner/season', '/planner/season?view=month', '/planner/season?view=night', '/planner/coverage',
   '/planner/liturgical', '/planner/live', '/planner/live?tab=run', '/planner/live?tab=results', '/planner/settings', '/planner/setup', '/planner/one-pager',
   '/console', '/console?tab=season', '/console?tab=teams', '/console?tab=scoring', '/console?tab=huddle', '/console?tab=reports', '/console?tab=people', '/console?tab=walkthrough'
 ];

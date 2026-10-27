@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { demoPlan } from '@/lib/data/seed-plan';
 import { advent1, churchYear, easter, weekdayOf } from '@/lib/liturgical';
-import { nightsOf, orderOf, seasonsOf, teachingByNight, timings, yearOf } from '@/lib/plan';
+import { classesInPlan, emptyPlan, gradeIn, journeyYears, nightsOf, orderOf, seasonsOf, teachingByNight, timings, yearOf } from '@/lib/plan';
 
 describe('the church year', () => {
   it('computes Easter for published dates', () => {
@@ -77,5 +77,21 @@ describe('the plan', () => {
     expect(tm.rows.find((r) => r.id === 'teaching')!.off).toBe(6);
     expect(tm.net).toBe(6 - 6 + 3);
     expect(orderOf(p, '2027-01-06').length).toBe(p.blocks.filter((b) => b.on).length);
+  });
+});
+
+describe('following a class', () => {
+  const p = emptyPlan(2026);
+  it('names the classes in the plan, newest first, and their grade each year', () => {
+    expect(classesInPlan(p)).toEqual([2033, 2032, 2031, 2030, 2029, 2028, 2027]);
+    expect(gradeIn(p, 2033, 0)).toBe(6);
+    expect(gradeIn(p, 2033, 6)).toBe(12);
+    expect(gradeIn(p, 2030, 0)).toBe(9);
+  });
+  it('walks one student through their years, a repeated grade taking two', () => {
+    expect(journeyYears(p, 2033, { enter: 6, last: 12, repeat: null }).map((x) => x.y + ':' + x.grade)).toEqual(['0:6', '1:7', '2:8', '3:9', '4:10', '5:11', '6:12']);
+    expect(journeyYears(p, 2033, { enter: 8, last: 10, repeat: null }).map((x) => x.y + ':' + x.grade)).toEqual(['2:8', '3:9', '4:10']);
+    expect(journeyYears(p, 2033, { enter: 6, last: 12, repeat: 8 }).map((x) => x.y + ':' + x.grade)).toEqual(['0:6', '1:7', '2:8', '3:8', '4:9', '5:10', '6:11']);
+    expect(journeyYears(p, 2030, { enter: 6, last: 12, repeat: null }).map((x) => x.y + ':' + x.grade)).toEqual(['0:9', '1:10', '2:11', '3:12']);
   });
 });

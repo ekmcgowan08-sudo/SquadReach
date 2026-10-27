@@ -4,6 +4,7 @@
    seasons, the debrief questions and the volunteer roles. Changes apply for
    everyone on staff; each is one undo step and lands in Recent changes. */
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useSaveConfig } from '@/components/console/kit';
 import { PageHead, Panel, Toggle, UndoButtons, usePlanSave } from '@/components/planner/kit';
@@ -38,7 +39,8 @@ function templateReach(p: Plan) {
 export function PlannerSettings() {
   const p = useApp((s) => s.data.plan);
   const roles = useApp((s) => s.data.config.cycle.serveRoles);
-  const [panel, setPanel] = useState<PanelId>('basics');
+  const asked = useSearchParams().get('panel');
+  const [panel, setPanel] = useState<PanelId>(() => PANELS.find((x) => x.id === asked)?.id ?? 'basics');
   const counts: Record<PanelId, number | null> = {
     basics: null,
     lanes: p.lanes.filter((l) => l.on).length,

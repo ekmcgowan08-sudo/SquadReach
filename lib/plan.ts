@@ -340,3 +340,28 @@ export const clockOf = (mins: number) => {
   const h = Math.floor(mins / 60) % 24;
   return ((h + 11) % 12) + 1 + ':' + String(mins % 60).padStart(2, '0') + (h >= 12 ? 'pm' : 'am');
 };
+
+/** A class, named by the spring it graduates: its grade in plan year y. */
+export const gradeIn = (p: Plan, classOf: number, y: number) => 12 - (classOf - (p.settings.startYear + y + 1));
+
+/** The classes in the ministry in year one, newest (the one that sees all
+ *  seven years from the entry grade) first. */
+export function classesInPlan(p: Plan): number[] {
+  const newest = p.settings.startYear + 1 + (12 - p.settings.entryGrade);
+  return Array.from({ length: 12 - p.settings.entryGrade + 1 }, (_, i) => newest - i);
+}
+
+export const ordinal = (n: number) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+
+/** One student's years inside the plan: from the grade they join in to the
+ *  last grade they're here for, a repeated grade taking two years. Years
+ *  before or after the plan's seven drop off. */
+export function journeyYears(p: Plan, classOf: number, from: { enter: number; last: number; repeat: number | null }): { y: number; grade: number }[] {
+  const startY = from.enter - gradeIn(p, classOf, 0);
+  const grades: number[] = [];
+  for (let g = from.enter; g <= from.last; g++) {
+    grades.push(g);
+    if (g === from.repeat) grades.push(g);
+  }
+  return grades.map((grade, i) => ({ y: startY + i, grade })).filter((x) => x.y >= 0 && x.y <= 6);
+}

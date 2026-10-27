@@ -10,7 +10,7 @@ const PHONE = [
   '/dashboard/library', '/dashboard/media', '/dashboard/notifications', '/dashboard/settings', '/dashboard/follow-ups', '/dashboard/season-plan', '/dashboard/walkthrough'
 ];
 const DESK = [
-  '/planner', '/planner/prep', '/planner/prep?view=recap', '/planner/people', '/planner/roadmap', '/planner/roadmap?view=checks', '/planner/roadmap?view=suggestions', '/planner/year', '/planner/season', '/planner/season?view=month', '/planner/season?view=night', '/planner/coverage',
+  '/planner', '/planner/prep', '/planner/prep?view=recap', '/planner/people', '/planner/roadmap', '/planner/roadmap?view=journey', '/planner/roadmap?density=one', '/planner/roadmap?view=checks', '/planner/roadmap?view=suggestions', '/planner/year', '/planner/season', '/planner/season?view=month', '/planner/season?view=night', '/planner/coverage',
   '/planner/liturgical', '/planner/live', '/planner/live?tab=run', '/planner/settings', '/planner/setup', '/planner/one-pager', '/console', '/console?tab=season', '/console?tab=teams',
   '/console?tab=scoring', '/console?tab=huddle', '/console?tab=reports', '/console?tab=people', '/console?tab=walkthrough', '/projector', '/live/room'
 ];

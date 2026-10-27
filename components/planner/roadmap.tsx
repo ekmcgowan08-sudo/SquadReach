@@ -3,6 +3,7 @@
    years and lanes (or Alt+arrow from the keyboard); every change is one
    undo step. Checks and Suggestions read the plan and say why in plain
    words; Publish shows exactly what the app will start or stop showing. */
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { ItemPanel, KINDS } from '@/components/planner/item-panel';
@@ -11,12 +12,46 @@ import { Btn, Icon, cx } from '@/components/ui';
 import { advent1, easter } from '@/lib/liturgical';
 import type { AiSuggestion } from '@/lib/plan-ai';
 import { planChecks, publishDiff, signature, suggestions, type Health } from '@/lib/plan-insights';
-import { MONTHS_FROM_AUG, laneColor, monthIndex, nightsOf, teachingOf, yearLabel, yearOf, type PlanItem } from '@/lib/plan';
+import { MONTHS_FROM_AUG, classesInPlan, gradeIn, journeyYears, laneColor, monthIndex, nightsOf, ordinal, teachingOf, yearLabel, yearOf, type Plan, type PlanItem } from '@/lib/plan';
 import { isoDay, nowMs } from '@/lib/dates';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
-type View = 'board' | 'checks' | 'suggestions';
+type View = 'board' | 'journey' | 'checks' | 'suggestions';
+type Density = 'one' | 'compact' | 'standard' | 'detail';
+const DENSITIES: [Density, string][] = [
+  ['one', 'One screen'],
+  ['compact', 'Compact'],
+  ['standard', 'Standard'],
+  ['detail', 'Detail']
+];
+
+/** The class a leader is following across the plan: from the URL, or the
+ *  newest class (the one that sees all seven years). */
+function useClassOf(p: Plan): [number, (c: number) => void] {
+  const params = useSearchParams();
+  const router = useRouter();
+  const classes = classesInPlan(p);
+  const asked = Number(params.get('class'));
+  const set = (c: number) => {
+    const q = new URLSearchParams(params.toString());
+    q.set('class', String(c));
+    router.replace('/planner/roadmap?' + q.toString());
+  };
+  return [classes.includes(asked) ? asked : classes[0], set];
+}
+
+function ClassPicker({ p, value, onChange }: { p: Plan; value: number; onChange: (c: number) => void }) {
+  return (
+    <select className="input !min-h-9 w-auto !py-0 text-[13px]" value={value} onChange={(e) => onChange(Number(e.target.value))} aria-label="Follow a class">
+      {classesInPlan(p).map((c) => (
+        <option key={c} value={c}>
+          Follow the class of {c}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function Roadmap() {
   const p = useApp((s) => s.data.plan);
@@ -27,7 +62,13 @@ export function Roadmap() {
   const [flash, setFlash] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(params.get('publish') === '1');
   const diff = publishDiff(p);
-  const go = (v: View) => router.replace('/planner/roadmap' + (v === 'board' ? '' : '?view=' + v));
+  const go = (v: View) => {
+    const q = new URLSearchParams(params.toString());
+    q.delete('publish');
+    if (v === 'board') q.delete('view');
+    else q.set('view', v);
+    router.replace('/planner/roadmap' + (q.toString() ? '?' + q.toString() : ''));
+  };
   const show = (y: number) => {
     go('board');
     setFlash(y);
@@ -50,6 +91,7 @@ export function Roadmap() {
               {(
                 [
                   ['board', 'Board'],
+                  ['journey', 'Journey'],
                   ['checks', 'Checks' + (open_ ? ' · ' + open_ : '')],
                   ['suggestions', 'Suggestions' + (sugg.length ? ' · ' + sugg.length : '')]
                 ] as const
@@ -70,7 +112,7 @@ export function Roadmap() {
           </div>
         }
       />
-      {view === 'board' ? <Board onOpen={setOpen} flash={flash} /> : view === 'checks' ? <Checks onOpen={setOpen} onShow={show} /> : <Suggestions onShow={show} />}
+      {view === 'board' ? <Board onOpen={setOpen} flash={flash} /> : view === 'journey' ? <Journey onOpen={setOpen} /> : view === 'checks' ? <Checks onOpen={setOpen} onShow={show} /> : <Suggestions onShow={show} />}
       {open ? <ItemPanel id={open} onClose={() => setOpen(null)} onShow={show} /> : null}
       {publishing ? <PublishPanel onClose={() => setPublishing(false)} /> : null}
     </>
@@ -89,6 +131,17 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
     end: () => (setDrag(null), setOver(null))
   });
   const [hideDrafts, setHideDrafts] = useState(false);
+  const [classOf, setClassOf] = useClassOf(p);
+  const params = useSearchParams();
+  const router = useRouter();
+  const density = (DENSITIES.find(([id]) => id === params.get('density'))?.[0] ?? 'standard') as Density;
+  const setDensity = (v: Density) => {
+    const q = new URLSearchParams(params.toString());
+    if (v === 'standard') q.delete('density');
+    else q.set('density', v);
+    router.replace('/planner/roadmap' + (q.toString() ? '?' + q.toString() : ''));
+  };
+  const [church, setChurch] = useState(p.settings.liturgical);
   const lanes = p.lanes.filter((l) => l.on);
   const sy = p.settings.startYear;
   const years = [0, 1, 2, 3, 4, 5, 6];
@@ -129,12 +182,26 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
           </Btn>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-4 text-[11.5px] text-neutral-500">
-        <span>Drag an item to another year or lane, or focus it and press Alt + arrows.</span>
-        <label className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="Density" className="flex rounded-md border border-neutral-800 p-[3px]">
+          {DENSITIES.map(([id, label]) => (
+            <button key={id} onClick={() => setDensity(id)} aria-pressed={density === id} className={cx('min-h-8 rounded-[6px] px-3 text-[12.5px]', density === id ? 'bg-neutral-800 font-medium text-neutral-100' : 'text-neutral-400 hover:text-neutral-200')}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <ClassPicker p={p} value={classOf} onChange={setClassOf} />
+        <button onClick={() => setChurch(!church)} aria-pressed={church} className={cx('min-h-9 rounded-md px-3 text-[12.5px] font-medium', church ? 'text-accent-200' : 'text-neutral-400')}>
+          Church year
+        </button>
+        <Link href="/planner/settings?panel=lanes" className="min-h-9 content-center px-1 text-[12.5px] font-medium text-accent-300">
+          Lanes
+        </Link>
+        <label className="flex items-center gap-2 text-[12px] text-neutral-400">
           <input type="checkbox" checked={hideDrafts} onChange={(e) => setHideDrafts(e.target.checked)} />
           Hide drafts
         </label>
+        <span className="text-[11.5px] text-neutral-500">Drag an item to another year or lane, or focus it and press Alt + arrows.</span>
       </div>
       <div className="overflow-x-auto rounded-lg border border-neutral-800">
         <div className="grid min-w-[1180px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(140px, 1fr))' }}>
@@ -142,16 +209,24 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
           {years.map((y) => {
             const nights = nightsOf(p, y).length;
             const w = teachingOf(p, y).reduce((n, s) => n + s.size, 0);
+            const grade = gradeIn(p, classOf, y);
             return (
               <div key={y} className={cx('border-b border-l border-neutral-800 px-3 py-2 transition-colors', flash === y && 'bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)]')}>
-                <div className="text-[13px] font-medium text-neutral-100">{yearLabel(sy, y)}</div>
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 text-[13px] font-medium text-neutral-100">{yearLabel(sy, y)}</span>
+                  {grade >= p.settings.entryGrade && grade <= 12 ? (
+                    <span className="rounded-[4px] bg-neutral-800 px-[6px] py-[2px] text-[10.5px] font-semibold text-neutral-200" title={'The class of ' + classOf + ' is in ' + ordinal(grade) + ' grade'}>
+                      {ordinal(grade)}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="text-[10.5px] text-neutral-500">
                   Year {y + 1} · {w}/{nights} nights taught
                 </div>
               </div>
             );
           })}
-          {p.settings.liturgical ? (
+          {church ? (
             <>
               <div className="sticky left-0 z-10 border-b border-neutral-800 bg-surface px-3 py-2 text-[12px] text-neutral-400">Church year</div>
               {years.map((y) => (
@@ -162,7 +237,7 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
             </>
           ) : null}
           {lanes.map((l) => (
-            <Lane key={l.id} lane={l}>
+            <Lane key={l.id} lane={l} count={p.items.filter((i) => i.lane === l.id).length}>
               {years.map((y) => {
                 const cell = l.id + '|' + y;
                 const items = p.items.filter((i) => i.lane === l.id && i.year === y && !(hideDrafts && i.status === 'draft'));
@@ -182,7 +257,7 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                       setDrag(null);
                       setOver(null);
                     }}
-                    className={cx('group relative flex min-h-[64px] flex-col gap-1 border-b border-l border-neutral-800 p-[6px]', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === cell && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500', flash === y && 'bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]')}
+                    className={cx('group relative flex flex-col gap-1 border-b border-l border-neutral-800 p-[6px]', density === 'one' || density === 'compact' ? 'min-h-[40px]' : 'min-h-[64px]', drag && 'outline outline-1 -outline-offset-2 outline-neutral-800', over === cell && 'bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] outline-accent-500', flash === y && 'bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]')}
                   >
                     {items.map((it) => (
                       <button
@@ -200,7 +275,8 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                         }}
                         onClick={() => onOpen(it.id)}
                         onKeyDown={(e) => onKey(e, it)}
-                        className={cx('flex items-start gap-[6px] rounded-md px-2 py-[5px] text-left text-[11.5px] leading-[1.3]', HOLDABLE, it.status === 'draft' && 'italic')}
+                        aria-label={density === 'one' ? it.title : undefined}
+                        className={cx('flex items-start gap-[6px] text-left leading-[1.3]', density === 'one' ? 'h-[12px] rounded-[3px] p-0' : density === 'compact' ? 'rounded-[5px] px-2 py-[3px] text-[11px]' : 'rounded-md px-2 py-[5px] text-[11.5px]', HOLDABLE, it.status === 'draft' && 'italic')}
                         style={{
                           background: it.status === 'confirmed' ? 'color-mix(in srgb, ' + laneColor(l.hue) + ' 22%, var(--color-neutral-900))' : 'transparent',
                           border: '1px ' + (it.status === 'draft' ? 'dashed' : 'solid') + ' ' + laneColor(l.hue),
@@ -209,18 +285,34 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
                         }}
                         title={it.title + ' — ' + KINDS[it.kind].label + ' · ' + it.size + ' ' + KINDS[it.kind].size.toLowerCase() + (it.month !== undefined ? ' · from ' + MONTHS_FROM_AUG[it.month] : '')}
                       >
-                        <Icon name={'ph ' + KINDS[it.kind].icon} className="mt-[1px] flex-none text-[11px] text-neutral-400" />
-                        {/* One line each, cut short rather than wrapped (the full title is on hover and read aloud). */}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate">{it.title}</span>
-                          {it.kind === 'series' || it.suggested ? (
-                            <span className="block truncate text-[10.5px] not-italic text-neutral-300">
-                              {it.kind === 'series' ? it.size + ' weeks' : null}
-                              {it.kind === 'series' && it.suggested ? ' · ' : null}
-                              {it.suggested ? <span className="text-accent-300">suggested</span> : null}
-                            </span>
-                          ) : null}
-                        </span>
+                        {density === 'one' ? null : density === 'compact' ? (
+                          <span className="min-w-0 flex-1 truncate">{it.title}</span>
+                        ) : (
+                        <>
+                          <Icon name={'ph ' + KINDS[it.kind].icon} className="mt-[1px] flex-none text-[11px] text-neutral-400" />
+                          {/* One line each, cut short rather than wrapped (the full title is on hover and read aloud). */}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate">{it.title}</span>
+                            {it.kind === 'series' || it.suggested ? (
+                              <span className="block truncate text-[10.5px] not-italic text-neutral-300">
+                                {it.kind === 'series' ? it.size + ' weeks' : null}
+                                {it.kind === 'series' && it.suggested ? ' · ' : null}
+                                {it.suggested ? <span className="text-accent-300">suggested</span> : null}
+                              </span>
+                            ) : null}
+                            {density === 'detail' ? (
+                              <>
+                                <span className="block text-[10.5px] not-italic text-neutral-400">
+                                  {KINDS[it.kind].label}
+                                  {it.month !== undefined ? ' · from ' + MONTHS_FROM_AUG[it.month] : ''}
+                                  {it.status === 'draft' ? ' · draft' : ''}
+                                </span>
+                                {it.bigIdea || it.notes ? <span className="mt-[2px] line-clamp-2 block text-[10.5px] not-italic text-neutral-300">{it.bigIdea || it.notes}</span> : null}
+                              </>
+                            ) : null}
+                          </span>
+                        </>
+                        )}
                       </button>
                     ))}
                     <button onClick={() => add(l.id, y)} aria-label={'Add to ' + l.short + ' in ' + yearLabel(sy, y)} className="mt-auto self-start rounded px-1 text-[11px] text-neutral-500 opacity-0 group-hover:opacity-100 focus:opacity-100">
@@ -239,18 +331,99 @@ function Board({ onOpen, flash }: { onOpen: (id: string) => void; flash: number 
 
 const fmtShort = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-function Lane({ lane, children }: { lane: { id: string; name: string; hue: number }; children: React.ReactNode }) {
+function Lane({ lane, count, children }: { lane: { id: string; name: string; hue: number }; count: number; children: React.ReactNode }) {
   return (
     <>
       <div className="sticky left-0 z-10 flex items-start gap-2 border-b border-neutral-800 bg-surface px-3 py-2">
         <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: laneColor(lane.hue) }} />
-        <span className="text-[12px] leading-[1.3] text-neutral-300">{lane.name}</span>
+        <span>
+          <span className="block text-[12px] leading-[1.3] text-neutral-300">{lane.name}</span>
+          <span className="block text-[10.5px] text-neutral-500">{count ? count + ' across the plan' : 'nothing yet'}</span>
+        </span>
       </div>
       {children}
     </>
   );
 }
 
+/** One class read down the plan instead of across it: only the years a
+ *  student is actually here for, at the grade they're in. */
+function Journey({ onOpen }: { onOpen: (id: string) => void }) {
+  const p = useApp((s) => s.data.plan);
+  const [classOf, setClassOf] = useClassOf(p);
+  const entry = p.settings.entryGrade;
+  const grades = Array.from({ length: 12 - entry + 1 }, (_, i) => entry + i);
+  const [enter, setEnter] = useState(entry);
+  const [last, setLast] = useState(12);
+  const [repeat, setRepeat] = useState<number | null>(null);
+  const years = journeyYears(p, classOf, { enter, last: Math.max(enter, last), repeat });
+  const lanes = new Map(p.lanes.map((l) => [l.id, l]));
+  const row = (label: string, opts: { v: number | null; label: string }[], value: number | null, set: (v: number | null) => void) => (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-[110px] text-[11px] font-semibold uppercase tracking-[.1em] text-neutral-500">{label}</span>
+      {opts.map((o) => (
+        <button key={String(o.v)} onClick={() => set(o.v)} aria-pressed={value === o.v} className={cx('min-h-10 min-w-[52px] rounded-md border px-3 text-[13px]', value === o.v ? 'border-accent-500 text-accent-100' : 'border-neutral-800 text-neutral-300')} style={{ background: value === o.v ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : undefined }}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="max-w-[620px] flex-1">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="text-[22px] font-medium text-neutral-100">The class of {classOf}</h2>
+            <span className="text-[13px] text-neutral-500">
+              {years.length} {years.length === 1 ? 'year' : 'years'} inside the plan{years.length ? ' · ' + ordinal(years[0].grade) + ' through ' + ordinal(years[years.length - 1].grade) : ''}
+            </span>
+          </div>
+          <p className="mt-1 text-[14px] leading-[1.6] text-neutral-400 text-pretty">One class read down the plan, not across it. It’s the same plan as the board — what changes is that a student only ever sees the years they’re actually here for.</p>
+        </div>
+        <ClassPicker p={p} value={classOf} onChange={setClassOf} />
+      </div>
+      <div className="flex flex-col gap-2">
+        {row('Enters in', grades.map((g) => ({ v: g, label: ordinal(g) })), enter, (v) => setEnter(v ?? entry))}
+        {row('Last grade here', grades.map((g) => ({ v: g, label: ordinal(g) })), last, (v) => setLast(v ?? 12))}
+        {row('Repeats a grade', [{ v: null, label: 'No' }, ...grades.map((g) => ({ v: g, label: ordinal(g) }))], repeat, setRepeat)}
+      </div>
+      {!years.length ? <div className="text-[13px] text-neutral-500">This class isn’t here for any of the plan’s seven years with those grades.</div> : null}
+      {years.map(({ y, grade }, i) => {
+        const items = p.items.filter((it) => it.year === y);
+        const taught = teachingOf(p, y).reduce((n, s) => n + s.size, 0);
+        return (
+          <section key={y + ':' + i} className="sr-card flex flex-col gap-3 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-[4px] bg-neutral-800 px-[7px] py-[2px] text-[11.5px] font-semibold text-neutral-200">{ordinal(grade)}</span>
+              <span className="text-[15px] font-medium text-neutral-100">Year {y + 1}</span>
+              <span className="text-[13px] text-neutral-500">{yearLabel(p.settings.startYear, y)}</span>
+              {i > 0 && years[i - 1].grade === grade ? <span className="text-[12px] text-accent-300">repeating {ordinal(grade)}</span> : null}
+              <span className="flex-1" />
+              <span className="text-[12.5px] text-neutral-400">
+                {taught} of {nightsOf(p, y).length} teaching weeks
+              </span>
+            </div>
+            {!items.length ? <div className="text-[12.5px] text-neutral-500">Nothing planned for this year yet.</div> : null}
+            <div className="flex flex-wrap gap-2">
+              {items.map((it) => {
+                const l = lanes.get(it.lane);
+                return (
+                  <button key={it.id} onClick={() => onOpen(it.id)} className={cx('flex flex-col rounded-md border border-neutral-800 px-3 py-[6px] text-left', it.status === 'draft' && 'border-dashed')} style={{ boxShadow: 'inset 3px 0 0 ' + laneColor(l?.hue ?? 0) }}>
+                    <span className="text-[13.5px] text-neutral-100">{it.title}</span>
+                    <span className="text-[11.5px] text-neutral-500">
+                      {l?.short ?? it.lane} · {KINDS[it.kind].label}
+                      {it.status === 'draft' ? ' · draft' : ''}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
 
 function Checks({ onOpen, onShow }: { onOpen: (id: string) => void; onShow: (y: number) => void }) {
   const p = useApp((s) => s.data.plan);
