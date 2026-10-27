@@ -44,7 +44,7 @@ export function NightRecapScreen({ bare }: { bare?: boolean } = {}) {
 }
 
 /* ── attendance ──────────────────────────────────────────────────────── */
-function AttendanceTab() {
+export function AttendanceTab({ stats: showStats = true }: { stats?: boolean } = {}) {
   const { d, m, iso, night, t, now } = useCycle();
   const api = useAppApi();
   const saveNight = useNightSave();
@@ -95,11 +95,13 @@ function AttendanceTab() {
 
   return (
     <>
-      <div className="flex gap-[9px]">
-        <Stat label="Here" value={open ? String(stats.here) : '–'} hint={open ? 'of ' + stats.total : 'not open yet'} />
-        <Stat label="At the door" value={open ? String(stats.qr) : '–'} hint="QR or kiosk" />
-        <Stat label="New" value={String(stats.visitors)} hint="first time" />
-      </div>
+      {showStats ? (
+        <div className="flex gap-[9px]">
+          <Stat label="Here" value={open ? String(stats.here) : '–'} hint={open ? 'of ' + stats.total : 'not open yet'} />
+          <Stat label="At the door" value={open ? String(stats.qr) : '–'} hint="QR or kiosk" />
+          <Stat label="New" value={String(stats.visitors)} hint="first time" />
+        </div>
+      ) : null}
 
       {!open ? (
         <div className="text-[12px] leading-[1.5] text-neutral-400 text-pretty">
@@ -225,7 +227,8 @@ function AttendanceTab() {
 }
 
 /* ── follow-ups ──────────────────────────────────────────────────────── */
-function FollowupsTab() {
+/** Grouped: one section per kind with its own done count (the desk). */
+export function FollowupsTab({ grouped }: { grouped?: boolean } = {}) {
   const { d, iso, t, now, me } = useCycle();
   const api = useAppApi();
   const saveNight = useNightSave();
@@ -250,6 +253,69 @@ function FollowupsTab() {
     return fam && num.length >= 7 ? { who: fam.guardian || 'the family', num } : null;
   };
 
+  const item = (f: FollowUp, i: number) => {
+    const isOpen = openId === f.id;
+    const text = drafts[f.id] ?? f.text;
+    const phone = phoneFor(f);
+    return (
+      <div key={f.id} className={grouped ? 'flex gap-[11px] py-3' : 'sr-card flex gap-[11px] px-[14px] py-3'} style={grouped && i ? { borderTop: '1px solid var(--color-divider)' } : undefined}>
+        <button onClick={() => !f.private && mark(f, !f.done)} disabled={f.private} aria-pressed={f.done} aria-label={f.done ? 'Mark not done' : 'Mark done'} className="flex h-11 w-7 flex-none items-start justify-center pt-[1px]">
+          <Tick on={f.done} locked={f.private} />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="flex-1 text-[13px] font-medium leading-[1.3]" style={{ color: f.done ? 'var(--color-neutral-500)' : 'var(--color-neutral-100)', textDecoration: f.done ? 'line-through' : 'none' }}>
+              {f.title}
+            </span>
+            <span className="flex-none text-[10.5px]" style={{ color: f.mine ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
+              {f.mine ? 'You' : f.owner ?? 'Leaders'}
+            </span>
+          </div>
+          <div className="mt-[3px] text-[11px] leading-[1.45] text-neutral-500 text-pretty">
+            {FU_KINDS.find((k) => k.id === f.kind)?.label} · {f.sub}
+          </div>
+          {!f.private && !f.done && f.draft ? (
+            <button onClick={() => setOpenId(isOpen ? null : f.id)} aria-expanded={isOpen} className="mt-[6px] min-h-8 text-[11.5px] font-medium text-accent-300">
+              {isOpen ? 'Close draft' : 'Draft a message'}
+            </button>
+          ) : null}
+          {isOpen ? (
+            <div className="mt-2 flex flex-col gap-2">
+              <textarea className="input min-h-[88px] py-2 text-[12.5px] leading-[1.5]" value={text} onChange={(e) => setDrafts((x) => ({ ...x, [f.id]: e.target.value }))} aria-label={'Message for ' + f.title} />
+              <div className="flex gap-2">
+                {phone ? (
+                  <Btn
+                    className="flex-1 justify-center text-[12px]"
+                    href={'sms:' + phone.num + '?&body=' + encodeURIComponent(text)}
+                    ariaLabel={'Text ' + phone.who}
+                  >
+                    Text {phone.who.split(' ')[0]}
+                  </Btn>
+                ) : null}
+                <Btn
+                  variant={phone ? 'secondary' : 'primary'}
+                  className="flex-1 justify-center text-[12px]"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(text);
+                    } catch {
+                      /* the text is still saved on the item */
+                    }
+                    mark(f, true, text);
+                    setOpenId(null);
+                    api().say('Copied and marked done.');
+                  }}
+                >
+                  Copy & mark done
+                </Btn>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="text-[11.5px] leading-[1.4]" style={{ color: now > t.due ? 'var(--color-accent-200)' : 'var(--color-neutral-500)' }}>
@@ -270,68 +336,24 @@ function FollowupsTab() {
           />
           {!shown.length ? <EmptyNote>{filter === 'mine' ? 'Nothing is yours from this night.' : 'Nothing to follow up on.'}</EmptyNote> : null}
           {left === 0 && shown.length ? <div className="text-[12px] text-accent-300">All done. Thank you.</div> : null}
-          {shown.map((f) => {
-            const isOpen = openId === f.id;
-            const text = drafts[f.id] ?? f.text;
-            const phone = phoneFor(f);
-            return (
-              <div key={f.id} className="sr-card flex gap-[11px] px-[14px] py-3">
-                <button onClick={() => !f.private && mark(f, !f.done)} disabled={f.private} aria-pressed={f.done} aria-label={f.done ? 'Mark not done' : 'Mark done'} className="flex h-11 w-7 flex-none items-start justify-center pt-[1px]">
-                  <Tick on={f.done} locked={f.private} />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="flex-1 text-[13px] font-medium leading-[1.3]" style={{ color: f.done ? 'var(--color-neutral-500)' : 'var(--color-neutral-100)', textDecoration: f.done ? 'line-through' : 'none' }}>
-                      {f.title}
-                    </span>
-                    <span className="flex-none text-[10.5px]" style={{ color: f.mine ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
-                      {f.mine ? 'You' : f.owner ?? 'Leaders'}
-                    </span>
-                  </div>
-                  <div className="mt-[3px] text-[11px] leading-[1.45] text-neutral-500 text-pretty">
-                    {FU_KINDS.find((k) => k.id === f.kind)?.label} · {f.sub}
-                  </div>
-                  {!f.private && !f.done && f.draft ? (
-                    <button onClick={() => setOpenId(isOpen ? null : f.id)} aria-expanded={isOpen} className="mt-[6px] min-h-8 text-[11.5px] font-medium text-accent-300">
-                      {isOpen ? 'Close draft' : 'Draft a message'}
-                    </button>
-                  ) : null}
-                  {isOpen ? (
-                    <div className="mt-2 flex flex-col gap-2">
-                      <textarea className="input min-h-[88px] py-2 text-[12.5px] leading-[1.5]" value={text} onChange={(e) => setDrafts((x) => ({ ...x, [f.id]: e.target.value }))} aria-label={'Message for ' + f.title} />
-                      <div className="flex gap-2">
-                        {phone ? (
-                          <Btn
-                            className="flex-1 justify-center text-[12px]"
-                            href={'sms:' + phone.num + '?&body=' + encodeURIComponent(text)}
-                            ariaLabel={'Text ' + phone.who}
-                          >
-                            Text {phone.who.split(' ')[0]}
-                          </Btn>
-                        ) : null}
-                        <Btn
-                          variant={phone ? 'secondary' : 'primary'}
-                          className="flex-1 justify-center text-[12px]"
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(text);
-                            } catch {
-                              /* the text is still saved on the item */
-                            }
-                            mark(f, true, text);
-                            setOpenId(null);
-                            api().say('Copied and marked done.');
-                          }}
-                        >
-                          Copy & mark done
-                        </Btn>
-                      </div>
+          {grouped
+            ? FU_KINDS.map((k) => {
+                const items = shown.filter((f) => f.kind === k.id);
+                if (!items.length) return null;
+                return (
+                  <section key={k.id} className="flex flex-col">
+                    <div className="flex items-center gap-2 pb-1">
+                      <Icon name={'ph ' + k.icon} className="text-[15px] text-neutral-400" />
+                      <Label className="flex-1">{k.label}</Label>
+                      <span className="text-[11px] text-neutral-500">
+                        {items.filter((f) => f.done).length} of {items.length} done
+                      </span>
                     </div>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
+                    {items.map(item)}
+                  </section>
+                );
+              })
+            : shown.map(item)}
         </>
       )}
     </>
@@ -339,7 +361,7 @@ function FollowupsTab() {
 }
 
 /* ── notes ───────────────────────────────────────────────────────────── */
-function NotesTab() {
+export function NotesTab() {
   const { d, iso, night } = useCycle();
   const api = useAppApi();
   const saveNight = useNightSave();

@@ -7,57 +7,99 @@ import { useState } from 'react';
 import { PreviewClock } from '@/components/cycle/bits';
 import { useCycle, useNightSave } from '@/components/cycle/use-cycle';
 import { Btn, Icon, Label, Screen, ScreenHeader } from '@/components/ui';
-import { countdown, dayLabel, reminders, slipDueLabel, slipsView, weekday } from '@/lib/cycle';
+import { countdown, dayLabel, reminders, slipDueLabel, slipsView, weekday, type ReminderView } from '@/lib/cycle';
 import { isoDay, nowMs, weekOf } from '@/lib/dates';
 import { uncoveredPosts } from '@/lib/feeds';
 import { useAppApi } from '@/lib/store/provider';
+import type { MinistryData } from '@/lib/types/model';
 import Link from 'next/link';
 
-export function PrepWeekScreen({ bare }: { bare?: boolean } = {}) {
-  const { d, m, iso, night, t, now, stages, preview } = useCycle();
+/** The night's reminders, and what a leader can do to each: post it early,
+ *  switch it off, or change its words for this week only. */
+export function useReminders() {
+  const { d, m, iso, night, now, preview } = useCycle();
   const api = useAppApi();
   const saveNight = useNightSave();
-  const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
-  const cd = countdown(t, now);
-  const rems = reminders(d, iso, now);
-  const week = weekOf(d.config.meetingDates, iso);
-
   const setRem = (id: string, patch: { off?: boolean; sentAt?: number; text?: string }) => {
     saveNight(iso, (n) => void (n.rem[id] = { ...n.rem[id], ...patch }));
     api().emit({ kind: 'reminder', date: iso, id, rec: { ...night.rem[id], ...patch } });
   };
+  return {
+    rems: reminders(d, iso, now),
+    post: (r: ReminderView) => {
+      setRem(r.id, { sentAt: preview ? now : nowMs(), off: false });
+      api().logActivity(r.label + ' reminder posted early by ' + m.displayName);
+      api().say(r.label + ' reminder posted.');
+    },
+    toggle: (r: ReminderView) => setRem(r.id, { off: !r.off }),
+    words: (r: ReminderView, text: string) => {
+      setRem(r.id, { text });
+      api().say('Saved for ' + weekday(iso) + '’s reminder.');
+    }
+  };
+}
 
+export interface ReadyItem {
+  icon: string;
+  title: string;
+  meta: string;
+  href: string;
+  /** The same fix from the desk planner. */
+  deskHref: string;
+  /** What the row asks for, while it is still open. */
+  action: string | null;
+}
+
+/** What has to be true by the night, each row pointing at its fix. */
+export function readyBy(d: MinistryData, iso: string, now: number): ReadyItem[] {
   const open = uncoveredPosts(d.huddle);
   const pend = d.serving.swaps.filter((s) => s.status === 'pending');
   const done = d.huddle.ready.filter((r) => r.done).length;
   const slipsTonight = slipsView(d).filter((v) => v.slip.due.split('T')[0] <= iso && v.slip.due.split('T')[0] >= isoDay(new Date(now)));
-  const ready = [
+  return [
     {
       icon: open.length ? 'ph-user-plus' : 'ph-check-circle',
       title: open.length ? open.length + (open.length === 1 ? ' post still open' : ' posts still open') : 'Every post is covered',
       meta: open.map((o) => o.post).join(', ') || 'Tonight is fully staffed.',
-      href: '/dashboard/huddle'
+      href: '/dashboard/huddle',
+      deskHref: '/planner/people',
+      action: open.length ? 'Fill' : null
     },
     ...slipsTonight.map((v) => ({
       icon: v.signedN < v.total ? 'ph-signature' : 'ph-check-circle',
       title: v.slip.title + ': ' + v.signedN + ' of ' + v.total + ' signed',
       meta: v.kids.filter((k) => !k.signed).map((k) => k.name).join(', ') || 'Everyone is cleared. ' + slipDueLabel(v.slip, isoDay(new Date(now))) + '.',
-      href: '/dashboard/parents'
+      href: '/dashboard/parents',
+      deskHref: '/planner/people?tab=parents',
+      action: v.signedN < v.total ? 'Nudge' : null
     })),
     {
       icon: pend.length ? 'ph-swap' : 'ph-check-circle',
       title: pend.length ? pend.length + (pend.length === 1 ? ' swap request waiting' : ' swap requests waiting') : 'No swap requests',
       meta: pend.map((x) => x.from + ', ' + x.role).join(' · ') || 'Volunteers ask from Serving.',
-      href: '/dashboard/serving'
+      href: '/dashboard/serving',
+      deskHref: '/planner/people',
+      action: pend.length ? 'Review' : null
     },
     {
       icon: done < d.huddle.ready.length ? 'ph-list-checks' : 'ph-check-circle',
       title: 'Ready check ' + done + ' of ' + d.huddle.ready.length,
       meta: d.huddle.ready.filter((r) => !r.done).map((r) => r.label).join(' · ') || 'Everything is set.',
-      href: '/dashboard/huddle'
+      href: '/dashboard/huddle',
+      deskHref: '/planner',
+      action: done < d.huddle.ready.length ? 'Open' : null
     }
   ];
+}
+
+export function PrepWeekScreen({ bare }: { bare?: boolean } = {}) {
+  const { d, m, iso, t, now, stages, preview } = useCycle();
+  const { rems, post, toggle, words } = useReminders();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+  const cd = countdown(t, now);
+  const week = weekOf(d.config.meetingDates, iso);
+  const ready = readyBy(d, iso, now);
 
   return (
     <Screen label="Prep week">
@@ -95,9 +137,8 @@ export function PrepWeekScreen({ bare }: { bare?: boolean } = {}) {
                   className="flex-1 justify-center text-[12px]"
                   disabled={!draft.trim()}
                   onClick={() => {
-                    setRem(r.id, { text: draft.trim() });
+                    words(r, draft.trim());
                     setEditing(null);
-                    api().say('Saved for ' + weekday(iso) + '’s reminder.');
                   }}
                 >
                   Save for this week
@@ -116,11 +157,7 @@ export function PrepWeekScreen({ bare }: { bare?: boolean } = {}) {
                 <Btn
                   variant="secondary"
                   className="flex-1 justify-center text-[12px]"
-                  onClick={() => {
-                    setRem(r.id, { sentAt: preview ? now : nowMs(), off: false });
-                    api().logActivity(r.label + ' reminder posted early by ' + m.displayName);
-                    api().say(r.label + ' reminder posted.');
-                  }}
+                  onClick={() => post(r)}
                 >
                   Post now
                 </Btn>
@@ -135,7 +172,7 @@ export function PrepWeekScreen({ bare }: { bare?: boolean } = {}) {
               >
                 Edit words
               </Btn>
-              <Btn variant="ghost" className="flex-1 justify-center text-[12px] text-neutral-400" onClick={() => setRem(r.id, { off: !r.off })}>
+              <Btn variant="ghost" className="flex-1 justify-center text-[12px] text-neutral-400" onClick={() => toggle(r)}>
                 {r.off ? 'Turn on' : 'Turn off'}
               </Btn>
             </div>

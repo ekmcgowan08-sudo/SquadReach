@@ -93,3 +93,16 @@ export function holyDaysBetween(from: string, to: string): HolyDay[] {
   for (let y = Number(from.slice(0, 4)); y <= Number(to.slice(0, 4)); y++) for (const h of churchYear(y)) if (h.date >= from && h.date <= to) out.push(h);
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** Where the church year stands on a date: the season it's in (Ordinary
+ *  Time between the named ones) and the next season to begin. */
+export function churchSeasonOn(iso: string): { now: { name: string; from: string; to: string }; next: { name: string; from: string } } {
+  const y = Number(iso.slice(0, 4));
+  const seasons = [...churchYear(y - 1), ...churchYear(y), ...churchYear(y + 1)].filter((h) => h.kind === 'season').sort((a, b) => a.date.localeCompare(b.date));
+  const next = seasons.find((s) => s.date > iso)!;
+  const cur = seasons.filter((s) => s.date <= iso && (s.until ?? s.date) >= iso).pop();
+  if (cur) return { now: { name: cur.name, from: cur.date, to: cur.until ?? cur.date }, next: { name: next.name, from: next.date } };
+  const prev = seasons.filter((s) => (s.until ?? s.date) < iso).pop()!;
+  /* The one day between Easter season and Ordinary Time is Pentecost. */
+  return { now: { name: prev.id === 'eastertide' ? 'Pentecost' : 'Ordinary Time', from: addDays(prev.until ?? prev.date, 1), to: addDays(next.date, -1) }, next: { name: next.name, from: next.date } };
+}

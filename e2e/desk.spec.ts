@@ -164,3 +164,17 @@ test('People explains Planning Center in the demo, and the connect route says it
   await page.goto('/api/pco/connect');
   await expect(page).toHaveURL(/\/console\?tab=people&pco=unavailable$/);
 });
+
+test('Prep & recap turns to the recap once the night wraps, and the title turns it back', async ({ page }) => {
+  await page.goto('/planner/prep');
+  await ready(page);
+  await expect(page.getByRole('heading', { name: 'Reminders' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Prep week' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('group', { name: 'Preview as of' }).getByRole('button', { name: 'Next day', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Follow-ups' })).toBeVisible();
+  await expect(page.getByText('In the room', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^\d+ \/ \d+$/)).toBeVisible();
+  await page.getByRole('button', { name: 'Prep week' }).click();
+  await expect(page).toHaveURL(/view=prep/);
+  await expect(page.getByRole('heading', { name: 'Reminders' })).toBeVisible();
+});
