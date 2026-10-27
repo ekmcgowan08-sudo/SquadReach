@@ -71,7 +71,6 @@ export function emptyMinistry(): MinistryData {
     practiceLog: [],
     tonight: { date: '', presence: {}, via: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
     game: emptyGame(),
-    bracket: { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} },
     challengeCredit: {},
     presenceLog: {},
     cycle: {},

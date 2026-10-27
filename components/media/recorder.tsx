@@ -13,7 +13,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
-import { bracketWinPayable, settleFromClip } from '@/lib/feeds';
+import { advanceBracket, bracketSeeds, bracketWinPayable, settleFromClip } from '@/lib/feeds';
+import { bracketOf } from '@/lib/game';
 import { putBlob } from '@/lib/media-store';
 import { canScore } from '@/lib/permissions';
 import { fmt, pointBase } from '@/lib/scoring';
@@ -236,15 +237,15 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
     /* Stop filming → the bracket game settles itself, paying once. */
     let extra = '';
     const data = s.data;
-    if (data.bracket.enabled) {
-      const res = settleFromClip(data.teams, data.ledger, data.bracket, playing, drawState.current.tally);
-      if (res && bracketWinPayable(data.bracket, res.matchKey, res.winner)) {
+    const br = bracketOf(data.game);
+    if (br.enabled) {
+      const res = settleFromClip(data.teams, data.ledger, br, playing, drawState.current.tally);
+      if (res && bracketWinPayable(br, res.matchKey, res.winner)) {
         const amt = pointBase(data.config);
         s.award({ team: res.winner, cat: 'games', amount: amt, why: 'won a bracket game · from the filmed game', by: 'Tournament' });
-        s.mutate((x) => {
-          x.bracket.winners[res.matchKey] = res.winner;
-          x.bracket.paid[res.matchKey] = res.winner;
-        });
+        const { next } = advanceBracket(br, bracketSeeds(data.teams, data.ledger, br), res.matchKey, res.winner);
+        s.mutate((x) => void (x.game.bracket = next));
+        s.emit({ kind: 'game', game: api().data.game });
         const name = data.teams.find((t) => t.id === res.winner)?.name ?? '';
         s.logActivity('Bracket: ' + name + ' advances — from the filmed game');
         extra = ' · ' + name + ' advances in the bracket';

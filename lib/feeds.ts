@@ -100,6 +100,43 @@ export function settleFromClip(
 /** A bracket win pays once. `paid` guards a corrected result from paying twice. */
 export const bracketWinPayable = (b: BracketState, matchKey: string, winner: string) => b.paid[matchKey] !== winner;
 
+/** A squad wins a match. The seeds in play are kept as they stand (live
+ *  seeding stops at the first result), later rounds start over, and the
+ *  payouts that changes are returned: who to pay, and whose earlier win to
+ *  take back (a corrected result, or a later round that no longer holds). */
+export function advanceBracket(b: BracketState, seeds: string[], key: string, winner: string): { next: BracketState; pay: string[]; unpay: string[] } {
+  if (b.winners[key] === winner) return { next: b, pay: [], unpay: [] };
+  const round = Number(key.split('-')[0]);
+  const winners: Record<string, string> = {};
+  const paid: Record<string, string> = {};
+  const unpay: string[] = [];
+  for (const [k, w] of Object.entries(b.winners)) if (Number(k.split('-')[0]) <= round && k !== key) winners[k] = w;
+  for (const [k, w] of Object.entries(b.paid)) {
+    if (Number(k.split('-')[0]) > round || (k === key && w !== winner)) unpay.push(w);
+    else paid[k] = w;
+  }
+  winners[key] = winner;
+  const pay = paid[key] === winner ? [] : [winner];
+  paid[key] = winner;
+  return { next: { ...b, seeds, liveSeed: false, winners, paid }, pay, unpay };
+}
+
+/** Put a squad in a round-one slot by hand: it swaps with whoever was
+ *  there, live seeding stops and results start over. */
+export function placeSeed(seeds: string[], idx: number, teamId: string): string[] {
+  const next = seeds.slice();
+  const from = next.indexOf(teamId);
+  if (from < 0 || from === idx) return next;
+  [next[idx], next[from]] = [next[from], next[idx]];
+  return next;
+}
+
+/** The bracket's champion, once the final is decided. */
+export function bracketChampion(rounds: BracketMatch[][]): string | null {
+  const last = rounds[rounds.length - 1];
+  return last?.length === 1 ? last[0].winner : null;
+}
+
 /* ── attendance → tonight's points ───────────────────────────────────────
    Marking who is here IS the scoring step. There is no separate submit.
    One row per present student per category posted — 28 students posting

@@ -8,7 +8,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Ready } from '@/components/shell/phone-shell';
 import { Icon, tint } from '@/components/ui';
-import { clock, heatRows, liveEffects, soloSec } from '@/lib/game';
+import { bracketChampion, bracketSeeds, buildBracket, nextBracketGame } from '@/lib/feeds';
+import { bracketOf, clock, heatRows, liveEffects, soloSec } from '@/lib/game';
 import { gameGoals } from '@/lib/goals';
 import { fmt, standings } from '@/lib/scoring';
 import { catOf, teamOf } from '@/lib/selectors';
@@ -40,6 +41,9 @@ function Board() {
   const showLanes = g.mode !== 'single' && heatRows(g, d.teams, d.config.penalties).some((r) => r.ran || r.running);
   const now = useNow(true, lanesRunning || soloRunning ? 100 : 1000);
   const goals = gameGoals(d.ledger, g.goalsSince ?? 0);
+  const bracket = bracketOf(g);
+  const nextUp = nextBracketGame(d.teams, d.ledger, bracket);
+  const champ = bracket.enabled ? bracketChampion(buildBracket(bracketSeeds(d.teams, d.ledger, bracket), bracket.winners)) : null;
   const [full, setFull] = useState(false);
 
   /* Keep the TV from sleeping mid-game, where the browser allows it. */
@@ -172,6 +176,18 @@ function Board() {
               <span className="tabular">{goals.byTeam[t.id] ?? 0}</span>
             </span>
           ))}
+        </div>
+      ) : null}
+      {!showLanes && bracket.enabled && (nextUp || champ) ? (
+        <div className="pointer-events-none absolute left-[44px] top-[78px] flex items-center gap-3 rounded-full bg-surface px-5 py-3 text-[17px] font-semibold text-neutral-100" style={{ boxShadow: 'inset 0 0 0 1px var(--color-neutral-800)' }} aria-label="Tournament">
+          <Icon name={champ ? 'ph-fill ph-trophy' : 'ph ph-tree-structure'} className="text-[18px] text-accent-300" />
+          {champ ? (
+            <span>{teamOf(d, champ).name} wins the tournament</span>
+          ) : nextUp ? (
+            <span>
+              <span className="text-neutral-400">{nextUp.label}:</span> {teamOf(d, nextUp.match.a).name} vs {teamOf(d, nextUp.match.b).name}
+            </span>
+          ) : null}
         </div>
       ) : null}
       {!showLanes ? <EffectBanner now={now} /> : null}

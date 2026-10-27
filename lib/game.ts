@@ -2,7 +2,7 @@
    how long it has been running since its start stamp, so every screen that
    reads the same state — the timekeeper's phone, the projector — shows the
    same clock without anything ticking in the data. */
-import type { GameState, HeatLane, LiveEffect, Penalty, Team } from '@/lib/types/model';
+import type { BracketData, GameState, HeatLane, LiveEffect, Penalty, Team } from '@/lib/types/model';
 
 export const DEFAULT_PENALTIES: Penalty[] = [
   { id: 'freeze', label: 'Freeze', sec: 30, kind: 'add', icon: 'ph-snowflake', color: '#38bdf8', style: 'blur', rule: 'Team must stand completely still — no talking, no moving — until it clears.' },
@@ -16,6 +16,8 @@ export const DEFAULT_PENALTIES: Penalty[] = [
 ];
 
 export const emptyLane = (): HeatLane => ({ elapsedMs: 0, startedAt: null, counts: {} });
+
+export const bracketOf = (g: GameState): BracketData => g.bracket ?? { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} };
 
 export function emptyGame(): GameState {
   return { mode: 'single', h2hPick: [], lanes: {}, solo: { mode: 'up', targetSec: 120, elapsedMs: 0, startedAt: null }, effects: [] };

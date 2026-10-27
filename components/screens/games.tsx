@@ -4,11 +4,12 @@
    award(), so a timed game lands on the board like any other score. */
 import Link from 'next/link';
 import { useState, type CSSProperties } from 'react';
+import { Bracket } from '@/components/game/bracket';
 import { GoalPanel } from '@/components/game/goal-panel';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, tint } from '@/components/ui';
 import {
-  activeTeams, clock, emptyLane, flipNote, heatRows, laneOf, laneSec, placementAwards, soloSec, startLane, stopLane, withEffect
+  activeTeams, clock, emptyLane, flipNote, heatRows, laneOf, laneSec, placementAwards, soloSec, startLane, stopLane, withEffect, bracketOf
 } from '@/lib/game';
 import { nowMs } from '@/lib/dates';
 import { postedLabel, wasHeld } from '@/lib/held';
@@ -354,6 +355,7 @@ export function GamesScreen() {
       ) : null}
 
       <GoalPanel teams={activeTeams(g, d.teams).length ? activeTeams(g, d.teams) : d.teams} />
+      {bracketOf(g).enabled || canApprove(m.persona) ? <Bracket editable /> : null}
 
       <PenaltyEditor open={editor} onClose={() => setEditor(false)} canEdit={canApprove(m.persona)} />
     </Screen>

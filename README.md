@@ -317,6 +317,13 @@ Where the prototype left a call open, the build took the safer default:
   person's own switches on the phone override it, and "Back to the
   ministry's settings" drops them. Phones that saved settings before this
   keep only the ones they had turned off.
+- **A tournament pays once per win.** Tournament mode (Console › Scoring,
+  or the game timer) is single elimination, seeded from the standings
+  until the first result. Each win pays the night's base points to Games
+  once; correcting a result, or changing an earlier round, takes the
+  wins that no longer hold back as reversals. The bracket lives with
+  tonight's game, so every phone running it and the room screen agree,
+  and a filmed bracket game settles itself when the recording stops.
 - **Award voting keeps to its window.** In Console › Awards a leader can
   schedule when voting on each popularity award opens and closes (days in
   the ministry's time zone), or close it by hand. The database refuses a

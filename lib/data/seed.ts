@@ -508,7 +508,6 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     practiceLog: seedPractice(now),
     tonight: { date: '2026-10-28', presence: {}, via: {}, checkinDetail: {}, checkinPosted: {}, goals: {}, pushed: {}, heatPosted: null },
     game: emptyGame(),
-    bracket: { enabled: false, seeds: [], winners: {}, liveSeed: true, paid: {} },
     challengeCredit: {},
     ...seedCycle(now)
   };

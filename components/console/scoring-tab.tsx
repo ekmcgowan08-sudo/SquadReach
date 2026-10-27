@@ -1,8 +1,10 @@
 'use client';
+import Link from 'next/link';
 /* Scoring rules: the categories points land in, which of them check-in
    pays, and the game players see on Game rules — down to a field map. */
 import { useEffect, useRef, useState } from 'react';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
+import { Bracket } from '@/components/game/bracket';
 import { Btn, Icon } from '@/components/ui';
 import { CHECKIN_PRESENT_PTS } from '@/lib/scoring';
 import { useApp, useAppApi } from '@/lib/store/provider';
@@ -162,8 +164,15 @@ export function ScoringTab() {
           </div>
         </div>
         <FieldMap />
-        <div className="text-[11.5px] text-neutral-500">Penalty and bonus buttons for the game timer are edited from the timer itself (the sliders icon), so they’re one tap away on game night.</div>
+        <div className="text-[11.5px] text-neutral-500">
+          Penalty and bonus buttons are in{' '}
+          <Link href="/console?tab=live" className="text-accent-300 underline underline-offset-2">
+            Live control
+          </Link>{' '}
+          and behind the sliders icon on the game timer.
+        </div>
       </Section>
+      <Bracket editable />
     </>
   );
 }

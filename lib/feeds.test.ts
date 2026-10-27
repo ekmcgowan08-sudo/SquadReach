@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { demoMinistry } from '@/lib/data/seed';
 import {
-  attendanceRows, availableBench, bracketSeeds, bracketWinPayable, buildBracket, churchRows, churchSocials,
-  challengesIn, creditChallenges, nextBracketGame, settleFromClip, uncoveredPosts, type BracketState
+  advanceBracket, attendanceRows, availableBench, bracketChampion, bracketSeeds, bracketWinPayable, buildBracket, churchRows, churchSocials,
+  challengesIn, creditChallenges, nextBracketGame, placeSeed, settleFromClip, uncoveredPosts, type BracketState
 } from '@/lib/feeds';
 
 const d = demoMinistry(0);
@@ -41,6 +41,32 @@ describe('filming → bracket + points', () => {
     const b = bracket({ paid: { '0-0': 'yellow' } });
     expect(bracketWinPayable(b, '0-0', 'yellow')).toBe(false);
     expect(bracketWinPayable(b, '0-0', 'green')).toBe(true);
+  });
+});
+
+describe('advancing the bracket by hand', () => {
+  const seeds = ['yellow', 'red', 'blue', 'green'];
+  it('freezes the seeds, pays the winner once, and takes back a corrected win', () => {
+    const first = advanceBracket(bracket(), seeds, '0-0', 'yellow');
+    expect(first.next).toMatchObject({ seeds, liveSeed: false, winners: { '0-0': 'yellow' }, paid: { '0-0': 'yellow' } });
+    expect(first).toMatchObject({ pay: ['yellow'], unpay: [] });
+    expect(advanceBracket(first.next, seeds, '0-0', 'yellow')).toMatchObject({ pay: [], unpay: [] });
+    const fixed = advanceBracket(first.next, seeds, '0-0', 'red');
+    expect(fixed).toMatchObject({ pay: ['red'], unpay: ['yellow'] });
+    expect(fixed.next.paid['0-0']).toBe('red');
+  });
+  it('a change in an earlier round clears later rounds and takes their wins back', () => {
+    let b = advanceBracket(bracket(), seeds, '0-0', 'yellow').next;
+    b = advanceBracket(b, seeds, '0-1', 'blue').next;
+    b = advanceBracket(b, seeds, '1-0', 'blue').next;
+    expect(bracketChampion(buildBracket(seeds, b.winners))).toBe('blue');
+    const r = advanceBracket(b, seeds, '0-1', 'green');
+    expect(r.next.winners).toEqual({ '0-0': 'yellow', '0-1': 'green' });
+    expect(r).toMatchObject({ pay: ['green'] });
+    expect(r.unpay.sort()).toEqual(['blue', 'blue']);
+  });
+  it('placing a squad swaps it with whoever held the slot', () => {
+    expect(placeSeed(seeds, 0, 'green')).toEqual(['green', 'red', 'blue', 'yellow']);
   });
 });
 

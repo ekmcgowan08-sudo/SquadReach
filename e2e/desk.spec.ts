@@ -539,3 +539,25 @@ test('goal scoring: goals credited to a scorer, taken back, an MVP, and the room
   await ready(page);
   await expect(page.getByLabel('Goals this game')).toBeVisible();
 });
+
+test('tournament bracket: seeded from the standings, winners advance and pay once, corrections start later rounds over', async ({ page }) => {
+  await page.goto('/console?tab=scoring');
+  await ready(page);
+  const br = page.getByRole('region', { name: 'Tournament bracket' });
+  await br.getByRole('button', { name: 'Turn on tournament mode' }).click();
+  await br.getByRole('button', { name: 'Yellow wins semifinal match 1' }).click();
+  await br.getByRole('button', { name: 'Blue wins semifinal match 2' }).click();
+  await br.getByRole('button', { name: 'Yellow wins final match 1' }).click();
+  await expect(br.getByText('Yellow wins the tournament')).toBeVisible();
+
+  await page.goto('/projector');
+  await ready(page);
+  await expect(page.getByLabel('Tournament')).toContainText('Yellow wins the tournament');
+
+  await page.goto('/console?tab=scoring');
+  await ready(page);
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('region', { name: 'Tournament bracket' }).getByRole('button', { name: 'Red wins semifinal match 1' }).click();
+  await expect(page.getByText('Yellow wins the tournament')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Tournament bracket' }).getByRole('button', { name: 'Red wins final match 1' })).toBeEnabled();
+});

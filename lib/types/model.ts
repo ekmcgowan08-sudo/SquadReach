@@ -668,6 +668,9 @@ export interface GameState {
    *  Games points; this game's count is everything since `goalsSince`. */
   goalsOn?: boolean;
   goalsSince?: number;
+  /** Tournament mode: single elimination, kept with tonight's game so
+   *  every phone running it (and the room screen) sees the same bracket. */
+  bracket?: BracketData;
 }
 
 export interface TonightState {
@@ -735,7 +738,6 @@ export interface MinistryData {
   practiceLog: PracticeRow[];
   tonight: TonightState;
   game: GameState;
-  bracket: BracketData;
   challengeCredit: Record<string, string[]>;
   /** Supabase, leaders only: everyone with a membership, for the Console. */
   people?: PersonRow[];
