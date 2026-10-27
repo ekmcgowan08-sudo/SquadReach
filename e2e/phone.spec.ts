@@ -170,3 +170,34 @@ test('a small group screen starts from an idea, and its picture plays behind the
   await expect(player.getByText('Joshua 1:9')).toBeVisible();
   await expect(player.getByRole('img', { name: 'Campfire circle' })).toBeVisible();
 });
+
+test('a chat thread can be muted, left unread, or flagged for a leader who reads it', async ({ page, context, baseURL }) => {
+  await as(context, 'member', baseURL!);
+  await page.goto('/dashboard/chat?t=team-yellow');
+  await ready(page);
+  await page.getByRole('button', { name: 'Thread options' }).click();
+  await page.getByRole('menuitem', { name: 'Mute this thread' }).click();
+  await expect(page.getByText(/· muted$/)).toBeVisible();
+  await page.getByRole('button', { name: 'Thread options' }).click();
+  await page.getByRole('menuitem', { name: 'Mark unread' }).click();
+  await expect(page).toHaveURL(/\/dashboard\/chat$/);
+  /* Muted: it lists, but its unread never counts. */
+  const row = page.getByRole('button', { name: /^Yellow Squad\s*,\s*muted/ });
+  await expect(row).toBeVisible();
+  await expect(row.getByText('1', { exact: true })).toHaveCount(0);
+
+  await row.click();
+  await page.getByRole('button', { name: 'Thread options' }).click();
+  await page.getByRole('menuitem', { name: 'Flag for a leader' }).click();
+  await expect(page.getByText('You flagged this for a leader.', { exact: false })).toBeVisible();
+
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/notifications');
+  await ready(page);
+  await page.getByRole('link', { name: /flagged the Yellow Squad thread/ }).click();
+  await expect(page).toHaveURL(/\/dashboard\/chat\?t=team-yellow/);
+  const banner = page.getByRole('status').filter({ hasText: 'Flagged for a leader by' });
+  await expect(banner).toBeVisible();
+  await banner.getByRole('button', { name: 'Mark read' }).click();
+  await expect(banner).toHaveCount(0);
+});

@@ -653,6 +653,18 @@ export interface ChatThread {
   team?: string;
 }
 
+/** A chat thread someone flagged for a leader to read. */
+export interface ChatFlag {
+  id: string;
+  thread: string;
+  threadName: string;
+  /** Who flagged it — the database stamps this, the phone doesn't choose it. */
+  by: string;
+  at: number;
+  seenBy?: string;
+  seenAt?: number;
+}
+
 export interface ChatMessage {
   id: string;
   /** Display labels; derived from `at` for real messages. */
@@ -789,6 +801,7 @@ export interface MinistryData {
   chatThreads: ChatThread[];
   chatMsgs: Record<string, ChatMessage[]>;
   chatUnread: Record<string, number>;
+  chatFlags: ChatFlag[];
   rsvps: Record<string, Record<string, Rsvp>>;
   /** Supabase: head counts from rsvp_counts(), for roles that can't read names. */
   rsvpCounts?: Record<string, RsvpCount>;

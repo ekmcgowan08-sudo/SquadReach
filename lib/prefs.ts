@@ -15,7 +15,8 @@ export const NOTIF_TRIGGERS = [
   { key: 'streakBreak', label: 'Streak about to break', hint: 'Nudge before it resets' },
   { key: 'bibleReminder', label: 'Bible reading reminder', hint: 'When review is due' },
   { key: 'nightCycle', label: 'The week around the night', hint: 'Prep reminders, swaps, the door, follow-ups' },
-  { key: 'reportDelivery', label: 'Scheduled reports', hint: 'When one reaches you, and what goes out today' }
+  { key: 'reportDelivery', label: 'Scheduled reports', hint: 'When one reaches you, and what goes out today' },
+  { key: 'chatFlag', label: 'Flagged chats', hint: 'When someone flags a thread for a leader to read' }
 ] as const;
 export type NotifTrigger = (typeof NOTIF_TRIGGERS)[number]['key'];
 
@@ -47,6 +48,8 @@ export interface Prefs {
   onePager: { paper: 'letter' | 'a4'; ground: 'light' | 'dark' };
   /** Console › Reports: the at-a-glance views this person has turned off. */
   reportViewsOff: Record<string, boolean>;
+  /** Chat threads muted on this phone: still listed, never counted as unread. */
+  chatMuted: Record<string, boolean>;
 }
 
 const DEFAULTS: Prefs = {
@@ -60,7 +63,8 @@ const DEFAULTS: Prefs = {
   cyclePreview: null,
   walkthroughDone: {},
   onePager: { paper: 'letter', ground: 'light' },
-  reportViewsOff: {}
+  reportViewsOff: {},
+  chatMuted: {}
 };
 
 let current: Prefs = DEFAULTS;

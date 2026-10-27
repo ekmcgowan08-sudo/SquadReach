@@ -7,6 +7,7 @@ import { switchRole } from '@/app/actions';
 import { canScore } from '@/lib/permissions';
 import { SheetAutopublish } from '@/components/shell/sheet-autopublish';
 import { TourCard } from '@/components/shell/tour';
+import { usePrefs } from '@/lib/prefs';
 import { ROLE_TAB, TABS, type TabSlot } from '@/lib/screen-map';
 import { chatThreadsFor } from '@/lib/selectors';
 import { useApp, useAppApi, useApprovedRoles } from '@/lib/store/provider';
@@ -29,7 +30,9 @@ function TabBar() {
   const m = useApp((s) => s.membership);
   const d = useApp((s) => s.data);
   const coachTeam = useApp((s) => s.coachTeam);
-  const chatUnread = useMemo(() => chatThreadsFor(d, m, coachTeam).reduce((n, t) => n + (d.chatUnread[t.id] || 0), 0), [d, m, coachTeam]);
+  const muted = usePrefs().chatMuted;
+  /* Muted threads never count toward the badge. */
+  const chatUnread = useMemo(() => chatThreadsFor(d, m, coachTeam).reduce((n, t) => n + (muted[t.id] ? 0 : d.chatUnread[t.id] || 0), 0), [d, m, coachTeam, muted]);
   const tab = (t: TabSlot): TabDef => ({ ...t, match: (x) => x.startsWith(t.href) });
   const home: TabDef = { ...TABS.home, match: (x) => x === '/dashboard' };
   const role = tab(ROLE_TAB[persona]);

@@ -109,6 +109,8 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
       list.push({ icon: 'ph ph-calendar-plus', label: 'New event proposal: ' + e.title, meta: e.by ?? e.date, href: '/dashboard/calendar', trigger: 'event' });
     }
     if (d.prayerQueue.length) list.push({ icon: 'ph ph-hands-praying', label: d.prayerQueue.length + (d.prayerQueue.length === 1 ? ' prayer request' : ' prayer requests') + ' to review', meta: 'Nothing is public until you post it', href: '/dashboard/follow-ups', trigger: 'prayer' });
+    for (const f of openChatFlags(d))
+      list.push({ icon: 'ph ph-flag', label: f.by + ' flagged the ' + f.threadName + ' thread', meta: 'Read it, then mark it read', href: '/dashboard/chat?t=' + encodeURIComponent(f.thread), trigger: 'chatFlag' });
   }
   const next = d.events.find((e) => eventVisible(e, p));
   if (next) list.push({ icon: 'ph ph-calendar-dots', label: 'Upcoming: ' + next.title, meta: next.date + ' · ' + next.meta, href: '/dashboard/events/' + next.id, trigger: 'event' });
@@ -281,6 +283,8 @@ export function rsvpTally(d: MinistryData, e: MinistryEvent, p: Persona): RsvpCo
 }
 
 /* ── chat ─────────────────────────────────────────────────────────────── */
+/** Flags no leader has read yet — all of them, or one thread's. */
+export const openChatFlags = (d: MinistryData, thread?: string) => (d.chatFlags ?? []).filter((f) => !f.seenAt && (!thread || f.thread === thread));
 export const chatThreadsFor = (d: MinistryData, m: Membership, coachTeam?: string | null) =>
   d.chatThreads.filter((t) => t.read.includes(m.persona) && (!t.team || holdsSheet(m.persona) || myTeamId(m, d, coachTeam ?? '') === t.team));
 export function chatStamp(at: number, now = new Date()): { day: string; time: string } {

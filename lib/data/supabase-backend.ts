@@ -310,6 +310,17 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           if (r.error) throw r.error;
           return;
         }
+        case 'chatFlag': {
+          /* Who flagged it and when are stamped by the database. */
+          const r = await db.from('chat_flags').insert({ id: e.flag.id, org_id: org, thread_id: e.flag.thread, thread_name: e.flag.threadName });
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'chatFlagSeen': {
+          const r = await db.rpc('chat_flag_seen', { p_flag: e.id });
+          if (r.error) throw r.error;
+          return;
+        }
         case 'rsvp': {
           if (!membership.membershipId) return;
           const r = await db.from('rsvps').upsert(
@@ -564,11 +575,17 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       if (g && Object.keys(g).length) d.game = { ...d.game, ...g };
 
       /* RSVPs (yours, or everyone's for the volunteer set) and head counts. */
-      const [rs, counts, chat] = await Promise.all([
+      const [rs, counts, chat, chatFlags] = await Promise.all([
         db.from('rsvps').select('event_id, name, status, guests').eq('org_id', org),
         db.rpc('rsvp_counts', { p_org: org }),
-        db.from('chat_messages').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(400)
+        db.from('chat_messages').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(400),
+        db.from('chat_flags').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(100)
       ]);
+      /* Flags: a leader sees them all, anyone else only their own. */
+      d.chatFlags = ((chatFlags.data ?? []) as { id: string; thread_id: string; thread_name: string; by_name: string; created_at: string; seen_by: string | null; seen_at: string | null }[]).map((f) => ({
+        id: f.id, thread: f.thread_id, threadName: f.thread_name, by: f.by_name, at: new Date(f.created_at).getTime(),
+        ...(f.seen_at ? { seenBy: f.seen_by ?? '', seenAt: new Date(f.seen_at).getTime() } : {})
+      }));
       for (const r of (rs.data ?? []) as { event_id: string; name: string; status: Rsvp['status']; guests: number }[]) {
         (d.rsvps[r.event_id] ??= {})[r.name] = { status: r.status, guests: r.guests };
       }

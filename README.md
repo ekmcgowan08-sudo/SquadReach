@@ -87,6 +87,7 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261027110000_award_windows.sql` | `award_vote_open`: votes and nominations only inside an award's voting window |
    | `20261027120000_access_role.sql` | `decide_access` can approve someone as a different role than they asked for (owner only by an owner), kept as `granted_role` |
    | `20261027130000_access_notice.sql` | A decided request keeps who decided it (`decided_by`); `access_notice_emails`, which only the server may call, lists the leaders and owners to tell about a new one |
+   | `20261027140000_chat_flags.sql` | `chat_flags`: a thread flagged for a leader, with who flagged it; `chat_flag_seen`; `chat_can` lets leaders read (not post in) a flagged thread |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -261,6 +262,12 @@ Where the prototype left a call open, the build took the safer default:
 - **Direct messages.** Adults can message each other privately. Any thread
   with a student in it is an open door: leaders can read it but not post in
   it. Students can’t message each other.
+- **Anyone can flag a chat thread for a leader.** The flag carries their
+  name (stamped by the database), every leader and owner is notified, and
+  a leader can read a flagged thread from then on — even two adults’
+  private messages — but never post in it. Marking it read keeps who read
+  it; nobody deletes a flag. Muting a thread is per phone: it still lists,
+  it just never counts as unread.
 - **Library placements are copies.** Placing a shared unit copies it into
   your ministry with credit to where it came from, so the original can
   change or disappear without breaking your season.

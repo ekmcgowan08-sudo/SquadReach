@@ -509,6 +509,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     chatThreads: CHAT_THREADS,
     chatMsgs: CHAT_SEED,
     chatUnread: { all: 2, leaders: 1, 'team-blue': 3, parents: 0, 'dm-mike': 0, 'dm-zoe': 1 },
+    chatFlags: [],
     rsvps: seedRsvps(),
     attendanceHistory: attendanceHistory(),
     practiceLog: seedPractice(now),

@@ -7,9 +7,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/sheet';
 import { Icon, Screen, initialsOf } from '@/components/ui';
 import { dmThread, dmThreadId } from '@/lib/chat-dm';
-import { holdsSheet } from '@/lib/permissions';
-import { chatThreadsFor, teamOf } from '@/lib/selectors';
+import { canApprove, holdsSheet } from '@/lib/permissions';
+import { setPrefs, usePrefs } from '@/lib/prefs';
+import { chatThreadsFor, openChatFlags, teamOf } from '@/lib/selectors';
 import { sendChat } from '@/lib/store/actions';
+import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef } from '@/lib/types/domain';
 import type { ChatThread } from '@/lib/types/model';
@@ -35,12 +37,15 @@ function ThreadList() {
   const needle = q.trim().toLowerCase();
   const coachTeam = useApp((s) => s.coachTeam);
   const mineName = (from?: string) => !!from && (from === m.displayName || from.startsWith(m.displayName + ' '));
+  const muted = usePrefs().chatMuted;
+  const leader = canApprove(p);
   const threads = chatThreadsFor(d, m, coachTeam)
     .filter((t) => (filter === 'groups' ? t.kind !== 'dm' : filter === 'dms' ? t.kind === 'dm' : true))
     .filter((t) => !needle || t.name.toLowerCase().includes(needle) || (d.chatMsgs[t.id] ?? []).some((x) => x.text.toLowerCase().includes(needle)))
     .map((t) => {
       const msgs = d.chatMsgs[t.id] ?? [];
-      return { t, last: msgs[msgs.length - 1], unread: d.chatUnread[t.id] ?? 0 };
+      /* A muted thread still lists; it just never counts as unread. */
+      return { t, last: msgs[msgs.length - 1], unread: muted[t.id] ? 0 : (d.chatUnread[t.id] ?? 0), muted: !!muted[t.id], flagged: leader && openChatFlags(d, t.id).length > 0 };
     })
     .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
 
@@ -85,7 +90,7 @@ function ThreadList() {
       </div>
       {threads.length ? (
         <div className="sr-card overflow-hidden">
-          {threads.map(({ t, last, unread }) => (
+          {threads.map(({ t, last, unread, muted: quiet, flagged }) => (
             <button key={t.id} onClick={() => router.push('/dashboard/chat?t=' + encodeURIComponent(t.id))} className="flex w-full items-center gap-[11px] border-t border-divider px-[14px] py-3 text-left first:border-t-0 hover:bg-[color-mix(in_srgb,var(--color-accent)_7%,transparent)]">
               <ThreadAvatar t={t} size={40} />
               <div className="min-w-0 flex-1">
@@ -93,6 +98,18 @@ function ThreadList() {
                   <span className="truncate text-[13.5px] leading-[1.2]" style={{ color: unread ? 'var(--color-neutral-100)' : 'var(--color-neutral-200)', fontWeight: unread ? 600 : 500 }}>
                     {t.name}
                   </span>
+                  {quiet ? (
+                    <>
+                      <Icon name="ph ph-bell-slash" className="flex-none self-center text-[12px] text-neutral-500" />
+                      <span className="sr-only">, muted</span>
+                    </>
+                  ) : null}
+                  {flagged ? (
+                    <span className="flex flex-none items-center gap-[3px] self-center text-[10px] font-semibold uppercase leading-none tracking-[.06em] text-accent-200">
+                      <Icon name="ph-fill ph-flag" className="text-[11px]" />
+                      Flagged
+                    </span>
+                  ) : null}
                   <span className="ml-auto flex-none text-[10.5px] leading-none text-neutral-500">{last ? (last.day === 'Today' ? last.time : last.day) : ''}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-2">
@@ -140,6 +157,12 @@ function ThreadView({ id }: { id: string }) {
   const msgs = useMemo(() => d.chatMsgs[id] ?? [], [d.chatMsgs, id]);
   const canRead = !!t && t.read.includes(m.persona);
   const canPost = !!t && t.post.includes(m.persona);
+  const muted = !!usePrefs().chatMuted[id];
+  const [menu, setMenu] = useState(false);
+  const firstItem = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (menu) firstItem.current?.focus();
+  }, [menu]);
 
   useEffect(() => {
     if ((api().data.chatUnread[id] ?? 0) > 0) api().mutate((x) => void (x.chatUnread[id] = 0));
@@ -157,6 +180,41 @@ function ThreadView({ id }: { id: string }) {
     );
   }
   const student = t.kind === 'dm' && d.roster.some((r) => r.name === t.name);
+  const flags = openChatFlags(d, id);
+  const mine = flags.find((f) => f.by === m.displayName);
+  const leader = canApprove(m.persona);
+  const toggleMute = () => {
+    const on = !muted;
+    setPrefs((pr) => ({ chatMuted: { ...pr.chatMuted, [id]: on } }));
+    setMenu(false);
+    api().say(on ? t.name + ' muted — it still shows here, it just won’t count as unread.' : t.name + ' unmuted.');
+  };
+  const markUnread = () => {
+    api().mutate((x) => void (x.chatUnread[id] = Math.max(1, x.chatUnread[id] ?? 0)));
+    api().say('Left unread.');
+    router.push('/dashboard/chat');
+  };
+  /* A flag goes to the ministry's leaders with the flagger's name on it,
+     and lets them read the thread even if they otherwise couldn't. */
+  const flag = () => {
+    setMenu(false);
+    const f = { id: uid(), thread: id, threadName: t.name, by: m.displayName, at: Date.now() };
+    api().mutate((x) => void x.chatFlags.push(f));
+    api().emit({ kind: 'chatFlag', flag: f });
+    api().logActivity('Flagged the ' + t.name + ' thread for a leader to read');
+    api().say('Flagged. The ministry’s leaders get the thread, with your name on the flag.');
+  };
+  const markRead = () => {
+    for (const f of flags) {
+      api().mutate((x) => {
+        const r = x.chatFlags.find((y) => y.id === f.id);
+        if (r) Object.assign(r, { seenBy: m.displayName, seenAt: Date.now() });
+      });
+      api().emit({ kind: 'chatFlagSeen', id: f.id });
+    }
+    api().logActivity('Read the flagged ' + t.name + ' thread');
+    api().say('Marked read. The flag stays on record.');
+  };
   const send = () => {
     if (!draft.trim()) return;
     sendChat(api, id, draft);
@@ -172,9 +230,57 @@ function ThreadView({ id }: { id: string }) {
         <ThreadAvatar t={t} size={32} />
         <div className="min-w-0 flex-1">
           <div className="truncate text-[14px] font-medium leading-[1.2] text-neutral-100">{t.name}</div>
-          <div className="mt-[2px] text-[10.5px] leading-[1.3] text-neutral-500">{t.sub}</div>
+          <div className="mt-[2px] text-[10.5px] leading-[1.3] text-neutral-500">
+            {t.sub}
+            {muted ? ' · muted' : ''}
+          </div>
+        </div>
+        <div className="relative flex-none">
+          <button aria-label="Thread options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((v) => !v)} className="flex h-11 w-11 items-center justify-center rounded-full border border-neutral-800 text-neutral-300">
+            <Icon name="ph ph-dots-three-vertical" className="text-[16px]" />
+          </button>
+          {menu ? (
+            <>
+              <div aria-hidden="true" className="fixed inset-0 z-[4]" onClick={() => setMenu(false)} />
+              <div
+                role="menu"
+                aria-label="Thread options"
+                onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), setMenu(false))}
+                className="absolute right-0 top-[50px] z-[5] flex w-[230px] flex-col rounded-lg border border-neutral-800 bg-surface py-1 shadow-lg"
+              >
+                <button ref={firstItem} role="menuitem" onClick={toggleMute} className="flex min-h-11 items-center gap-[10px] px-3 text-left text-[13px] text-neutral-200 sr-hover">
+                  <Icon name={muted ? 'ph ph-bell' : 'ph ph-bell-slash'} className="text-[15px] text-neutral-400" />
+                  {muted ? 'Unmute this thread' : 'Mute this thread'}
+                </button>
+                <button role="menuitem" onClick={markUnread} className="flex min-h-11 items-center gap-[10px] px-3 text-left text-[13px] text-neutral-200 sr-hover">
+                  <Icon name="ph ph-envelope-simple" className="text-[15px] text-neutral-400" />
+                  Mark unread
+                </button>
+                <button role="menuitem" onClick={flag} disabled={!!mine} className="flex min-h-11 items-center gap-[10px] px-3 text-left text-[13px] text-accent-200 sr-hover disabled:text-neutral-500">
+                  <Icon name="ph ph-flag" className="text-[15px]" />
+                  {mine ? 'You flagged this' : 'Flag for a leader'}
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
+      {flags.length && leader ? (
+        <div role="status" className="mx-[14px] mt-[10px] flex items-start gap-[9px] rounded-md border border-accent-600 px-3 py-[9px]" style={{ background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)' }}>
+          <Icon name="ph-fill ph-flag" className="mt-[1px] flex-none text-[14px] text-accent-200" />
+          <div className="min-w-0 flex-1 text-[11.5px] leading-[1.5] text-accent-100 text-pretty">
+            Flagged for a leader by {flags.map((f) => f.by).join(', ')} · {new Date(flags[0].at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Read it through, then mark it read — the flag stays on record.
+          </div>
+          <button onClick={markRead} className="min-h-11 flex-none rounded-md border border-accent-600 px-3 text-[12px] font-medium text-accent-100">
+            Mark read
+          </button>
+        </div>
+      ) : mine ? (
+        <div className="mx-[14px] mt-[10px] flex items-start gap-[9px] rounded-md border border-neutral-800 px-3 py-[9px]">
+          <Icon name="ph ph-flag" className="mt-[1px] flex-none text-[14px] text-neutral-400" />
+          <div className="text-[11px] leading-[1.5] text-neutral-400 text-pretty">You flagged this for a leader. They can read it, and your name is on the flag.</div>
+        </div>
+      ) : null}
       {student ? (
         <div className="mx-[14px] mt-[10px] flex items-start gap-[9px] rounded-md border border-accent-700 px-3 py-[9px]" style={{ background: 'color-mix(in srgb, var(--color-accent) 9%, transparent)' }}>
           <Icon name="ph ph-eye" className="mt-[1px] flex-none text-[14px] text-accent-300" />
