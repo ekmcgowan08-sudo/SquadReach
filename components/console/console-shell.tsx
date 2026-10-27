@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
 import { StudentSearch } from '@/components/console/student-search';
 import { PushBanner, Ready, Toast } from '@/components/shell/phone-shell';
+import { SheetAutopublish } from '@/components/shell/sheet-autopublish';
 import { Icon } from '@/components/ui';
 import { useApp } from '@/lib/store/provider';
 
@@ -45,6 +46,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <PushBanner />
+      <SheetAutopublish />
       <Ready>{children}</Ready>
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] mx-auto h-[220px] max-w-[460px]">
         <Toast />

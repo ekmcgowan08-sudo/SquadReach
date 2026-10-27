@@ -382,6 +382,9 @@ export interface HuddleState {
   dismissed: Record<string, boolean>;
   /** Edited since it was last published — nobody has been told yet. */
   sheetDirty?: boolean;
+  /** Publish the sheet on its own: this many days before the night, at
+   *  this time ("16:00") in the ministry's zone. Cleared once it goes. */
+  sheetSchedule?: { daysBefore: number; time: string } | null;
 }
 
 export interface VisitorLogRow {

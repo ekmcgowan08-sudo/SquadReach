@@ -131,3 +131,14 @@ describe('ministry settings changed without signal', () => {
     expect(store.getState().unsavedConfig).toBe(false);
   });
 });
+
+describe('keeping the data', () => {
+  it('keeps a line logged right after a change, not only the change', () => {
+    const snaps: string[][] = [];
+    const backend: Backend = { ...demoBackend, saveSnapshot: (d) => void snaps.push(d.activityLog.map((a) => a.line)) };
+    const store = createAppStore(backend, leader, demoMinistry());
+    store.getState().mutate((d) => void (d.config.gameName = 'Sock wars'));
+    store.getState().logActivity('Renamed the game');
+    expect(snaps[snaps.length - 1]).toContain('Renamed the game');
+  });
+});

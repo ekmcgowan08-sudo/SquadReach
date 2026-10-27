@@ -11,6 +11,13 @@ export const SNAPSHOT_KEY = 'squadrise_demo_v1';
 let saveT: ReturnType<typeof setTimeout> | null = null;
 let pending: MinistryData | null = null;
 
+/* A reset or a blank preview replaces the snapshot; a save still waiting
+   must not write the old data back on the way out. */
+function dropPending() {
+  pending = null;
+  if (saveT) clearTimeout(saveT);
+}
+
 function flush() {
   if (!pending) return;
   try {
@@ -65,6 +72,7 @@ export const demoBackend: Backend = {
  *  scored — what the setup checklist and empty states look like. "Reset the
  *  demo" brings week 9 back. */
 export function previewBlankDemo() {
+  dropPending();
   try {
     localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ ...emptyMinistry(), config: { ...DEFAULT_CONFIG, ministryName: 'Your ministry' } }));
   } catch {
@@ -73,6 +81,7 @@ export function previewBlankDemo() {
 }
 
 export function resetDemo() {
+  dropPending();
   try {
     localStorage.removeItem(SNAPSHOT_KEY);
   } catch {

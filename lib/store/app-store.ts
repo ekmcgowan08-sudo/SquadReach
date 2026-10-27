@@ -146,7 +146,7 @@ let heldSinceMemo: number | null = null;
 
 export function createAppStore(backend: Backend, membership: Membership, initial: MinistryData) {
   let docRetry: ReturnType<typeof setTimeout> | null = null;
-  return createStore<AppState>()(
+  const store = createStore<AppState>()(
     immer((set, get) => {
       const leaderId = () => {
         const d = get().data;
@@ -773,6 +773,13 @@ export function createAppStore(backend: Backend, membership: Membership, initial
       };
     })
   );
+  /* Any change to the ministry's data is kept (the demo's snapshot is
+     debounced, and a no-op on Supabase, where each change syncs itself) —
+     so a line logged just after a change isn't lost on reload. */
+  store.subscribe((s, prev) => {
+    if (s.data !== prev.data) s.backend.saveSnapshot(s.data);
+  });
+  return store;
 }
 
 export type AppStore = ReturnType<typeof createAppStore>;

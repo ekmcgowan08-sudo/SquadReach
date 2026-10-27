@@ -124,8 +124,12 @@ email it as well:
 3. Set the ministry's time zone in Console › Setup. Deliveries go out by that
    clock.
 
-The same secret runs `GET /api/cron/media` once a day (also in `vercel.json`),
-which removes game film past the ministry's keep-for days.
+The same call publishes any run sheet scheduled to go out on its own
+(Console › Huddle sheet › Publish on a schedule), by the ministry's clock;
+an open leader or volunteer screen publishes it too, so the demo works
+without a server. The same secret runs `GET /api/cron/media` once a day
+(also in `vercel.json`), which removes game film past the ministry's
+keep-for days.
 
 Each (delivery, period) is claimed in `report_sends` before anything is sent,
 so the job running twice never sends twice, and a period more than a day

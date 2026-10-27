@@ -646,3 +646,19 @@ test('game rules drafted from notes are shown first and used only on request', a
   await expect(page.getByRole('textbox', { name: /^Rules/ })).toHaveValue(/Each squad starts behind its line/);
   await expect(page.getByText(/3 rounds × 4 min — the scoreboard runs a clock · 8 on the field\. Players see this/)).toBeVisible();
 });
+
+test('a run sheet scheduled to publish goes out on its own once it is due', async ({ page }) => {
+  await page.goto('/console?tab=huddle');
+  await ready(page);
+  await page.getByRole('button', { name: 'Publish on a schedule' }).click();
+  await page.getByLabel('When').selectOption({ label: 'The day before' });
+  await page.getByLabel('At', { exact: true }).fill('00:00');
+  await expect(page.getByText('Goes out Tuesday, the day before, at 12:00 AM.')).toBeVisible();
+  await page.getByRole('button', { name: 'Schedule it' }).click();
+  /* Tuesday has passed for the demo's Wednesday night, so it goes at once. */
+  await expect(page.getByRole('button', { name: 'Publish on a schedule' })).toBeVisible();
+  await page.goto('/dashboard/audit');
+  await ready(page);
+  await page.getByRole('button', { name: /Activity/ }).click();
+  await expect(page.getByText(/Published the run sheet on schedule/)).toBeVisible();
+});

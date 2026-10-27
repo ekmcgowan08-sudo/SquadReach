@@ -2,6 +2,7 @@
 /* The huddle sheet: tonight's running order, who serves where, who is on
    the bench, the open posts and the ready check. The phones' Huddle and the
    Home Tonight card read exactly this. */
+import { useState } from 'react';
 import { Section } from '@/components/console/kit';
 import { useHuddleSave } from '@/components/screens/huddle';
 import { Btn, Icon } from '@/components/ui';
@@ -9,6 +10,7 @@ import { nowMs } from '@/lib/dates';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { RUN_TEMPLATES, runTemplate } from '@/lib/run-templates';
+import { scheduleSentence } from '@/lib/sheet-schedule';
 import type { CrewMember, HuddleState, RunSheetItem } from '@/lib/types/model';
 
 const cell = 'input !min-h-9 !py-0';
@@ -36,12 +38,13 @@ export function HuddleTab() {
   const untold = h.runSheet.filter((it) => it.assignedTo && !it.notifiedAt);
   const unowned = h.runSheet.filter((it) => !it.assignedTo);
   const publish = () => {
-    if (!h.sheetDirty && !untold.length) return api().say('Nothing has changed since you last published.');
+    if (!h.sheetDirty && !untold.length && !h.sheetSchedule) return api().say('Nothing has changed since you last published.');
     const at = nowMs();
     const told = untold.map((it) => h.crew.find((c) => c.id === it.assignedTo)?.name).filter(Boolean) as string[];
     save((x) => {
       for (const it of x.runSheet) if (it.assignedTo && !it.notifiedAt) it.notifiedAt = at;
       x.sheetDirty = false;
+      x.sheetSchedule = null;
     });
     for (const it of untold) {
       const who = h.crew.find((c) => c.id === it.assignedTo)?.name;
@@ -87,10 +90,11 @@ export function HuddleTab() {
               Changes since you last published.{untold.length ? ' ' + untold.length + (untold.length === 1 ? ' owner hasn’t' : ' owners haven’t') + ' been told yet.' : ''}
             </div>
             <Btn className="px-4" onClick={publish}>
-              Publish
+              {h.sheetSchedule ? 'Publish now instead' : 'Publish'}
             </Btn>
           </div>
         ) : null}
+        <SheetScheduler />
         {unowned.length ? (
           <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">
             {unowned.length} {unowned.length === 1 ? 'item has' : 'items have'} no single owner. Whole-team moments (the huddle, send home) don’t need one; anything that only happens if one person remembers it does.
@@ -251,5 +255,81 @@ export function HuddleTab() {
         </div>
       </Section>
     </>
+  );
+}
+
+/* Publish on a schedule: the day before at 4:00 PM, say. The sheet as it
+   stands then is what goes out (lib/sheet-schedule). */
+function SheetScheduler() {
+  const h = useApp((s) => s.data.huddle);
+  const night = useApp((s) => s.data.tonight.date);
+  const api = useAppApi();
+  const save = useHuddleSave();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(h.sheetSchedule ?? { daysBefore: 1, time: '16:00' });
+  if (h.sheetSchedule && !open) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-neutral-800 px-3 py-[10px]">
+        <Icon name="ph ph-clock-countdown" className="text-[16px] text-accent-300" />
+        <div className="min-w-0 flex-1 text-[12.5px] text-neutral-200">Scheduled · {scheduleSentence(h.sheetSchedule, night)}. The sheet as it stands then is what goes out.</div>
+        <Btn variant="ghost" className="px-3" onClick={() => (setDraft(h.sheetSchedule!), setOpen(true))}>
+          Change
+        </Btn>
+        <Btn
+          variant="ghost"
+          className="px-3"
+          onClick={() => {
+            save((x) => void (x.sheetSchedule = null));
+            api().logActivity('Cancelled the scheduled run sheet publish');
+            api().say('Schedule cancelled. Nothing goes out until you publish it yourself.');
+          }}
+        >
+          Cancel schedule
+        </Btn>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <Btn variant="secondary" className="self-start px-4" onClick={() => setOpen(true)}>
+        <Icon name="ph ph-clock" className="mr-[6px] text-[14px]" />
+        Publish on a schedule
+      </Btn>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-neutral-800 p-3">
+      <p className="text-[12px] text-neutral-400">Pick when it goes out. The sheet as it stands at that moment is what owners are told about — keep editing until then.</p>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="field">
+          <span className="sr-label">When</span>
+          <select className="input" value={draft.daysBefore} onChange={(e) => setDraft({ ...draft, daysBefore: Number(e.target.value) })}>
+            <option value={0}>The day of the night</option>
+            <option value={1}>The day before</option>
+            <option value={2}>Two days before</option>
+          </select>
+        </label>
+        <label className="field">
+          <span className="sr-label">At</span>
+          <input className="input" type="time" value={draft.time} onChange={(e) => setDraft({ ...draft, time: e.target.value })} />
+        </label>
+        <Btn
+          className="px-4"
+          onClick={() => {
+            if (!/^\d{2}:\d{2}$/.test(draft.time)) return api().say('Give it a time.');
+            save((x) => void (x.sheetSchedule = { ...draft }));
+            api().logActivity('Scheduled the run sheet — ' + scheduleSentence(draft, night).toLowerCase());
+            api().say(scheduleSentence(draft, night) + '.');
+            setOpen(false);
+          }}
+        >
+          Schedule it
+        </Btn>
+        <Btn variant="ghost" className="px-3" onClick={() => setOpen(false)}>
+          Not now
+        </Btn>
+      </div>
+      <p className="text-[11.5px] text-neutral-500">{scheduleSentence(draft, night)}.</p>
+    </div>
   );
 }

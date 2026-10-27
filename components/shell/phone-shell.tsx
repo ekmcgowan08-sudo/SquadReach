@@ -5,6 +5,7 @@ import { clearRecents, noteNavigation, noteVisit, recentsOwner } from '@/lib/rec
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { switchRole } from '@/app/actions';
 import { canScore } from '@/lib/permissions';
+import { SheetAutopublish } from '@/components/shell/sheet-autopublish';
 import { TourCard } from '@/components/shell/tour';
 import { chatThreadsFor } from '@/lib/selectors';
 import { useApp, useAppApi, useApprovedRoles } from '@/lib/store/provider';
@@ -327,6 +328,7 @@ export function PhoneShell({ children }: { children: ReactNode }) {
     >
       <div className="relative flex h-dvh w-full max-w-[440px] flex-col overflow-hidden bg-bg sm:my-0 sm:border-x sm:border-neutral-800">
         <PushBanner />
+      <SheetAutopublish />
         <div ref={scroller} className="flex flex-1 flex-col overflow-y-auto overscroll-contain" style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)' }}>
           <OfflineBanner />
           <Ready>{children}</Ready>
