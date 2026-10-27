@@ -327,3 +327,29 @@ test('the console opens on Home, and Export everything hands over one file', asy
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/^grace-community-students-\d{4}-\d{2}-\d{2}\.json$/);
 });
+
+test('media spots run in the weeks picked and show on the season plan', async ({ page }) => {
+  await page.goto('/console?tab=media');
+  await ready(page);
+  await expect(page.getByRole('radiogroup', { name: 'Clips in the album' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add spot' }).click();
+  const spot = page.getByRole('group', { name: 'Spot: Untitled' });
+  await spot.getByLabel('Type', { exact: true }).fill('Sponsor read');
+  await spot.getByLabel('Title', { exact: true }).fill('Pizza night thanks');
+  await spot.getByLabel('Title', { exact: true }).press('Enter');
+  const named = page.getByRole('group', { name: 'Spot: Pizza night thanks' });
+  await named.getByRole('button', { name: 'None' }).click();
+  await named.getByRole('button', { name: 'Pizza night thanks, week 9' }).click();
+  await expect(named.getByText('Runs: Week 9')).toBeVisible();
+
+  await page.goto('/dashboard/season-plan');
+  await ready(page);
+  await expect(page.getByText('Pizza night thanks')).toBeVisible();
+  await expect(page.getByText('Blaze intro dance').first()).toBeVisible();
+
+  await page.goto('/dashboard/media');
+  await ready(page);
+  const tonight = page.getByRole('region', { name: 'Tonight’s spots' });
+  await expect(tonight.getByText('Pizza night thanks')).toBeVisible();
+  await expect(tonight.getByText('Fall retreat promo')).toBeVisible();
+});

@@ -2,7 +2,6 @@
 /* CONSOLE — the desktop shape of the ministry. Every save goes through the
    same store and sync events as the phone, so a change here lands on every
    phone the same way. */
-import { FILM_DEFAULTS } from '@/lib/types/model';
 import { DEFAULT_ZONE, ZONES } from '@/lib/time-zone';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -11,6 +10,7 @@ import { ChallengesTab } from '@/components/console/challenges-tab';
 import { DraftTab } from '@/components/console/draft-tab';
 import { HomeTab } from '@/components/console/home-tab';
 import { HuddleTab } from '@/components/console/huddle-tab';
+import { MediaTab } from '@/components/console/media-tab';
 import { OverlayTab } from '@/components/console/overlay-tab';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
 import { CycleSection } from '@/components/console/cycle-section';
@@ -19,7 +19,7 @@ import { ReportsTab } from '@/components/console/reports-tab';
 import { ScoringTab } from '@/components/console/scoring-tab';
 import { SeasonTab } from '@/components/console/season-tab';
 import { WalkthroughChapters } from '@/components/walkthrough-chapters';
-import { Btn, Icon, Switch2 } from '@/components/ui';
+import { Btn, Icon } from '@/components/ui';
 import { isoDay, parseLocalISO } from '@/lib/dates';
 import { pointBase, fmt, teamTotal } from '@/lib/scoring';
 import { uid } from '@/lib/store/app-store';
@@ -35,6 +35,7 @@ const TABS = [
   { id: 'scoring', label: 'Scoring', icon: 'ph ph-trophy' },
   { id: 'challenges', label: 'Challenges', icon: 'ph ph-flag-checkered' },
   { id: 'bible', label: 'Bible & memory', icon: 'ph ph-book-open-text' },
+  { id: 'media', label: 'Media', icon: 'ph ph-images' },
   { id: 'overlay', label: 'Recording overlay', icon: 'ph ph-video-camera' },
   { id: 'people', label: 'People', icon: 'ph ph-users-three' },
   { id: 'huddle', label: 'Huddle sheet', icon: 'ph ph-clipboard-text' },
@@ -64,7 +65,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
+        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'media' ? <MediaTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );
@@ -77,7 +78,6 @@ function SetupTab() {
   const api = useAppApi();
   const save = useSaveConfig();
   const c = d.config;
-  const film = c.filmUpload ?? FILM_DEFAULTS;
   const [start, setStart] = useState(c.meetingDates[0] ?? isoDay(new Date()));
   const [count, setCount] = useState(c.seasonWeeks || 9);
   const [newDate, setNewDate] = useState('');
@@ -125,17 +125,6 @@ function SetupTab() {
             </select>
             <span className="text-[11px] text-neutral-500">Scheduled report emails go out by this clock.</span>
           </label>
-        </div>
-      </Section>
-
-      <Section title="Game film" sub="Clips are filmed on a phone and stay there unless someone adds one to the week album. Turn this on to allow that. Uploaded film takes storage space, so it has a size limit and leaves the album after a set time; the copy on the phone that filmed it isn’t touched.">
-        <div className="grid items-end gap-3 sm:grid-cols-3">
-          <div className="field">
-            <span className="sr-label" aria-hidden="true">Clips in the album</span>
-            <Switch2 label="Clips in the album" value={film.on ? 'on' : 'off'} options={[{ id: 'off', label: 'Off' }, { id: 'on', label: 'Allowed' }]} onChange={(v) => save({ filmUpload: { ...film, on: v === 'on' } }, v === 'on' ? 'Allowed game film in the album' : 'Stopped new game film in the album')} />
-          </div>
-          <Field label="Largest clip (MB)" type="number" value={film.maxMb} onSave={(v) => save({ filmUpload: { ...film, maxMb: Math.max(5, Math.min(500, Number(v) || FILM_DEFAULTS.maxMb)) } })} />
-          <Field label="Keep for (days)" type="number" value={film.keepDays} onSave={(v) => save({ filmUpload: { ...film, keepDays: Math.max(1, Math.min(365, Number(v) || FILM_DEFAULTS.keepDays)) } })} hint="Then it leaves the album for good." />
         </div>
       </Section>
 

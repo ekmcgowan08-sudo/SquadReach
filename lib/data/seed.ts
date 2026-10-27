@@ -342,6 +342,11 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     config: {
       ministryName: 'Grace Community Students',
       seasonName: 'Fall 2026',
+      mediaSpots: [
+        { id: 'sp1', kind: 'Mascot bit', title: 'Blaze intro dance', note: '30 seconds, opens the night', color: '#e0a23f' },
+        { id: 'sp2', kind: 'Commercial', title: 'Fall retreat promo', note: 'Plays during halftime', color: '#5a9fd6', weeks: [6, 7, 8, 9] },
+        { id: 'sp3', kind: 'Hype video', title: 'Last week recap', note: 'Plays as students walk in', color: '#74b37a', weeks: [2, 3, 4, 5, 6, 7, 8, 9] }
+      ],
       cycle: DEFAULT_CYCLE,
       pointBase: 900,
       weekGrowthPct: 8,

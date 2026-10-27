@@ -8,7 +8,7 @@ import { ytEmbedUrl } from '@/components/screens/games';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf, tint } from '@/components/ui';
 import { kindOf } from '@/lib/library';
-import { challengesIn } from '@/lib/feeds';
+import { challengesIn, runningIn } from '@/lib/feeds';
 import { canApprove, canScore } from '@/lib/permissions';
 import { TIER_COLOR, catOf, computeBadges, eventLabel, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
@@ -84,13 +84,14 @@ function Weeks() {
     for (const g of d.smallGroups.filter((x) => x.weekNumber === w)) items.push({ icon: 'ph ph-users-four', color: 'var(--color-accent-400)', label: g.title, kind: 'Small group' });
     for (const p of d.libraryPlaced.filter((x) => x.week === w)) items.push({ icon: kindOf(p.kind).icon, color: 'var(--color-accent-300)', label: p.title, kind: 'From the library' });
     for (const ch of challengesIn(d.challenges, w)) items.push({ icon: 'ph ph-target', color: catOf(d, 'visitors').color, label: ch.title, kind: ch.kind + ' challenge' });
+    for (const sp of runningIn(c.mediaSpots ?? [], w)) items.push({ icon: 'ph ph-film-strip', color: sp.color, label: sp.title, kind: sp.kind });
     if (iso) for (const e of d.events.filter((x) => x.status !== 'proposed' && x.iso && x.iso > iso && (!next || x.iso < next))) items.push({ icon: 'ph ph-calendar-dots', color: e.color, label: e.title + ' · ' + eventLabel(e), kind: 'Event' });
     const date = iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
     return { w, date, items, now: w === c.weekNumber, past: w < c.weekNumber };
   });
   return (
     <>
-      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Every week of the season and what runs in it — the game, the verse, the small group, the challenges and anything on the calendar in between.</div>
+      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Every week of the season and what runs in it — the game, the verse, the small group, the challenges, the media spots and anything on the calendar in between.</div>
       <div className="flex flex-col gap-[9px]">
         {weeks.map((w) => (
           <div key={w.w} className="rounded-lg bg-surface px-[14px] py-3" style={{ boxShadow: w.now ? 'inset 0 0 0 1px var(--color-accent-600)' : 'var(--shadow-sm)', opacity: w.past ? 0.72 : 1 }}>

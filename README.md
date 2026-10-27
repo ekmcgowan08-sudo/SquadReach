@@ -286,7 +286,7 @@ Where the prototype left a call open, the build took the safer default:
   sharing the unit; a unit that changes starts over with no reports.
 - **Game film is off the server by default.** A clip stays on the phone
   that filmed it. A leader can allow clips in the week album (Console ›
-  Setup › Game film), with a size limit per clip (80 MB unless changed) and
+  Media › Game film), with a size limit per clip (80 MB unless changed) and
   a keep-for period (60 days unless changed). `GET /api/cron/media` runs
   daily and removes expired film, file first and then its album row; photos
   are never touched. Supabase's own upload limit (50 MB on the free plan)

@@ -134,8 +134,10 @@ export function creditChallenges(
   return touched ? next : null;
 }
 
-/** The challenges running in a week: scheduled for it, or for every week. */
-export const challengesIn = (challenges: Challenge[], week: number) => challenges.filter((c) => !c.weeks || c.weeks.includes(week));
+/** What runs in a week: scheduled for it, or for every week (no list). */
+export const runningIn = <T extends { weeks?: number[] | null }>(list: T[], week: number) => list.filter((c) => !c.weeks || c.weeks.includes(week));
+/** The challenges running in a week. */
+export const challengesIn = (challenges: Challenge[], week: number) => runningIn(challenges, week);
 
 /* ── Setup fields → the Home church card ─────────────────────────────────
    Blank fields disappear; nothing renders an empty row. */

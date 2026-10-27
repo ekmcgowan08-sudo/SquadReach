@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Recorder } from '@/components/media/recorder';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader } from '@/components/ui';
+import { runningIn } from '@/lib/feeds';
 import { shrinkImage } from '@/lib/image';
 import { delBlob, getBlob, putBlob, useFileUrl } from '@/lib/media-store';
 import { canApprove } from '@/lib/permissions';
@@ -37,6 +38,7 @@ export function MediaScreen() {
   const [clip, setClip] = useState<Clip | null>(null);
   const wk = d.config.weekNumber;
 
+  const spots = runningIn(d.config.mediaSpots ?? [], wk);
   const gw = d.config.gameSetup.gameWeeks;
   const runsGame = (w: number) => !!d.config.gameName && (!gw || gw.includes(w));
   const albums = (() => {
@@ -78,6 +80,25 @@ export function MediaScreen() {
         }
       />
       <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Everything files into the week it happened in and stays there. Clips stay on the phone that filmed them unless someone adds them to the album.</div>
+
+      {spots.length ? (
+        <section className="sr-card overflow-hidden" aria-label="Tonight’s spots">
+          <div className="px-[15px] pb-[9px] pt-[13px]">
+            <div className="text-[14px] font-medium leading-[1.2] text-neutral-100">Tonight’s spots</div>
+            <div className="mt-[3px] text-[11px] leading-[1.35] text-neutral-500 text-pretty">What plays or gets filmed this week. The console sets these.</div>
+          </div>
+          {spots.map((sp) => (
+            <div key={sp.id} className="flex items-center gap-[11px] border-t border-divider px-[15px] py-[11px]">
+              <span className="h-[30px] w-[4px] flex-none rounded-full" style={{ background: sp.color }} aria-hidden />
+              <div className="min-w-0 flex-1">
+                <div className="text-[12.5px] font-medium leading-[1.3] text-neutral-200">{sp.title}</div>
+                {sp.note ? <div className="mt-[2px] text-[10.5px] leading-[1.3] text-neutral-500">{sp.note}</div> : null}
+              </div>
+              <span className="flex-none text-[9.5px] uppercase leading-none tracking-[.06em] text-neutral-500">{sp.kind}</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {d.filmMarks.length ? (
         <div className="sr-card overflow-hidden border border-accent-700">

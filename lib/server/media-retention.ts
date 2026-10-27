@@ -1,6 +1,6 @@
 import 'server-only';
 /* Game film leaves the album after the ministry's chosen number of days
-   (Console › Setup › Game film): the storage object and its album row both
+   (Console › Media › Game film): the storage object and its album row both
    go. Photos are never touched. Runs daily from app/api/cron/media. */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { FILM_DEFAULTS, type MinistryConfig } from '@/lib/types/model';

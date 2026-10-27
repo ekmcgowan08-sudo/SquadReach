@@ -153,6 +153,16 @@ export interface Challenge {
   weeks?: number[] | null;
 }
 
+export interface MediaSpot {
+  id: string;
+  /** The type, named by the ministry: "Mascot bit", "Commercial"… */
+  kind: string;
+  title: string;
+  note: string;
+  color: string;
+  weeks?: number[] | null;
+}
+
 export interface AccessRequest {
   id: string;
   name: string;
@@ -212,6 +222,9 @@ export interface MinistryConfig {
   draft?: DraftSettings;
   /** Every squad move made as a trade, newest first. */
   trades?: TradeRecord[];
+  /** Spots to film or play on the night: mascot bits, commercials, hype
+   *  videos. Weeks as for challenges: absent means every week. */
+  mediaSpots?: MediaSpot[];
   /** What the scoreboard burned into game film shows (lib/scorebug). */
   overlay?: Partial<OverlaySettings>;
   /** Memory drills by week (lib/bible drillsIn): absent means every week. */
