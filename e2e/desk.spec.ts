@@ -228,3 +228,27 @@ test('Ministry time: duplicate an activity, then turn the copy into a this-or-th
   await expect(page.getByText('2. This or that')).toBeVisible();
   await expect(page.getByRole('textbox').first()).toHaveValue('Who wrote the letter to the Ephesians?');
 });
+
+test('the leader tour follows a new leader across the desk screens', async ({ page }) => {
+  await page.goto('/planner/coverage');
+  await ready(page);
+  await page.getByRole('button', { name: 'Leader tour' }).click();
+  await expect(page).toHaveURL(/\/planner$/);
+  const tour = page.getByRole('dialog', { name: 'Leader tour' });
+  await expect(tour).toContainText('1 of 13');
+  await tour.getByRole('button', { name: /^Next: Fill roles/ }).click();
+  await tour.getByRole('button', { name: 'Next: Prep week' }).click();
+  await expect(page).toHaveURL(/\/planner\/prep\?view=prep$/);
+  await expect(tour).toContainText('3 of 13');
+  await page.reload();
+  await ready(page);
+  await expect(tour).toContainText('Prep week');
+  await tour.getByRole('button', { name: 'End the tour' }).click();
+  await expect(tour).toHaveCount(0);
+});
+
+test('⌘K’s debrief action opens tonight’s night, not the season', async ({ page }) => {
+  await page.goto('/planner/season?debrief=1');
+  await ready(page);
+  await expect(page.getByText('Service order')).toBeVisible();
+});

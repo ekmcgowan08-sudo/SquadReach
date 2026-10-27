@@ -38,6 +38,7 @@ Things worth trying first:
 | More → **Prep week**, **Night recap**, **Serving & swaps**, **Message parents**, **Door kiosk** | The week around the night. In demo mode, the “Preview as of” chips move the clock through the week |
 | `/f/demo-reid-family` | A parent’s private family link: tonight’s card, permission slips to sign, messages. No account |
 | `/console` (as a leader) | The desktop console: setup, the season interview, squads, scoring, people (with a who-can-do-what table read off the real permission checks), the huddle sheet, reports and their delivery schedule, the walkthrough |
+| `/planner` → the compass button | The leader tour: one card that walks a new leader through all thirteen desk screens |
 | `/planner` (as a leader) | The desk planner: tonight, prep and recap, people, the seven-year roadmap, the ministry year, season and night, coverage, the liturgical year, settings. ⌘K jumps anywhere |
 | `/planner/setup` | The plan’s guided setup: the seven-year range, groups, the night you meet and its breaks, church identity, lanes and goals |
 | `/planner/live?tab=run` → **Open the room screen** | Live ministry time. Open an activity and a pretend room answers; the room screen in the other window follows |

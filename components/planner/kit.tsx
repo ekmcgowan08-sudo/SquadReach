@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { DeskTourCard, startDeskTour } from '@/components/planner/desk-tour';
 import { PushBanner, Ready, Toast } from '@/components/shell/phone-shell';
 import { Btn, Icon, cx } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
@@ -41,7 +42,8 @@ const ACTIONS = [
   { label: 'Print the one-pager', href: '/planner/one-pager?print=1', group: 'Plan' },
   { label: 'Plan checks', href: '/planner/roadmap?view=checks', group: 'Plan' },
   { label: 'Run ministry time', href: '/planner/live?tab=run', group: 'Tonight' },
-  { label: 'Open the room screen', href: '/live/room', group: 'Tonight' }
+  { label: 'Open the room screen', href: '/live/room', group: 'Tonight' },
+  { label: 'Take the leader tour', href: '#tour', group: 'Help' }
 ];
 
 /** "Move Gospel of Mark…" → "move Gospel of Mark…": names keep their capitals. */
@@ -318,6 +320,17 @@ export function PlannerShell({ children }: { children: ReactNode }) {
             Jump to…
             <span className="rounded border border-neutral-700 px-1 text-[10.5px]">⌘K</span>
           </button>
+          <button
+            onClick={() => {
+              startDeskTour();
+              router.push('/planner');
+            }}
+            aria-label="Leader tour"
+            title="Leader tour"
+            className="hidden h-9 w-9 flex-none items-center justify-center rounded-full border border-neutral-800 text-accent-300 md:flex"
+          >
+            <Icon name="ph ph-compass" className="text-[15px]" />
+          </button>
           {unsaved ? (
             <span role="status" className="flex-none rounded-full border border-[oklch(0.72_0.105_66)] px-3 py-[5px] text-[11.5px] text-neutral-200" title="Kept on this screen; it saves itself, merged with anyone else’s changes, when the connection is back.">
               Not saved yet — saves when you’re back online
@@ -335,6 +348,7 @@ export function PlannerShell({ children }: { children: ReactNode }) {
         <main className="mx-auto max-w-[1440px] px-5 pb-16 pt-5">{children}</main>
       </Ready>
       {palette ? <Palette onClose={() => setPalette(false)} /> : null}
+      <DeskTourCard />
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] mx-auto h-[220px] max-w-[460px]">
         <Toast />
       </div>
@@ -356,7 +370,10 @@ function Palette({ onClose }: { onClose: () => void }) {
   }, [q]);
   const go = (href: string) => {
     onClose();
-    router.push(href);
+    if (href === '#tour') {
+      startDeskTour();
+      router.push('/planner');
+    } else router.push(href);
   };
   return (
     <div className="fixed inset-0 z-[150] flex items-start justify-center bg-black/60 px-4 pt-[12vh]" onClick={onClose}>

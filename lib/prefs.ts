@@ -35,6 +35,8 @@ export interface Prefs {
   tourSeen: boolean;
   /** The walkthrough: on, and which step. Survives navigation and reloads. */
   tour: { on: boolean; i: number };
+  /** The planner's leader tour, across the desk screens. */
+  deskTour: { on: boolean; i: number };
   /** Demo only: the moment of the week the night-cycle screens preview. */
   cyclePreview: string | null;
   /** Walkthrough chapters this person has ticked off. */
@@ -50,6 +52,7 @@ const DEFAULTS: Prefs = {
   notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true, nightCycle: true, reportDelivery: true },
   tourSeen: false,
   tour: { on: false, i: 0 },
+  deskTour: { on: false, i: 0 },
   cyclePreview: null,
   walkthroughDone: {},
   onePager: { paper: 'letter', ground: 'light' }

@@ -32,7 +32,7 @@ export function SeasonNight() {
   const p = d.plan;
   const focus = params.get('night') ?? tonight;
   const asked = params.get('view');
-  const view = asked === 'season' || asked === 'month' || asked === 'night' ? asked : params.get('night') ? 'night' : 'season';
+  const view = asked === 'season' || asked === 'month' || asked === 'night' ? asked : params.get('night') || params.get('debrief') ? 'night' : 'season';
   const [year, setYear] = useState(() => Math.max(0, Math.min(6, yearOf(p, focus))));
   const seasons = seasonsOf(p, year);
   const [seasonId, setSeasonId] = useState(() => seasons.find((s) => focus >= s.from && focus <= s.to)?.id ?? seasons[0]?.id);
