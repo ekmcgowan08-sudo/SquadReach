@@ -16,7 +16,7 @@ import { groupHeldEntries, heldTotal, wasHeld } from '@/lib/held';
 import { autoApproves, canApprove, canControlEvent, canHuddle } from '@/lib/permissions';
 import { deltaLabel, fmt, pointBase, studentRanks, studentTotal } from '@/lib/scoring';
 import { catOf, computeBadges, computeNotifications, eventLabel, myBible, myTeamId, sheetMinutes, teamOf, teamRoster, upcomingEvents } from '@/lib/selectors';
-import { usePrefs } from '@/lib/prefs';
+import { notifOn, usePrefs } from '@/lib/prefs';
 import { useNow } from '@/lib/use-now';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
@@ -33,7 +33,7 @@ export function HomeScreen() {
   const coachTeam = useApp((s) => s.coachTeam);
   const rows = useStandings();
   const prefs = usePrefs();
-  const notifs = useMemo(() => computeNotifications(d, m, prefs.notifTriggers), [d, m, prefs.notifTriggers]);
+  const notifs = useMemo(() => computeNotifications(d, m, notifOn(d.config.notifDefaults, prefs.notifMine)), [d, m, prefs.notifMine]);
 
   useEffect(() => {
     if (params.get('denied')) api().say('Your role does not have that screen.');

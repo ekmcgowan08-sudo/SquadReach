@@ -13,7 +13,7 @@ import { startTour } from '@/components/shell/tour';
 import { Btn, EmptyNote, Icon, Screen, ScreenHeader } from '@/components/ui';
 import { ago } from '@/lib/dates';
 import { canApprove } from '@/lib/permissions';
-import { HOME_SECTIONS, NOTIF_TRIGGERS, setPrefs, usePrefs } from '@/lib/prefs';
+import { HOME_SECTIONS, NOTIF_TRIGGERS, notifOn, setPrefs, usePrefs } from '@/lib/prefs';
 import { fmt, signed } from '@/lib/scoring';
 import { catOf, computeNotifications, teamOf } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
@@ -53,7 +53,8 @@ export function NotificationsScreen() {
   const api = useAppApi();
   const prefs = usePrefs();
   const [settings, setSettings] = useState(false);
-  const list = useMemo(() => computeNotifications(d, m, prefs.notifTriggers), [d, m, prefs.notifTriggers]);
+  const on = notifOn(d.config.notifDefaults, prefs.notifMine);
+  const list = useMemo(() => computeNotifications(d, m, notifOn(d.config.notifDefaults, prefs.notifMine)), [d, m, prefs.notifMine]);
 
   /* A real notification from this phone, so a leader can check the device
      will actually show them before relying on it on a Wednesday night. */
@@ -110,12 +111,17 @@ export function NotificationsScreen() {
 
       <Sheet open={settings} onClose={() => setSettings(false)} label="Notification settings" z={85} maxH="85%">
         <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">Notification settings</div>
-        <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Choose what shows up in your notifications on this phone. Approvals you’re responsible for still appear on Home.</div>
+        <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Choose what shows up in your notifications on this phone. Your ministry sets what’s on to begin with; what you change here is yours. Approvals you’re responsible for still appear on Home.</div>
         <div className="flex flex-col gap-[5.6px]">
           {NOTIF_TRIGGERS.map((t) => (
-            <CheckRow key={t.key} on={prefs.notifTriggers[t.key]} label={t.label} hint={t.hint} onClick={() => setPrefs((p) => ({ notifTriggers: { ...p.notifTriggers, [t.key]: !p.notifTriggers[t.key] } }))} />
+            <CheckRow key={t.key} on={on[t.key]} label={t.label} hint={t.hint} onClick={() => setPrefs((p) => ({ notifMine: { ...p.notifMine, [t.key]: !on[t.key] } }))} />
           ))}
         </div>
+        {Object.keys(prefs.notifMine).length ? (
+          <Btn variant="ghost" className="min-h-11 justify-center text-accent-300" onClick={() => setPrefs({ notifMine: {} })}>
+            Back to the ministry’s settings
+          </Btn>
+        ) : null}
         <Btn variant="ghost" className="min-h-[46px] justify-center" onClick={() => setSettings(false)}>
           Done
         </Btn>

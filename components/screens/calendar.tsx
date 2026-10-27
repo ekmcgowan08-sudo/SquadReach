@@ -13,7 +13,7 @@ import { sendChat, sendRsvp } from '@/lib/store/actions';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { realRole, roleIn } from '@/lib/types/domain';
-import type { AudienceId, MinistryEvent, Rsvp } from '@/lib/types/model';
+import { DEFAULT_EVENT_TYPES, type AudienceId, type MinistryEvent, type Rsvp } from '@/lib/types/model';
 
 export const AUDIENCE_LABELS: Record<AudienceId, { label: string; hint: string }> = {
   members: { label: 'Students', hint: 'every squad' },
@@ -237,12 +237,6 @@ function AudiencePicker({ roles, onChange }: { roles: AudienceId[]; onChange: (r
   );
 }
 
-const QUICK = [
-  { title: 'Squad hangout', time: '7:00p', color: '#2563EB', roles: ['members', 'captains', 'coaches', 'leaders'] as AudienceId[] },
-  { title: 'Coaches’ lunch', time: '12:30p', color: '#968ae0', roles: ['coaches', 'leaders', 'admins'] as AudienceId[] },
-  { title: 'Serve day', time: '9:00a', color: '#0D9488', roles: [...ALL_AUDIENCES] }
-];
-
 function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const d = useApp((s) => s.data);
   const m = useApp((s) => s.membership);
@@ -256,6 +250,7 @@ function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }
   const [roles, setRoles] = useState<AudienceId[]>([...ALL_AUDIENCES]);
   const [color, setColor] = useState('#968ae0');
   const name = (team ? teamOf(d, team).name + ': ' : '') + (title.trim() || 'Event name');
+  const types = d.config.eventTypes ?? DEFAULT_EVENT_TYPES;
 
   const submit = () => {
     if (!title.trim()) return api().say('Give it a name first.');
@@ -293,14 +288,15 @@ function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }
       <div>
         <div className={kicker + ' mb-[8.4px]'}>Quick start</div>
         <div className="flex flex-wrap gap-[7px]">
-          {QUICK.map((q) => (
+          {types.map((q) => (
             <button
-              key={q.title}
+              key={q.id}
               onClick={() => {
                 setTitle(q.title);
                 setTime(q.time);
+                if (q.place) setPlace(q.place);
                 setColor(q.color);
-                setRoles(q.roles);
+                setRoles(q.roles.length ? q.roles : [...ALL_AUDIENCES]);
               }}
               className="flex min-h-11 items-center gap-[6px] rounded-full border border-neutral-800 px-3 text-[11.5px] font-medium leading-none text-neutral-300"
             >

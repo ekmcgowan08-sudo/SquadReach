@@ -7,11 +7,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { BibleTab } from '@/components/console/bible-tab';
 import { AwardsTab } from '@/components/console/awards-tab';
+import { CalendarTab } from '@/components/console/calendar-tab';
 import { ChallengesTab } from '@/components/console/challenges-tab';
 import { DraftTab } from '@/components/console/draft-tab';
 import { HomeTab } from '@/components/console/home-tab';
 import { HuddleTab } from '@/components/console/huddle-tab';
 import { MediaTab } from '@/components/console/media-tab';
+import { NotifsTab } from '@/components/console/notifs-tab';
 import { OverlayTab } from '@/components/console/overlay-tab';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
 import { CycleSection } from '@/components/console/cycle-section';
@@ -34,12 +36,14 @@ const TABS = [
   { id: 'teams', label: 'Squads', icon: 'ph ph-shield-check' },
   { id: 'draft', label: 'Draft & trades', icon: 'ph ph-arrows-left-right' },
   { id: 'scoring', label: 'Scoring', icon: 'ph ph-trophy' },
+  { id: 'calendar', label: 'Calendar', icon: 'ph ph-calendar-dots' },
   { id: 'challenges', label: 'Challenges', icon: 'ph ph-flag-checkered' },
   { id: 'bible', label: 'Bible & memory', icon: 'ph ph-book-open-text' },
   { id: 'awards', label: 'Awards', icon: 'ph ph-medal' },
   { id: 'media', label: 'Media', icon: 'ph ph-images' },
   { id: 'overlay', label: 'Recording overlay', icon: 'ph ph-video-camera' },
   { id: 'people', label: 'People', icon: 'ph ph-users-three' },
+  { id: 'notifs', label: 'Notifications', icon: 'ph ph-bell' },
   { id: 'huddle', label: 'Huddle sheet', icon: 'ph ph-clipboard-text' },
   { id: 'reports', label: 'Reports', icon: 'ph ph-file-arrow-down' },
   { id: 'walkthrough', label: 'Walkthrough', icon: 'ph ph-compass' }
@@ -67,7 +71,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'awards' ? <AwardsTab /> : tab === 'media' ? <MediaTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
+        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'calendar' ? <CalendarTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'awards' ? <AwardsTab /> : tab === 'media' ? <MediaTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'notifs' ? <NotifsTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );

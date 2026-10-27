@@ -372,3 +372,43 @@ test('an award voting window set in the console holds on the phone', async ({ pa
   await page.getByRole('group', { name: 'Award: MVP' }).getByRole('button', { name: 'Clear dates' }).click();
   await expect(page.getByRole('group', { name: 'Award: MVP' }).getByText('Open', { exact: true })).toBeVisible();
 });
+
+test('the console calendar approves a proposal and its event types reach the phone composer', async ({ page }) => {
+  await page.goto('/console?tab=calendar');
+  await ready(page);
+  await page.getByRole('button', { name: 'Approve Reign bowling night' }).click();
+  await expect(page.getByRole('button', { name: 'Approve Reign bowling night' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add event type' }).click();
+  const type = page.getByRole('group', { name: 'Event type: New event' });
+  await type.getByLabel('Name', { exact: true }).fill('Lock-in');
+  await type.getByLabel('Name', { exact: true }).press('Enter');
+  const lockIn = page.getByRole('group', { name: 'Event type: Lock-in' });
+  await lockIn.getByLabel('Where', { exact: true }).fill('Fellowship hall');
+  await lockIn.getByLabel('Where', { exact: true }).press('Enter');
+  await expect(lockIn.getByLabel('Where', { exact: true })).toHaveValue('Fellowship hall');
+
+  await page.goto('/dashboard/calendar');
+  await ready(page);
+  await page.getByRole('button', { name: /Event$/ }).click();
+  await page.getByRole('button', { name: 'Lock-in' }).click();
+  await expect(page.getByLabel('Event name')).toHaveValue('Lock-in');
+  await expect(page.getByLabel('Where')).toHaveValue('Fellowship hall');
+});
+
+test('notification defaults set in the console are what a phone starts with', async ({ page }) => {
+  await page.goto('/console?tab=notifs');
+  await ready(page);
+  await page.getByRole('checkbox', { name: /Weekly summary/ }).uncheck();
+  await expect(page.getByText('9 of 10 on')).toBeVisible();
+
+  await page.goto('/dashboard/notifications');
+  await ready(page);
+  await expect(page.getByText(/summary ready/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Notification settings' }).click();
+  const weekly = page.getByRole('button', { name: /Weekly summary/ });
+  await expect(weekly).toHaveAttribute('aria-pressed', 'false');
+  await weekly.click();
+  await expect(weekly).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Back to the ministry’s settings' }).click();
+  await expect(weekly).toHaveAttribute('aria-pressed', 'false');
+});

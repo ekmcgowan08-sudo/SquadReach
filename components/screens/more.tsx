@@ -21,7 +21,7 @@ import {
 } from '@/lib/permissions';
 import { attendanceStats, checkinOpen, followups, isAfter, myNights, nextReminder, reminders, slipsView, weekday } from '@/lib/cycle';
 import { computeNotifications, eventLabel, myBible, myTeamId, openFollowups, teamOf, upcomingEvents } from '@/lib/selectors';
-import { usePrefs } from '@/lib/prefs';
+import { notifOn, usePrefs } from '@/lib/prefs';
 import { clearRecents, recentsOwner, recentsSnapshot, subscribeRecents } from '@/lib/recents';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef, realRole } from '@/lib/types/domain';
@@ -51,7 +51,7 @@ export function MoreScreen() {
   const [invite, setInvite] = useState(false);
   const p = m.persona;
   const prefs = usePrefs();
-  const notifs = useMemo(() => computeNotifications(d, m, prefs.notifTriggers), [d, m, prefs.notifTriggers]);
+  const notifs = useMemo(() => computeNotifications(d, m, notifOn(d.config.notifDefaults, prefs.notifMine)), [d, m, prefs.notifMine]);
   const myTeam = teamOf(d, myTeamId(m, d, coachTeam));
   const pendingAccess = d.accessRequests.filter((r) => r.status === 'pending').length;
   const pendingPts = new Set(d.ledger.filter((e) => e.status === 'pending').map((e) => e.batch ?? e.id)).size;

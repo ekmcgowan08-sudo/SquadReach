@@ -291,6 +291,11 @@ Where the prototype left a call open, the build took the safer default:
   daily and removes expired film, file first and then its album row; photos
   are never touched. Supabase's own upload limit (50 MB on the free plan)
   still applies.
+- **Notifications: the ministry sets the start, each person has the last
+  word.** Console › Notifications says which kinds are on for everyone; a
+  person's own switches on the phone override it, and "Back to the
+  ministry's settings" drops them. Phones that saved settings before this
+  keep only the ones they had turned off.
 - **Award voting keeps to its window.** In Console › Awards a leader can
   schedule when voting on each popularity award opens and closes (days in
   the ministry's time zone), or close it by hand. The database refuses a

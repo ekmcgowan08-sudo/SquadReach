@@ -8,7 +8,7 @@ import { as, ready } from './helpers';
 const DESK = [
   '/planner', '/planner/prep', '/planner/prep?view=recap', '/planner/people', '/planner/roadmap', '/planner/roadmap?view=journey', '/planner/roadmap?density=one', '/planner/roadmap?view=checks', '/planner/year', '/planner/season', '/planner/season?view=month', '/planner/season?view=night', '/planner/coverage',
   '/planner/liturgical', '/planner/live', '/planner/live?tab=run', '/planner/live?tab=results', '/planner/settings', '/planner/setup', '/planner/one-pager',
-  '/console', '/console?tab=season', '/console?tab=teams', '/console?tab=draft', '/console?tab=scoring', '/console?tab=challenges', '/console?tab=bible', '/console?tab=awards', '/console?tab=media', '/console?tab=overlay', '/console?tab=huddle', '/console?tab=reports', '/console?tab=people', '/console?tab=walkthrough'
+  '/console', '/console?tab=season', '/console?tab=teams', '/console?tab=draft', '/console?tab=scoring', '/console?tab=challenges', '/console?tab=bible', '/console?tab=awards', '/console?tab=media', '/console?tab=overlay', '/console?tab=huddle', '/console?tab=reports', '/console?tab=people', '/console?tab=notifs', '/console?tab=calendar', '/console?tab=walkthrough'
 ];
 const WIDTHS = [1180, 1280, 1440];
 

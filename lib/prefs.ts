@@ -31,7 +31,9 @@ export interface Prefs {
   theme: 'dark' | 'light';
   reduceMotion: boolean;
   homeSections: Record<HomeSection, boolean>;
-  notifTriggers: Record<NotifTrigger, boolean>;
+  /** Notifications this person switched on or off themselves. Anything
+   *  not here follows the ministry's default (Console › Notifications). */
+  notifMine: Partial<Record<NotifTrigger, boolean>>;
   tourSeen: boolean;
   /** The walkthrough: on, and which step. Survives navigation and reloads. */
   tour: { on: boolean; i: number };
@@ -49,7 +51,7 @@ const DEFAULTS: Prefs = {
   theme: 'dark',
   reduceMotion: false,
   homeSections: { standings: true, feed: true, badges: true, church: true },
-  notifTriggers: { event: true, approvals: true, roleRequest: true, prayer: true, weeklySummary: true, runSheet: true, streakBreak: true, bibleReminder: true, nightCycle: true, reportDelivery: true },
+  notifMine: {},
   tourSeen: false,
   tour: { on: false, i: 0 },
   deskTour: { on: false, i: 0 },
@@ -68,12 +70,16 @@ function load(): Prefs {
   try {
     const raw = window.localStorage.getItem(PREFS_KEY);
     if (raw) {
-      const p = JSON.parse(raw) as Partial<Prefs>;
+      const p = JSON.parse(raw) as Partial<Prefs> & { notifTriggers?: Record<string, boolean> };
+      /* Phones saved every trigger before ministry defaults existed, all on
+         unless switched off, so only an "off" there was a choice. */
+      const old = p.notifTriggers ? Object.fromEntries(Object.entries(p.notifTriggers).filter(([, v]) => v === false)) : {};
+      delete p.notifTriggers;
       current = {
         ...DEFAULTS,
         ...p,
         homeSections: { ...DEFAULTS.homeSections, ...p.homeSections },
-        notifTriggers: { ...DEFAULTS.notifTriggers, ...p.notifTriggers },
+        notifMine: p.notifMine ?? old,
         onePager: { ...DEFAULTS.onePager, ...p.onePager }
       };
     }
@@ -112,4 +118,10 @@ export function usePrefs(): Prefs {
     load,
     () => DEFAULTS
   );
+}
+
+/** Which notifications reach this person: their own choice, else the
+ *  ministry's default, else on. */
+export function notifOn(ministry: Partial<Record<string, boolean>> | undefined, mine: Partial<Record<NotifTrigger, boolean>>): Record<NotifTrigger, boolean> {
+  return Object.fromEntries(NOTIF_TRIGGERS.map((t) => [t.key, mine[t.key] ?? ministry?.[t.key] ?? true])) as Record<NotifTrigger, boolean>;
 }

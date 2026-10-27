@@ -138,6 +138,23 @@ export interface MinistryEvent {
   nudgedOn?: string;
 }
 
+/** A quick start on the phone's event composer: fills the name, time,
+ *  place, colour and who it goes to. */
+export interface EventType {
+  id: string;
+  title: string;
+  time: string;
+  place?: string;
+  color: string;
+  roles: AudienceId[];
+}
+
+export const DEFAULT_EVENT_TYPES: EventType[] = [
+  { id: 'et1', title: 'Squad hangout', time: '7:00p', color: '#2563EB', roles: ['members', 'captains', 'coaches', 'leaders'] },
+  { id: 'et2', title: 'Coaches’ lunch', time: '12:30p', color: '#968ae0', roles: ['coaches', 'leaders', 'admins'] },
+  { id: 'et3', title: 'Serve day', time: '9:00a', color: '#0D9488', roles: ['members', 'captains', 'coaches', 'scorekeeper', 'leaders', 'parents', 'admins'] }
+];
+
 export interface Challenge {
   id: string;
   kind: 'Team' | 'Individual';
@@ -225,6 +242,12 @@ export interface MinistryConfig {
   /** Spots to film or play on the night: mascot bits, commercials, hype
    *  videos. Weeks as for challenges: absent means every week. */
   mediaSpots?: MediaSpot[];
+  /** Quick starts staff see when they add or propose an event. Absent
+   *  means DEFAULT_EVENT_TYPES. */
+  eventTypes?: EventType[];
+  /** Which notifications are on for everyone unless they change their own
+   *  (keys of lib/prefs NOTIF_TRIGGERS). Absent means on. */
+  notifDefaults?: Partial<Record<string, boolean>>;
   /** What the scoreboard burned into game film shows (lib/scorebug). */
   overlay?: Partial<OverlaySettings>;
   /** Memory drills by week (lib/bible drillsIn): absent means every week. */
