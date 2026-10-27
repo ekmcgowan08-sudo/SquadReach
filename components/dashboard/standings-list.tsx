@@ -34,8 +34,9 @@ export function StandingsCard() {
         ) : (
           <div className="h-[6px] w-[6px] rounded-full bg-accent-400" style={{ boxShadow: '0 0 10px var(--color-accent-500)' }} />
         )}
-        <div className="ml-auto text-[10.5px] leading-none text-neutral-500">tap a squad</div>
+        <div className="ml-auto text-[10.5px] leading-none text-neutral-500">{rows.length ? 'tap a squad' : ''}</div>
       </div>
+      {!rows.length ? <div className="text-[12px] leading-[1.5] text-neutral-500 text-pretty">No squads yet. Once they’re named, the board starts at zero and moves with every point.</div> : null}
       {gaps.length ? (
         <div className="mb-3 flex gap-[5.6px]">
           {gaps.map((g) => (

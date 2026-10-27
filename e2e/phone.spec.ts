@@ -98,3 +98,30 @@ test('Back walks the real way back, and More remembers recent screens', async ({
   await page.getByLabel('Search everything').fill('prayer');
   await expect(recent).toHaveCount(0);
 });
+
+test('a leader tours the app, previews a brand-new season, and resets the demo', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/more');
+  await ready(page);
+  await page.getByRole('button', { name: /^Leader tour/ }).click();
+  const tour = page.getByRole('dialog', { name: 'Walkthrough' });
+  await expect(tour).toContainText(/1 of \d+/);
+  await tour.getByRole('button', { name: 'End the walkthrough' }).click();
+  await expect(tour).toHaveCount(0);
+
+  /* The blank ministry: no squads on the board, and More offers the way back. */
+  await page.goto('/dashboard/more');
+  await ready(page);
+  await page.getByRole('button', { name: /^Preview a brand-new season/ }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await ready(page);
+  await page.goto('/dashboard/score');
+  await ready(page);
+  await expect(page.getByRole('button', { name: /^Yellow/ })).toHaveCount(0);
+  await page.goto('/dashboard/more');
+  await ready(page);
+  await expect(page.getByRole('button', { name: /^Preview a brand-new season/ })).toHaveCount(0);
+  await page.getByRole('button', { name: /^Reset the demo/ }).click();
+  await ready(page);
+  await expect(page.getByRole('button', { name: /^Preview a brand-new season/ })).toBeVisible();
+});

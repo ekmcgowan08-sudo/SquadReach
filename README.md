@@ -32,6 +32,8 @@ Things worth trying first:
 | `/dashboard` | Home: tonight’s card, standings, races, notices |
 | Centre **Score** tab | The score pad. Coaches’ entries wait for approval; scorekeepers’ post at once |
 | More → **Walkthrough** (as a leader) | A guided tour of a week, in nine chapters |
+| More → **Leader tour** / **Tour the app** | A step-by-step pass over every screen the current role can open |
+| More → **Preview a brand-new season** | The same demo as a ministry on its first day: no squads, no roster, the setup checklist and empty states |
 | `/dashboard/games` → `/projector` | Start a heat on the phone and watch it on the room screen |
 | More → **Prep week**, **Night recap**, **Serving & swaps**, **Message parents**, **Door kiosk** | The week around the night. In demo mode, the “Preview as of” chips move the clock through the week |
 | `/f/demo-reid-family` | A parent’s private family link: tonight’s card, permission slips to sign, messages. No account |
@@ -42,7 +44,7 @@ Things worth trying first:
 | More → **Live** | The same, on the phone: the leader’s console, or the answer pad for everyone else |
 | `/b/SR-9K42` | The public parent board, with no sign-in (More → Parent Board Link shows and rotates it) |
 
-To reset the demo, clear the site’s storage for localhost.
+To reset the demo, use More → **Reset the demo** (back to week 9), or clear the site’s storage for localhost.
 
 ## Scripts
 

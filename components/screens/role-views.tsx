@@ -369,7 +369,7 @@ export function CaptainViewScreen() {
       <div className="flex flex-col gap-[9px] rounded-lg border border-neutral-800 px-[14px] py-[13px]">
         <div className="text-[12.5px] font-medium leading-[1.2] text-neutral-100">Points you spot</div>
         <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">
-          {autoApproves(m.persona) ? 'Your role posts straight to the board.' : 'What you submit lands in the approval queue for a leader to clear — captains are not in AUTO_APPROVE_ROLES.'}
+          {autoApproves(m.persona) ? 'Your role posts straight to the board.' : 'What you submit waits for a leader to approve it, then it hits the board.'}
         </div>
         <Btn className="justify-center" onClick={() => router.push('/dashboard/submit-points')}>
           Submit points with proof
@@ -586,7 +586,7 @@ export function ParentViewScreen() {
           >
             Copy the link
           </Btn>
-          <Btn variant="ghost" className="flex-1 justify-center" href="/dashboard/follow-ups">
+          <Btn variant="ghost" className="flex-1 justify-center whitespace-nowrap px-2" href="/dashboard/follow-ups">
             Send a prayer request
           </Btn>
         </div>
@@ -600,7 +600,7 @@ export function ParentViewScreen() {
           </div>
         ))}
         <div className="mt-[2px] text-[10.5px] leading-[1.45] text-neutral-500 text-pretty">
-          Parent is a prototype-only tier: the schema has no MembershipRole for it, so the household record has to do the gating.
+          Parents don’t hold an account: their family link opens exactly this, for their own student and nobody else.
         </div>
       </div>
     </Screen>
@@ -662,7 +662,7 @@ export function CongregationViewScreen() {
       <div className="text-[10.5px] leading-[1.45] text-neutral-500">{d.prayers.length} requests on the wall · nothing on the wall carries a last name unless the student put it there.</div>
       <div className="rounded-lg bg-neutral-900 px-[14px] py-[13px]">
         <div className="text-[11px] leading-[1.5] text-neutral-400 text-pretty">
-          Congregation is a prototype-only tier — the schema has no MembershipRole for it. Read-only by design: squad totals, open events, the prayer wall. No names, no rosters, no student detail.
+          Read-only by design: squad totals, open events, the prayer wall. No names, no rosters, no student detail.
         </div>
       </div>
       <InviteSheet open={invite} onClose={() => setInvite(false)} initialMode="support" />

@@ -200,7 +200,7 @@ export function HomeScreen() {
       <div className="grid grid-cols-2 gap-[10px]">
         {[
           canHuddle(p) ? { label: 'Huddle', meta: d.huddle.runSheet.length ? d.huddle.runSheet[Math.min(d.huddle.runIdx, d.huddle.runSheet.length - 1)].time + ' · ' + d.huddle.runSheet[Math.min(d.huddle.runIdx, d.huddle.runSheet.length - 1)].label : 'no run sheet yet', icon: 'ph ph-users-four', href: '/dashboard/huddle' } : null,
-          { label: 'Bible & Memory', meta: myBible(d, m).due + ' verses due', icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
+          { label: 'Bible & Memory', meta: myBible(d, m).due + (myBible(d, m).due === 1 ? ' verse due' : ' verses due'), icon: 'ph ph-book-open-text', href: '/dashboard/bible' },
           { label: 'Media', meta: 'Week ' + d.config.weekNumber + ' album', icon: 'ph ph-camera', href: '/dashboard/media' },
           canControlEvent(p) ? { label: 'Game timer', meta: d.config.gameName || 'no game set', icon: 'ph ph-timer', href: '/dashboard/games' } : null,
           { label: 'Calendar', meta: upcomingEvents(d, p)[0] ? 'Next: ' + eventLabel(upcomingEvents(d, p)[0]) : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },

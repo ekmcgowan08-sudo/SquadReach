@@ -140,6 +140,10 @@ export function AttendanceScreen() {
     return { t, roster, cells, avg };
   });
   const best = [...rows].filter((r) => r.roster).sort((a, b) => b.avg - a.avg)[0];
+  const peak = rows
+    .flatMap((r) => r.cells.map((c, i) => ({ t: r.t, c: c ?? 0, w: i + 1 })))
+    .sort((a, b) => b.c - a.c || a.w - b.w)[0];
+  const summary = !best ? 'No check-ins yet' : (peak?.c ? peak.t.name + ' hit ' + peak.c + '% in week ' + peak.w + (peak.t.id === best.t.id ? ' and' : ';') + ' ' : '') + (peak?.c && peak.t.id === best.t.id ? '' : best.t.name + ' ') + 'shows up most — ' + best.avg + '% on average';
   return (
     <Screen label="Attendance">
       <ScreenHeader title="Attendance map" sub="Percent of each roster present, week by week" back="/dashboard/more" />
@@ -185,7 +189,7 @@ export function AttendanceScreen() {
         ))}
       </div>
       <div className="text-[10.5px] leading-[1.6] text-neutral-500 text-pretty">
-        {best ? best.t.name + ' shows up most — ' + best.avg + '% on average' : 'No check-ins yet'}. Past weeks read from check-in records; the outlined column is tonight.
+        {summary}. Past weeks read from check-in records; the outlined column is tonight.
       </div>
     </Screen>
   );

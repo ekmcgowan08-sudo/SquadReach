@@ -4,13 +4,15 @@
    the SAME function that gates its screen: a row you can see is a screen you
    can open, and the screen re-checks rather than trusting the menu. */
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { InviteSheet } from '@/components/dashboard/invite-sheet';
 import { useCycle } from '@/components/cycle/use-cycle';
 import { CHAPTERS } from '@/lib/walkthrough';
 import { crewAll } from '@/components/screens/huddle';
 import { Icon, Screen } from '@/components/ui';
-import { resetDemo } from '@/lib/data/demo-backend';
+import { previewBlankDemo, resetDemo } from '@/lib/data/demo-backend';
+import { startTour, tourSteps } from '@/components/shell/tour';
 import { heldTotal } from '@/lib/held';
 import {
   canApprove, canControlEvent, canHuddle, canMessageParents, canNightRecap, canOpenLibrary, canOpenRoleView, canPrepWeek, canPublishBoard,
@@ -41,6 +43,7 @@ export function MoreScreen() {
   const outbox = useApp((s) => s.outbox.length);
   const stale = useApp((s) => s.staleHeld);
   const api = useAppApi();
+  const router = useRouter();
   const [q, setQ] = useState('');
   const who = recentsOwner(m);
   const recentHrefs = useSyncExternalStore(subscribeRecents, () => recentsSnapshot(who), () => NO_RECENTS);
@@ -72,6 +75,9 @@ export function MoreScreen() {
         { label: 'Notifications', meta: notifs.length + ' new', icon: 'ph ph-bell', href: '/dashboard/notifications' },
         canApprove(p) ? { label: 'Access requests', meta: pendingAccess + ' waiting', icon: 'ph ph-user-focus', href: '/dashboard/access-requests' } : null,
         { label: 'Badges & Streaks', meta: 'season so far', icon: 'ph ph-medal', href: '/dashboard/badges' },
+        canApprove(p)
+          ? { label: 'Planning Center', meta: d.pco?.connected ? 'connected' + (d.pco.org ? ' · ' + d.pco.org : '') : m.mode === 'demo' ? 'on the live app' : 'not connected', icon: 'ph ph-plugs-connected', href: '/console?tab=people' }
+          : null,
         canApprove(p) ? { label: 'Walkthrough', meta: CHAPTERS.length + ' chapters, in the order a week happens', icon: 'ph ph-compass', href: '/dashboard/walkthrough' } : null,
         /* Review affordance: the offline design is unreviewable without it. */
         { label: offlineSim ? 'Restore signal' : 'Simulate no signal', meta: outbox ? outbox + ' held' : 'try the gym case', icon: offlineSim ? 'ph ph-cloud-check' : 'ph ph-cloud-slash', onClick: () => api().toggleOfflineSim() },
@@ -81,6 +87,19 @@ export function MoreScreen() {
           icon: 'ph ph-clock-counter-clockwise',
           onClick: () => api().plantStaleHeld()
         },
+        m.mode === 'demo' && d.teams.length
+          ? {
+              label: 'Preview a brand-new season',
+              meta: 'empty board, setup checklist',
+              icon: 'ph ph-sparkle',
+              onClick: () => {
+                previewBlankDemo();
+                /* A full load, so the demo reads the blank ministry back in. */
+                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                window.location.assign('/dashboard');
+              }
+            }
+          : null,
         m.mode === 'demo'
           ? {
               label: 'Reset the demo',
@@ -135,6 +154,7 @@ export function MoreScreen() {
           : null,
         canMessageParents(p) ? { label: 'Message parents', meta: firstSlip ? firstSlip.signedN + ' of ' + firstSlip.total + ' signed · ' + firstSlip.slip.title.split(/ · | from /)[0] : 'families, slips, pickup', icon: 'ph ph-chat-circle-text', href: '/dashboard/parents' } : null,
         canRunDoor(p) ? { label: 'Door kiosk', meta: 'students check themselves in', icon: 'ph ph-device-tablet', href: '/dashboard/door' } : null,
+        { label: canApprove(p) ? 'Leader tour' : 'Tour the app', meta: 'every screen in ' + tourSteps(p).length + ' steps', icon: 'ph ph-signpost', onClick: () => (startTour(), router.push('/dashboard')) },
         canHuddle(p) && sheetNow ? { label: 'Huddle & run sheet', meta: sheetNow.time + ' · ' + sheetNow.label + ' · ' + hereCount + ' of ' + crewIds.length + ' here', icon: 'ph ph-users-four', href: '/dashboard/huddle' } : null,
         canControlEvent(p) ? { label: 'Game timer', meta: 'week ' + d.config.weekNumber, icon: 'ph ph-timer', href: '/dashboard/games' } : null,
         { label: 'Submit Points', meta: 'with photo proof', icon: 'ph ph-paper-plane-tilt', href: '/dashboard/submit-points' },

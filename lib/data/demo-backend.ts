@@ -2,6 +2,7 @@
    snapshot write; there is nothing to sync and nobody else to hear from. */
 import type { Backend } from '@/lib/data/backend';
 import { demoLive } from '@/lib/data/demo-live';
+import { DEFAULT_CONFIG, emptyMinistry } from '@/lib/data/empty';
 import { demoMinistry } from '@/lib/data/seed';
 import type { MinistryData } from '@/lib/types/model';
 
@@ -59,6 +60,17 @@ export const demoBackend: Backend = {
   },
   live: demoLive
 };
+
+/** The demo as a ministry on its first day: no squads, no roster, nothing
+ *  scored — what the setup checklist and empty states look like. "Reset the
+ *  demo" brings week 9 back. */
+export function previewBlankDemo() {
+  try {
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ ...emptyMinistry(), config: { ...DEFAULT_CONFIG, ministryName: 'Your ministry' } }));
+  } catch {
+    /* storage blocked: the preview can't stick */
+  }
+}
 
 export function resetDemo() {
   try {

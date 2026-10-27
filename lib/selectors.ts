@@ -105,6 +105,9 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
     }
     const pending = d.ledger.filter((e) => e.status === 'pending').length;
     if (pending) list.push({ icon: 'ph ph-seal-check', label: pending + (pending === 1 ? ' point request' : ' point requests') + ' waiting on you', meta: 'Approve or send back from Home', href: '/dashboard/approvals', trigger: 'approvals' });
+    for (const e of d.events.filter((x) => x.status === 'proposed')) {
+      list.push({ icon: 'ph ph-calendar-plus', label: 'New event proposal: ' + e.title, meta: e.by ?? e.date, href: '/dashboard/calendar', trigger: 'event' });
+    }
     if (d.prayerQueue.length) list.push({ icon: 'ph ph-hands-praying', label: d.prayerQueue.length + (d.prayerQueue.length === 1 ? ' prayer request' : ' prayer requests') + ' to review', meta: 'Nothing is public until you post it', href: '/dashboard/follow-ups', trigger: 'prayer' });
   }
   const next = d.events.find((e) => eventVisible(e, p));

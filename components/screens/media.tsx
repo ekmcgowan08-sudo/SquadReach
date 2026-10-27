@@ -37,6 +37,8 @@ export function MediaScreen() {
   const [clip, setClip] = useState<Clip | null>(null);
   const wk = d.config.weekNumber;
 
+  const gw = d.config.gameSetup.gameWeeks;
+  const runsGame = (w: number) => !!d.config.gameName && (!gw || gw.includes(w));
   const albums = (() => {
     const weeks = new Set<number>([wk]);
     for (const x of d.media) weeks.add(x.week);
@@ -48,7 +50,7 @@ export function MediaScreen() {
         const date = iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
         return {
           week: w,
-          title: 'Week ' + w + (w === wk ? ' · ' + (d.config.gameName || 'Game night') : ''),
+          title: 'Week ' + w + (w === wk ? ' · ' + (d.config.gameName || 'Game night') : runsGame(w) ? ' · ' + d.config.gameName : ''),
           meta: w === wk ? 'tonight' : date,
           clips: d.clips.filter((c) => c.week === w),
           items: d.media.filter((x) => x.week === w).sort((a, b) => b.at - a.at)

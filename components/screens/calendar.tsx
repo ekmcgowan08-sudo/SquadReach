@@ -24,8 +24,12 @@ export const AUDIENCE_LABELS: Record<AudienceId, { label: string; hint: string }
   parents: { label: 'Parents', hint: 'household view' },
   admins: { label: 'Org admins', hint: 'the church office' }
 };
+const STAFF: AudienceId[] = ['coaches', 'scorekeeper', 'leaders', 'admins'];
 export const audienceLabel = (roles: AudienceId[]) =>
-  roles.length === ALL_AUDIENCES.length ? 'Everyone' : roles.map((r) => AUDIENCE_LABELS[r].label).join(', ') || 'Nobody yet';
+  roles.length === ALL_AUDIENCES.length ? 'Everyone in the ministry' : roles.map((r) => AUDIENCE_LABELS[r].label).join(', ') || 'Nobody yet';
+/** The short line under an event: who it's for, as the design words it. */
+export const audienceLine = (roles: AudienceId[]) =>
+  roles.length === ALL_AUDIENCES.length ? 'Everyone in the ministry' : roles.length && roles.every((r) => STAFF.includes(r)) ? 'Staff only · ' + roles.length + (roles.length === 1 ? ' role' : ' roles') : audienceLabel(roles);
 const audienceIcon = (roles: AudienceId[]) => (roles.length === ALL_AUDIENCES.length ? 'ph ph-globe-hemisphere-west' : roles.includes('members') ? 'ph ph-users-three' : 'ph ph-lock-simple');
 
 const RSVP_STATUSES: { id: Rsvp['status']; label: string; icon: string; fg: string }[] = [
@@ -101,7 +105,9 @@ export function CalendarScreen() {
                 <span className="ml-auto text-[11px] font-semibold leading-none text-neutral-300">{eventLabel(e)}</span>
               </div>
               <div className="mt-[11.2px] text-[14px] font-medium leading-[1.3] text-neutral-100">{e.title}</div>
-              <div className="mt-1 text-[11.5px] leading-[1.4] text-neutral-500">{e.meta}</div>
+              <div className="mt-1 text-[11.5px] leading-[1.4] text-neutral-500">
+                {e.meta} · asked for {audienceLine(e.roles).toLowerCase()}
+              </div>
               {leader ? (
                 <div className="mt-[16.8px] flex gap-[8.4px]">
                   <Btn variant="ghost" className="flex-1 justify-center" onClick={() => decline(e)}>
@@ -180,7 +186,7 @@ export function CalendarScreen() {
                 <div className="mt-1 text-[11.5px] leading-[1.4] text-neutral-500">{e.meta}</div>
                 <div className="mt-[7px] flex items-center gap-[5px]">
                   <Icon name={audienceIcon(e.roles)} className="text-[12px] text-neutral-500" />
-                  <span className="text-[10.5px] leading-none text-neutral-500">{audienceLabel(e.roles)}</span>
+                  <span className="text-[10.5px] leading-none text-neutral-500">{audienceLine(e.roles)}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-[7px]">
                   <span className="rounded-full border border-neutral-800 px-2 py-[5px] text-[10px] font-medium leading-none text-neutral-400">{t.going} going</span>
@@ -447,7 +453,7 @@ export function EventDetailScreen({ id }: { id: string }) {
         <div className="mt-[6px] text-[12.5px] leading-[1.5] text-neutral-400">{e.meta}</div>
         <div className="mt-[11px] flex items-center gap-[6px] border-t border-divider pt-[11px]">
           <Icon name={audienceIcon(e.roles)} className="text-[13px] text-neutral-500" />
-          <span className="text-[11px] leading-[1.3] text-neutral-500">{audienceLabel(e.roles)}</span>
+          <span className="text-[11px] leading-[1.3] text-neutral-500">{audienceLine(e.roles)}</span>
         </div>
       </div>
 

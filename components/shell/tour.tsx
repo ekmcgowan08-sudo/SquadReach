@@ -12,9 +12,13 @@ import type { Persona } from '@/lib/types/domain';
 
 const STEPS: { href: string; gate: GateName; title: string; body: string }[] = [
   { href: '/dashboard', gate: 'any', title: 'Home', body: 'Tonight first: the run of the night, what needs you, and the live standings. Tap a squad on the board for its breakdown.' },
+  { href: '/dashboard/prep-week', gate: 'prep', title: 'Prep week', body: 'Reminders go out 3 days before, the day before, the morning of and an hour out. Send one early or switch it off.' },
   { href: '/dashboard/huddle', gate: 'huddle', title: 'Huddle & run sheet', body: 'Who is here, what is next, and how long the current block has been running. Open posts fill from the bench in one tap.' },
   { href: '/dashboard/score', gate: 'score', title: 'Live scoring', body: 'Points by squad, live on every phone and the projector. Coaches send points; a leader approves them.' },
   { href: '/dashboard/games', gate: 'event', title: 'Game timer', body: 'Run timed heats and head-to-heads with penalty taps. Posting the heat pays placement points.' },
+  { href: '/dashboard/night-recap', gate: 'nightRecap', title: 'Recap', body: 'Tap students in or let them scan the QR. After the night, follow-ups build themselves and are due within 48 hours.' },
+  { href: '/dashboard/serving', gate: 'serve', title: 'Serving & swaps', body: 'Volunteers ask for a swap here. Nothing changes until it’s approved, on the phone or the web.' },
+  { href: '/dashboard/parents', gate: 'parents', title: 'Parents', body: 'Message families, nudge unsigned slips and move pickup. Parents get their own view of their child.' },
   { href: '/dashboard/follow-ups', gate: 'member', title: 'Prayer & care', body: 'Requests reach a leader before the wall. Team care is for coaches and leaders only.' },
   { href: '/dashboard/chat', gate: 'any', title: 'Chat', body: 'Announcements, the volunteer thread, and a thread for each squad.' },
   { href: '/dashboard/bible', gate: 'any', title: 'Bible & memory', body: 'This week’s verse, six ways to drill it, and one tap to log the practice.' },

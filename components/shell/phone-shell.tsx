@@ -274,7 +274,7 @@ function RoleSheet() {
                   </div>
                   <div className="mt-[2px] text-[11px] text-neutral-500">{on ? 'Current' : ok ? 'Approved · tap to switch' : 'Not approved'}</div>
                   <div className="mt-[2px] text-[10.5px] font-medium text-neutral-400">
-                    {r.maps ? 'role: ' + r.maps : 'not in the schema · prototype proposal'}
+                    {r.maps ? 'role: ' + r.maps : 'preview only · no account role'}
                   </div>
                 </div>
               </button>

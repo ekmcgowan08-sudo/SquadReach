@@ -76,7 +76,8 @@ function Weeks() {
     const iso = c.meetingDates[i];
     const next = c.meetingDates[i + 1];
     const items: { icon: string; color: string; label: string; kind: string }[] = [];
-    if (!c.gameSetup.gameWeeks || c.gameSetup.gameWeeks.includes(w)) if (c.gameName && w >= c.weekNumber) items.push({ icon: 'ph ph-timer', color: catOf(d, 'games').color, label: w === c.weekNumber ? c.gameName : 'Game night', kind: 'Game' });
+    /* One game runs the whole season, on the weeks it's set for. */
+    if (c.gameName && (!c.gameSetup.gameWeeks || c.gameSetup.gameWeeks.includes(w))) items.push({ icon: 'ph ph-timer', color: catOf(d, 'games').color, label: c.gameName, kind: 'Game' });
     const v = c.memoryVerses.find((x) => x.week === w);
     if (v) items.push({ icon: 'ph ph-book-open-text', color: catOf(d, 'bible').color, label: v.ref, kind: 'Memory verse' });
     for (const g of d.smallGroups.filter((x) => x.weekNumber === w)) items.push({ icon: 'ph ph-users-four', color: 'var(--color-accent-400)', label: g.title, kind: 'Small group' });

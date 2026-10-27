@@ -577,7 +577,7 @@ function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 's
     ],
     slipSigned,
     parentMsgs: [
-      { id: 'pm1', from: 'Pastor Mike', to: 'all', kids: everyone, text: 'Fall retreat sign-ups are open. The slip is in your family link — $85 covers lodging and meals, and nobody stays home over money.', at: now - 17 * DAY, reads }
+      { id: 'pm1', from: 'Pastor Mike', to: 'all', kids: everyone, text: 'Fall retreat sign-ups are open. The slip is in your family link — $85 covers lodging and meals, and nobody stays home over money.', at: new Date(now - 17 * DAY).setHours(20, 15, 0, 0), reads }
     ],
     seasons: [
       {
