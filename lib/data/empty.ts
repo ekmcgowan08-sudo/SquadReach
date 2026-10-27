@@ -67,6 +67,7 @@ export function emptyMinistry(): MinistryData {
     chatMsgs: {},
     chatUnread: {},
     chatFlags: [],
+    payments: [],
     rsvps: {},
     attendanceHistory: {},
     practiceLog: [],

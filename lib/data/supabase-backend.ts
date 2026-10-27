@@ -19,7 +19,7 @@ import { chatStamp } from '@/lib/selectors';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, Category, ChatMessage, ChatThread, CheckinVia, LibraryFlag, LibraryFlagReason, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData,
-  MinistryEvent, Rsvp, RsvpCount, Student, Team
+  MinistryEvent, PermissionSlip, Rsvp, RsvpCount, Student, Team
 } from '@/lib/types/model';
 
 interface EntryRow {
@@ -281,10 +281,27 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           return;
         }
         case 'slip': {
-          const r = await db.from('permission_slips').upsert({ id: e.slip.id, org_id: org, title: e.slip.title, due: e.slip.due, kids: e.slip.kids === 'all' ? null : e.slip.kids, created_at: new Date(e.slip.at).toISOString() });
+          const r = await db.from('permission_slips').upsert({
+            id: e.slip.id, org_id: org, title: e.slip.title, due: e.slip.due, kids: e.slip.kids === 'all' ? null : e.slip.kids, created_at: new Date(e.slip.at).toISOString(),
+            kind: e.slip.kind ?? 'permission', event_id: e.slip.event ?? null
+          });
           if (r.error) throw r.error;
           return;
         }
+        case 'payment': {
+          /* Who marked it is stamped by the database; it starts unconfirmed. */
+          const r = await db.from('camp_payments').insert({ id: e.payment.id, org_id: org, event_id: e.payment.event, student: e.payment.student, amount: e.payment.amount });
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'paymentConfirm': {
+          const r = await db.rpc('camp_payment_confirm', { p_payment: e.id });
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'paymentRemove':
+          await db.from('camp_payments').delete().eq('id', e.id);
+          return;
         case 'slipRemove':
           await db.from('permission_slips').delete().eq('id', e.id);
           return;
@@ -334,7 +351,8 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           const ev = e.event;
           const r = await db.from('events').upsert({
             id: ev.id, org_id: org, title: ev.title, meta: ev.meta, date_label: ev.date, color: ev.color, audiences: ev.roles,
-            day: ev.iso ?? null, time_label: ev.time ?? '', place: ev.place ?? '', status: ev.status ?? 'approved', proposed_by: ev.by ?? '', rsvp_closed: !!ev.rsvpClosed
+            day: ev.iso ?? null, time_label: ev.time ?? '', place: ev.place ?? '', status: ev.status ?? 'approved', proposed_by: ev.by ?? '', rsvp_closed: !!ev.rsvpClosed,
+            trip: !!ev.trip, cost: ev.trip?.cost ?? null
           });
           if (r.error) throw r.error;
           return;
@@ -482,10 +500,16 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         flaggedBy: c.flagged_by,
         at: new Date(c.created_at).getTime()
       }));
-      d.events = ((events.data ?? []) as { id: string; title: string; meta: string; date_label: string; color: string; audiences: string[]; day: string | null; time_label: string; place: string; status: 'proposed' | 'approved'; proposed_by: string; rsvp_closed: boolean }[]).map(
+      d.events = (
+        (events.data ?? []) as {
+          id: string; title: string; meta: string; date_label: string; color: string; audiences: string[]; day: string | null; time_label: string; place: string; status: 'proposed' | 'approved';
+          proposed_by: string; rsvp_closed: boolean; trip?: boolean; cost?: number | string | null;
+        }[]
+      ).map(
         (e): MinistryEvent => ({
           id: e.id, title: e.title, meta: e.meta, date: e.date_label, color: e.color, roles: (e.audiences.length ? e.audiences : [...ALL_AUDIENCES]) as MinistryEvent['roles'],
-          iso: e.day, time: e.time_label, place: e.place, status: e.status, by: e.proposed_by, rsvpClosed: e.rsvp_closed
+          iso: e.day, time: e.time_label, place: e.place, status: e.status, by: e.proposed_by, rsvpClosed: e.rsvp_closed,
+          ...(e.trip ? { trip: { cost: e.cost == null ? null : Number(e.cost) } } : {})
         })
       );
       d.challenges = ((challenges.data ?? []) as { id: string; kind: 'Team' | 'Individual'; title: string; body: string; points_label: string; status: string; done: boolean; team_id: string | null; category_key: string | null; amount: number | null; weeks: number[] | null }[]).map((c) => ({
@@ -661,7 +685,7 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       const recent = config.meetingDates.filter((x) => x <= tonight).slice(-4);
       const ahead = [tonight, ...config.meetingDates.filter((x) => x > tonight)].slice(0, 8);
       const nightsIn = [...new Set([...recent, ...ahead])];
-      const [rem, fu, notes, pick, flags, sched, avail, swaps, invites, fams, slips, sigs, pmsgs, preads] = await Promise.all([
+      const [rem, fu, notes, pick, flags, sched, avail, swaps, invites, fams, slips, sigs, pmsgs, preads, pays] = await Promise.all([
         db.from('night_reminders').select('*').eq('org_id', org).in('meeting_date', nightsIn),
         db.from('night_followups').select('*').eq('org_id', org).in('meeting_date', nightsIn),
         db.from('night_notes').select('*').eq('org_id', org).in('meeting_date', nightsIn),
@@ -675,8 +699,14 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         db.from('permission_slips').select('*').eq('org_id', org).order('created_at', { ascending: false }),
         db.from('slip_signatures').select('*').eq('org_id', org),
         db.from('parent_messages').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(60),
-        db.from('parent_message_reads').select('message_id, student_id, read_at')
+        db.from('parent_message_reads').select('message_id, student_id, read_at'),
+        db.from('camp_payments').select('*').eq('org_id', org).order('created_at')
       ]);
+      /* Camp money: coaches and leaders read it; everyone else gets nothing back. */
+      d.payments = ((pays.data ?? []) as { id: string; event_id: string; student: string; amount: number | string; by_name: string; created_at: string; confirmed_by: string | null; confirmed_at: string | null }[]).map((r) => ({
+        id: r.id, event: r.event_id, student: r.student, amount: Number(r.amount), by: r.by_name, at: new Date(r.created_at).getTime(),
+        ...(r.confirmed_at ? { confirmedBy: r.confirmed_by ?? '', confirmedAt: new Date(r.confirmed_at).getTime() } : {})
+      }));
       const nightOf = (iso: string) => (d.cycle[iso] ??= { rem: {}, fu: {}, notes: { well: '', change: '' }, pickupShift: 0, doorFlags: [] });
       const ms = (t: string | null) => (t ? new Date(t).getTime() : 0);
       for (const r of (rem.data ?? []) as { meeting_date: string; reminder_id: string; off: boolean; sent_at: string | null; body: string | null }[])
@@ -697,7 +727,9 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         const name = byId.get(r.student_id);
         if (name) d.families[name] = { guardian: r.guardian, contact: r.contact, token: r.token };
       }
-      d.slips = ((slips.data ?? []) as { id: string; title: string; due: string; kids: string[] | null; created_at: string }[]).map((r) => ({ id: r.id, title: r.title, due: r.due, kids: r.kids ?? 'all', at: ms(r.created_at) }));
+      d.slips = ((slips.data ?? []) as { id: string; title: string; due: string; kids: string[] | null; created_at: string; kind?: PermissionSlip['kind']; event_id?: string | null }[]).map((r) => ({
+        id: r.id, title: r.title, due: r.due, kids: r.kids ?? 'all', at: ms(r.created_at), kind: r.kind ?? 'permission', event: r.event_id ?? null
+      }));
       for (const r of (sigs.data ?? []) as { slip_id: string; student_id: string; signed_by: string; signed_at: string }[]) {
         const name = byId.get(r.student_id);
         if (name) d.slipSigned[r.slip_id + '|' + name] = { by: r.signed_by, at: ms(r.signed_at) };

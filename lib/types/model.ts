@@ -142,6 +142,9 @@ export interface MinistryEvent {
   rsvpClosed?: boolean;
   /** Local day a leader last nudged the no-replies (one a day). */
   nudgedOn?: string;
+  /** A trip or camp: unsigned blocking forms keep a student from signing
+   *  up. `cost` is what each student pays, if anything. */
+  trip?: { cost: number | null } | null;
 }
 
 /** A quick start on the phone's event composer: fills the name, time,
@@ -828,6 +831,7 @@ export interface MinistryData {
   slips: PermissionSlip[];
   /** `${slipId}|${student}` → who signed and when. */
   slipSigned: Record<string, { by: string; at: number }>;
+  payments: CampPayment[];
   parentMsgs: ParentMessage[];
   /** Season interviews, saved. One is the live season. */
   seasons: SavedSeason[];
@@ -974,6 +978,27 @@ export interface PermissionSlip {
   /** Everyone, or the students it covers. */
   kids: 'all' | string[];
   at: number;
+  /** What kind of form it is (lib/forms): medical, emergency contact,
+   *  general permission and trip waivers block trips; a photo release only
+   *  warns. Absent means general permission. */
+  kind?: FormKind;
+  /** A form for one trip (a waiver); absent means it stands for every trip. */
+  event?: string | null;
+}
+
+export type FormKind = 'medical' | 'emergency' | 'permission' | 'waiver' | 'photo';
+
+/** Money for a trip or camp, marked at the door. Tracking only: nothing
+ *  here takes a card. It stays unconfirmed until the office counts it. */
+export interface CampPayment {
+  id: string;
+  event: string;
+  student: string;
+  amount: number;
+  by: string;
+  at: number;
+  confirmedBy?: string;
+  confirmedAt?: number;
 }
 
 export interface ParentMessage {

@@ -5,7 +5,7 @@
 import { emptyNight, familyView, type FamilyView } from '@/lib/cycle';
 import { tonightDate } from '@/lib/dates';
 import { emptyMinistry } from '@/lib/data/empty';
-import type { CycleConfig, NightCycle, RunSheetItem, CheckinVia } from '@/lib/types/model';
+import type { CycleConfig, NightCycle, RunSheetItem, CheckinVia, FormKind } from '@/lib/types/model';
 
 export interface FamilyRaw {
   ministry: string;
@@ -22,7 +22,7 @@ export interface FamilyRaw {
   via: CheckinVia | null;
   presentDates: string[];
   night: Partial<NightCycle> | null;
-  slips: { id: string; title: string; due: string }[];
+  slips: { id: string; title: string; due: string; kind?: FormKind }[];
   signed: { slip: string; by: string }[];
   msgs: { id: string; from: string; text: string; at: number; read: boolean }[];
 }

@@ -7,7 +7,7 @@ import { as, ready } from './helpers';
 const PHONE = [
   '/dashboard', '/dashboard/score', '/dashboard/more', '/dashboard/live', '/dashboard/calendar', '/dashboard/chat', '/dashboard/bible', '/dashboard/night-recap', '/dashboard/prep-week',
   '/dashboard/serving', '/dashboard/parents', '/dashboard/door', '/dashboard/huddle', '/dashboard/games', '/dashboard/attendance', '/dashboard/approvals', '/dashboard/races', '/dashboard/awards',
-  '/dashboard/library', '/dashboard/media', '/dashboard/notifications', '/dashboard/settings', '/dashboard/follow-ups', '/dashboard/season-plan', '/dashboard/walkthrough'
+  '/dashboard/library', '/dashboard/media', '/dashboard/notifications', '/dashboard/settings', '/dashboard/follow-ups', '/dashboard/season-plan', '/dashboard/walkthrough', '/dashboard/events/e5'
 ];
 const DESK = [
   '/planner', '/planner/prep', '/planner/prep?view=recap', '/planner/people', '/planner/roadmap', '/planner/roadmap?view=journey', '/planner/roadmap?density=one', '/planner/roadmap?view=checks', '/planner/roadmap?view=suggestions', '/planner/year', '/planner/season', '/planner/season?view=month', '/planner/season?view=night', '/planner/coverage',

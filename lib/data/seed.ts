@@ -430,6 +430,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
       { id: 'e2', title: 'Coach huddle + assessments', meta: 'Sun 4:00p · Room 204', date: 'Oct 26', iso: '2026-10-26', color: '#968ae0', roles: ['coaches', 'scorekeeper', 'leaders', 'admins'] },
       { id: 'e3', title: 'Fall Retreat deposit due', meta: 'Deadline · $75 per student', date: 'Oct 31', iso: '2026-10-31', color: '#EAB308', roles: ALL_AUDIENCES },
       { id: 'e4', title: 'Season finale + trophy night', meta: 'Wed 6:30p · Worship Center', date: 'Nov 19', iso: '2026-11-19', color: '#0D9488', roles: ALL_AUDIENCES },
+      { id: 'e5', title: 'Fall retreat · Camp Lakeside', meta: 'Fri 5:00p – Sun 2:00p · Camp Lakeside', date: 'Nov 13', iso: '2026-11-13', time: '5:00p', place: 'Camp Lakeside', color: '#EAB308', roles: ALL_AUDIENCES, trip: { cost: 85 } },
       { id: 'p1', title: 'Coaches’ lunch before finale', meta: 'Sun 12:30p · Fellowship hall', date: 'Nov 16', iso: '2026-11-16', color: '#968ae0', roles: ['coaches', 'leaders', 'admins'], status: 'proposed', by: 'Coach Marcus · coach' },
       { id: 'p2', title: 'Reign bowling night', meta: 'Fri 7:00p · Sunset Lanes', date: 'Nov 7', iso: '2026-11-07', color: '#2563EB', roles: ALL_AUDIENCES, status: 'proposed', by: 'Ava Lin · captain' }
     ],
@@ -510,6 +511,12 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     chatMsgs: CHAT_SEED,
     chatUnread: { all: 2, leaders: 1, 'team-blue': 3, parents: 0, 'dm-mike': 0, 'dm-zoe': 1 },
     chatFlags: [],
+    /* Retreat money marked at the door; the office has counted two. */
+    payments: [
+      { id: 'pay1', event: 'e5', student: 'Melanie Russell', amount: 85, by: 'Coach Chris', at: now - 9 * DAY, confirmedBy: 'Pastor Mike', confirmedAt: now - 8 * DAY },
+      { id: 'pay2', event: 'e5', student: 'Isaac Smith', amount: 40, by: 'Coach Mario', at: now - 6 * DAY, confirmedBy: 'Pastor Mike', confirmedAt: now - 5 * DAY },
+      { id: 'pay3', event: 'e5', student: 'Hannah Duff', amount: 85, by: 'Coach Chris', at: now - 1 * DAY }
+    ],
     rsvps: seedRsvps(),
     attendanceHistory: attendanceHistory(),
     practiceLog: seedPractice(now),
@@ -563,6 +570,11 @@ function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 's
   ROSTER.filter((r) => !r.guest && r.name !== 'Ellison Reid' && hashStr('retreat:' + r.name) % 3 === 0).forEach((r) => {
     slipSigned['retreat|' + r.name] = { by: families[r.name].guardian, at: now - (hashStr(r.name) % 9) * DAY };
   });
+  /* The year's standing forms: most families signed in September. */
+  ROSTER.filter((r) => !r.guest && r.name !== 'Ellison Reid').forEach((r) => {
+    if (hashStr('med:' + r.name) % 6 !== 0) slipSigned['med|' + r.name] = { by: families[r.name].guardian, at: now - (40 + (hashStr(r.name) % 20)) * DAY };
+    if (hashStr('photo:' + r.name) % 3 !== 0) slipSigned['photo|' + r.name] = { by: families[r.name].guardian, at: now - (40 + (hashStr(r.name) % 20)) * DAY };
+  });
   const everyone = ROSTER.filter((r) => !r.guest).map((r) => r.name);
   const reads: Record<string, number> = {};
   everyone.filter((n) => hashStr('read:' + n) % 2 === 0).forEach((n) => (reads[n] = now - 2 * DAY));
@@ -594,8 +606,10 @@ function seedCycle(now: number): Pick<MinistryData, 'presenceLog' | 'cycle' | 's
     },
     families,
     slips: [
-      { id: 'van', title: 'Van ride from Lincoln Middle', due: '2026-10-28T18:00', kids: van, at: now - 6 * DAY },
-      { id: 'retreat', title: 'Fall retreat · Nov 13–15', due: '2026-11-06', kids: 'all', at: now - 17 * DAY }
+      { id: 'van', title: 'Van ride from Lincoln Middle', due: '2026-10-28T18:00', kids: van, at: now - 6 * DAY, kind: 'permission' },
+      { id: 'retreat', title: 'Fall retreat · Nov 13–15', due: '2026-11-06', kids: 'all', at: now - 17 * DAY, kind: 'waiver', event: 'e5' },
+      { id: 'med', title: 'Medical & allergies · 2026–27', due: '2026-09-30', kids: 'all', at: now - 60 * DAY, kind: 'medical' },
+      { id: 'photo', title: 'Photo release · 2026–27', due: '2026-09-30', kids: 'all', at: now - 60 * DAY, kind: 'photo' }
     ],
     slipSigned,
     parentMsgs: [

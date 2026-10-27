@@ -9,11 +9,14 @@ import { useMemo, useState } from 'react';
 import { PreviewClock, Seg, Tick } from '@/components/cycle/bits';
 import { useCycle, useNightSave } from '@/components/cycle/use-cycle';
 import { PcoCheckInsButton } from '@/components/pco';
+import { useParentActions } from '@/components/screens/parents';
 import { QrCode } from '@/components/qr-code';
 import { Sheet } from '@/components/sheet';
 import { Btn, Chip, EmptyNote, Icon, Label, Screen, ScreenHeader, Stat } from '@/components/ui';
 import { FU_KINDS, attendanceStats, checkinOpen, clock, dayLabel, dueLine, followups, isAfter, newFamilyToken, weekday, type FollowUp } from '@/lib/cycle';
 import { weekOf } from '@/lib/dates';
+import { formKind, hereWithoutForms } from '@/lib/forms';
+import { canMessageParents } from '@/lib/permissions';
 import { uid } from '@/lib/store/app-store';
 import { useAppApi } from '@/lib/store/provider';
 import type { Student } from '@/lib/types/model';
@@ -44,6 +47,53 @@ export function NightRecapScreen({ bare }: { bare?: boolean } = {}) {
 }
 
 /* ── attendance ──────────────────────────────────────────────────────── */
+/* Here tonight without a signed form: they stay in — the form gates trips,
+   not tonight — and a leader texts the parent from the door. */
+const FORM_NOTE = 'isn’t signed yet';
+function FormsAtTheDoor() {
+  const { d, m } = useCycle();
+  const { send } = useParentActions();
+  const missing = hereWithoutForms(d);
+  if (!missing.length) return null;
+  const dayStart = new Date(new Date().toDateString()).getTime();
+  const texted = (name: string) => d.parentMsgs.some((x) => x.to === name && x.at >= dayStart && x.text.includes(FORM_NOTE));
+  const leader = canMessageParents(m.persona);
+  return (
+    <div className="sr-card flex flex-col gap-2 px-[14px] py-[12px]" role="region" aria-label="Here without a signed form">
+      <div className="flex items-center gap-2">
+        <Icon name="ph ph-file-text" className="flex-none text-[16px] text-accent-300" />
+        <div className="flex-1 text-[12.5px] font-medium leading-[1.3] text-neutral-100">Here without a signed form · {missing.length}</div>
+      </div>
+      <div className="text-[11px] leading-[1.45] text-neutral-500 text-pretty">They stay in tonight. A missing form only keeps a student off a trip{leader ? ' — text the parent now so it’s signed before then.' : '. A leader texts the parent.'}</div>
+      {missing.slice(0, 12).map((x) => {
+        const forms = x.forms.map((f) => formKind(f).label).join(', ');
+        return (
+          <div key={x.name} className="flex items-center gap-2 border-t border-divider pt-2">
+            <div className="min-w-0 flex-1">
+              <div className="text-[12.5px] leading-[1.25] text-neutral-200">{x.name}</div>
+              <div className="mt-[2px] text-[10.5px] leading-[1.3] text-accent-200">{forms}</div>
+            </div>
+            {leader ? (
+              texted(x.name) ? (
+                <span className="text-[11px] text-neutral-500">Texted</span>
+              ) : (
+                <Btn
+                  variant="secondary"
+                  className="px-3 text-[12px]"
+                  ariaLabel={'Text the parent of ' + x.name}
+                  onClick={() => send(x.name, 'Hi — ' + x.name.split(' ')[0] + ' is here tonight, and that’s fine. Their ' + forms.toLowerCase() + ' form ' + FORM_NOTE + '. Please sign it from your family link before the next trip.')}
+                >
+                  Text the parent
+                </Btn>
+              )
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AttendanceTab({ stats: showStats = true }: { stats?: boolean } = {}) {
   const { d, m, iso, night, t, now } = useCycle();
   const api = useAppApi();
@@ -137,6 +187,8 @@ export function AttendanceTab({ stats: showStats = true }: { stats?: boolean } =
           </div>
         </div>
       ))}
+
+      <FormsAtTheDoor />
 
       <PcoCheckInsButton />
 

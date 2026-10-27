@@ -6,6 +6,7 @@
    Time is real time. Demo mode can preview the week at another moment, but
    that is the caller passing a different `now`, never a second clock. */
 import { isoDay, parseLocalISO, weekOf } from '@/lib/dates';
+import { formKind } from '@/lib/form-kinds';
 import type {
   CheckinVia, CycleConfig, Family, MinistryData, NightCycle, ParentMessage, PermissionSlip, ReminderDef, Student
 } from '@/lib/types/model';
@@ -542,7 +543,7 @@ export interface FamilyView {
   hist: boolean[];
   histTonight: boolean | null;
   plan: { at: string; label: string }[];
-  slips: { id: string; title: string; due: string; signed: boolean; by: string }[];
+  slips: { id: string; title: string; due: string; signed: boolean; by: string; kind: string; blocks: boolean }[];
   feed: FeedItem[];
   unread: number;
 }
@@ -594,7 +595,7 @@ export function familyView(d: MinistryData, kid: string, now: number): FamilyVie
       .filter((v) => v.kids.some((k) => k.name === s.name))
       .map((v) => {
         const k = v.kids.find((x) => x.name === s.name)!;
-        return { id: v.slip.id, title: v.slip.title, due: slipDueLabel(v.slip, today), signed: k.signed, by: k.by };
+        return { id: v.slip.id, title: v.slip.title, due: slipDueLabel(v.slip, today), signed: k.signed, by: k.by, kind: formKind(v.slip).label, blocks: formKind(v.slip).blocks };
       }),
     feed,
     unread: feed.filter((f) => !f.read).length

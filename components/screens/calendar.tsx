@@ -5,15 +5,17 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Sheet } from '@/components/sheet';
+import { useParentActions } from '@/components/screens/parents';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf } from '@/components/ui';
 import { isoDay, nowMs } from '@/lib/dates';
-import { canApprove } from '@/lib/permissions';
+import { formKind, money, tripBlock, tripMoney, tripRoster } from '@/lib/forms';
+import { canApprove, canMessageParents, canRunDoor } from '@/lib/permissions';
 import { ALL_AUDIENCES, canRsvp, canSeeRsvpNames, eventLabel, practiceName, rsvpTally, teamOf, upcomingEvents } from '@/lib/selectors';
 import { sendChat, sendRsvp } from '@/lib/store/actions';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { realRole, roleIn } from '@/lib/types/domain';
-import { DEFAULT_EVENT_TYPES, type AudienceId, type MinistryEvent, type Rsvp } from '@/lib/types/model';
+import { DEFAULT_EVENT_TYPES, type AudienceId, type CampPayment, type MinistryEvent, type Rsvp } from '@/lib/types/model';
 
 export const AUDIENCE_LABELS: Record<AudienceId, { label: string; hint: string }> = {
   members: { label: 'Students', hint: 'every squad' },
@@ -249,6 +251,8 @@ function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }
   const [place, setPlace] = useState('');
   const [roles, setRoles] = useState<AudienceId[]>([...ALL_AUDIENCES]);
   const [color, setColor] = useState('#968ae0');
+  const [trip, setTrip] = useState(false);
+  const [cost, setCost] = useState('');
   const name = (team ? teamOf(d, team).name + ': ' : '') + (title.trim() || 'Event name');
   const types = d.config.eventTypes ?? DEFAULT_EVENT_TYPES;
 
@@ -267,7 +271,8 @@ function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }
       color: team ? teamOf(d, team).color : color,
       roles,
       status: leader ? 'approved' : 'proposed',
-      by: m.displayName + ' · ' + m.persona
+      by: m.displayName + ' · ' + m.persona,
+      ...(trip ? { trip: { cost: Number(cost) > 0 ? Math.round(Number(cost) * 100) / 100 : null } } : {})
     };
     api().mutate((x) => void x.events.push(e));
     api().emit({ kind: 'event', event: e });
@@ -340,6 +345,19 @@ function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }
         <span className="sr-label">Where</span>
         <input value={place} onChange={(e) => setPlace(e.target.value)} className="input" placeholder="Main gym, Room 204, Sunset Lanes…" />
       </label>
+      <label className="flex min-h-11 items-center gap-3 rounded-md border border-neutral-800 px-3">
+        <input type="checkbox" checked={trip} onChange={(e) => setTrip(e.target.checked)} />
+        <span className="flex-1">
+          <span className="block text-[13px] text-neutral-100">A trip or camp</span>
+          <span className="block text-[10.5px] leading-[1.4] text-neutral-500">Students need their forms signed to sign up. Tonight is never held up by a form.</span>
+        </span>
+      </label>
+      {trip ? (
+        <label className="field">
+          <span className="sr-label">Cost per student (optional)</span>
+          <input value={cost} onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" className="input" placeholder="120" />
+        </label>
+      ) : null}
       <div>
         <div className={kicker + ' mb-[8.4px]'}>Who should this go to</div>
         <AudiencePicker roles={roles} onChange={setRoles} />
@@ -423,7 +441,10 @@ export function EventDetailScreen({ id }: { id: string }) {
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  /* A trip: unsigned blocking forms keep a student from saying they're going. */
+  const blocked = tripBlock(d, e, m.studentName ?? (p === 'member' || p === 'captain' ? me : null));
   const answer = (status: Rsvp['status']) => {
+    if (status === 'going' && blocked) return api().say(blocked);
     sendRsvp(api, e.id, me, { status, guests: status === 'going' ? mine?.guests ?? 0 : 0 });
     api().say(offline ? 'Held on this phone — it sends when you reconnect.' : status === 'going' ? 'See you there.' : status === 'maybe' ? 'Marked maybe.' : 'Thanks for letting them know.');
   };
@@ -470,7 +491,8 @@ export function EventDetailScreen({ id }: { id: string }) {
                     key={o.id}
                     onClick={() => answer(o.id)}
                     aria-pressed={on}
-                    className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-lg border hover:border-accent-500"
+                    aria-disabled={o.id === 'going' && !!blocked}
+                    className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-lg border hover:border-accent-500 aria-disabled:opacity-45"
                     style={{ borderColor: on ? 'var(--color-accent-500)' : 'var(--color-neutral-800)', background: on ? 'color-mix(in srgb, var(--color-accent) 18%, transparent)' : 'transparent', color: on ? o.fg : 'var(--color-neutral-400)' }}
                   >
                     <Icon name={o.icon} className="text-[17px]" />
@@ -479,6 +501,12 @@ export function EventDetailScreen({ id }: { id: string }) {
                 );
               })}
             </div>
+            {blocked ? (
+              <div role="status" className="mt-2 flex items-start gap-2 rounded-md border border-accent-700 px-3 py-[9px] text-[11px] leading-[1.5] text-accent-100" style={{ background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)' }}>
+                <Icon name="ph ph-file-text" className="mt-[1px] flex-none text-[14px]" />
+                {blocked}
+              </div>
+            ) : null}
             {mine ? (
               <div className="mt-2 text-[10.5px] leading-[1.5]" style={{ color: mine.heldAt ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
                 {mine.heldAt ? 'Held on this phone — it sends itself when you reconnect.' : 'Answered. Tap another to change it; a leader sees the change immediately.'}
@@ -535,7 +563,7 @@ export function EventDetailScreen({ id }: { id: string }) {
                   key={f.id}
                   onClick={() => setFilter(f.id)}
                   aria-pressed={on}
-                  className="relative min-h-[30px] rounded-full border px-[10px] text-[10.5px] font-medium leading-none before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-['']"
+                  className="min-h-11 rounded-full border px-[10px] text-[10.5px] font-medium leading-none"
                   style={{ borderColor: on ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', background: on ? 'color-mix(in srgb, var(--color-accent) 16%, transparent)' : 'transparent', color: on ? 'var(--color-accent-100)' : 'var(--color-neutral-500)' }}
                 >
                   {f.label} {n}
@@ -564,6 +592,8 @@ export function EventDetailScreen({ id }: { id: string }) {
       ) : (
         <Note icon="ph ph-eye-slash">Counts only. Names on an attendance list aren’t shown to your role.</Note>
       )}
+
+      {e.trip ? <TripPanel e={e} /> : null}
 
       {leader ? (
         <div className="flex flex-col gap-2 border-t border-divider pt-[13px]">
@@ -611,6 +641,149 @@ export function EventDetailScreen({ id }: { id: string }) {
         </div>
       ) : null}
     </Screen>
+  );
+}
+
+/* ── a trip: whose forms are in, and the money (tracking only) ─────────── */
+function TripPanel({ e }: { e: MinistryEvent }) {
+  const d = useApp((s) => s.data);
+  const m = useApp((s) => s.membership);
+  const api = useAppApi();
+  const { send } = useParentActions();
+  const p = m.persona;
+  const staff = canRunDoor(p);
+  const office = canApprove(p);
+  const [who, setWho] = useState('');
+  const [amount, setAmount] = useState('');
+  const cost = e.trip?.cost ?? null;
+  const rows = tripRoster(d, e);
+  const blocked = rows.filter((r) => r.blocking.length);
+  const noPhoto = rows.filter((r) => r.warning.length).map((r) => r.name);
+  const cash = tripMoney(d, e);
+  const owing = (name: string) => {
+    const r = rows.find((x) => x.name === name);
+    return cost ? Math.max(0, cost - (r?.paid ?? 0) - (r?.unconfirmed ?? 0)) : 0;
+  };
+  const mark = () => {
+    const amt = Math.round(Number(amount || owing(who)) * 100) / 100;
+    if (!who) return api().say('Pick who paid first.');
+    if (!(amt > 0)) return api().say('Put in how much they paid.');
+    const pay: CampPayment = { id: uid(), event: e.id, student: who, amount: amt, by: m.displayName, at: nowMs() };
+    api().mutate((x) => void x.payments.push(pay));
+    api().emit({ kind: 'payment', payment: pay });
+    api().logActivity('Marked ' + money(amt) + ' paid for ' + who + ' · ' + e.title + ' (not counted yet)');
+    api().say('Marked. It stays unconfirmed until the office counts it.');
+    setWho('');
+    setAmount('');
+  };
+  const count = (id: string) => {
+    const pay = d.payments.find((x) => x.id === id);
+    if (!pay) return;
+    api().mutate((x) => {
+      const r = x.payments.find((y) => y.id === id);
+      if (r) Object.assign(r, { confirmedBy: m.displayName, confirmedAt: nowMs() });
+    });
+    api().emit({ kind: 'paymentConfirm', id });
+    api().logActivity('Counted ' + money(pay.amount) + ' from ' + pay.student + ' · ' + e.title);
+  };
+  const remove = (id: string) => {
+    const pay = d.payments.find((x) => x.id === id);
+    if (!pay) return;
+    api().mutate((x) => void (x.payments = x.payments.filter((y) => y.id !== id)));
+    api().emit({ kind: 'paymentRemove', id });
+    api().logActivity('Took back a payment marked by mistake: ' + money(pay.amount) + ' for ' + pay.student);
+  };
+  const remind = () => {
+    const slips = [...new Map(blocked.flatMap((r) => r.blocking).map((x) => [x.id, x])).values()];
+    for (const x of slips) send('unsigned:' + x.id, 'Before ' + e.title + ': “' + x.title + '” isn’t signed yet. Sign it from your family link so your student can come.', true);
+    api().say('Reminders sent to the families of ' + blocked.length + (blocked.length === 1 ? ' student.' : ' students.'));
+  };
+
+  return (
+    <div className="flex flex-col gap-[10px]">
+      <div className={kicker}>Trip</div>
+      <div className="sr-card flex flex-col gap-[10px] px-[14px] py-[13px]">
+        <div className="text-[12.5px] leading-[1.5] text-neutral-300 text-pretty">
+          Medical, emergency contact, permission and the trip’s waiver must be signed before a student can say they’re going. A photo release only warns. {cost ? money(cost) + ' a student.' : ''}
+        </div>
+        {cost ? (
+          <div className="flex flex-col gap-[6px]">
+            <button disabled aria-disabled="true" className="min-h-11 rounded-md border border-dashed border-neutral-700 text-[12.5px] font-medium text-neutral-500">
+              Pay online — not open
+            </button>
+            <div className="text-[10.5px] leading-[1.45] text-neutral-500">SquadRise doesn’t take cards. Pay a leader at the door or the church office; it shows here once the office counts it.</div>
+          </div>
+        ) : null}
+      </div>
+      {staff ? (
+        <>
+          <div className="sr-card flex flex-col gap-2 px-[14px] py-[13px]" role="region" aria-label="Forms for this trip">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 text-[13px] font-medium text-neutral-100">{blocked.length ? blocked.length + (blocked.length === 1 ? ' can’t go yet' : ' can’t go yet') : 'Every form is in'}</div>
+              {blocked.length && canMessageParents(p) ? (
+                <button onClick={remind} className="min-h-11 rounded-md px-2 text-[12px] font-medium text-accent-300">
+                  Remind their families
+                </button>
+              ) : null}
+            </div>
+            {blocked.slice(0, 30).map((r) => (
+              <div key={r.name} className="flex items-baseline gap-2 border-t border-divider pt-2 text-[12px]">
+                <span className="w-[42%] flex-none truncate text-neutral-200">{r.name}</span>
+                <span className="flex-1 text-[11px] leading-[1.4] text-accent-200">Missing: {r.blocking.map((x) => (x.kind === 'waiver' ? x.title : formKind(x).label)).join(', ')}</span>
+              </div>
+            ))}
+            {blocked.length > 30 ? <div className="text-[11px] text-neutral-500">and {blocked.length - 30} more</div> : null}
+            {noPhoto.length ? <div className="border-t border-divider pt-2 text-[11px] leading-[1.45] text-neutral-500">No photo release (they can go — keep them out of photos): {noPhoto.slice(0, 8).join(', ') + (noPhoto.length > 8 ? ' and ' + (noPhoto.length - 8) + ' more' : '')}</div> : null}
+          </div>
+          {cost ? (
+            <div className="sr-card flex flex-col gap-2 px-[14px] py-[13px]" role="region" aria-label="Trip money">
+              <div className="text-[13px] font-medium text-neutral-100">
+                {money(cash.counted)} counted · {money(cash.unconfirmed)} waiting to be counted
+              </div>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="field min-w-[150px] flex-1">
+                  <span className="sr-label">Who paid</span>
+                  <select className="input" value={who} onChange={(x) => (setWho(x.target.value), setAmount(''))}>
+                    <option value="">Pick a student</option>
+                    {rows.map((r) => (
+                      <option key={r.name} value={r.name}>
+                        {r.name}
+                        {r.paid + r.unconfirmed ? ' · ' + money(r.paid + r.unconfirmed) + ' in' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field w-[96px]">
+                  <span className="sr-label">Amount</span>
+                  <input className="input" inputMode="decimal" value={amount} placeholder={who ? String(owing(who) || '') : String(cost)} onChange={(x) => setAmount(x.target.value.replace(/[^0-9.]/g, ''))} />
+                </label>
+                <Btn variant="secondary" className="px-4" onClick={mark}>
+                  Mark paid
+                </Btn>
+              </div>
+              {cash.waiting.map((x) => (
+                <div key={x.id} className="flex items-center gap-2 border-t border-divider pt-2 text-[12px]">
+                  <span className="flex-1 text-neutral-300">
+                    {money(x.amount)} from {x.student} <span className="text-neutral-500">· marked by {x.by} · not counted yet</span>
+                  </span>
+                  {office ? (
+                    <>
+                      <button onClick={() => count(x.id)} className="min-h-11 rounded-md px-2 text-[12px] font-medium text-accent-300" aria-label={'Count ' + money(x.amount) + ' from ' + x.student}>
+                        Count it
+                      </button>
+                      <button onClick={() => remove(x.id)} className="min-h-11 rounded-md px-2 text-[12px] text-neutral-400" aria-label={'Take back ' + money(x.amount) + ' from ' + x.student}>
+                        Take back
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              ))}
+              {!office && cash.waiting.length ? <div className="text-[10.5px] text-neutral-500">The office counts these — until then they stay unconfirmed.</div> : null}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
   );
 }
 

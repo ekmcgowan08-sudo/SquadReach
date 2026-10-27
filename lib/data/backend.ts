@@ -9,7 +9,7 @@
 import type { LiveAnswer, LiveRoom } from '@/lib/live';
 import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
-  AccessRequest, ActivityLine, CareReminder, Category, Challenge, ChatFlag, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
+  AccessRequest, ActivityLine, CampPayment, CareReminder, Category, Challenge, ChatFlag, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
   GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, PracticeRow,
   PrayerQueued, Rsvp, RsvpCount, Student, SwapRequest, Team, VolunteerInvite
 } from '@/lib/types/model';
@@ -80,6 +80,9 @@ export type SyncEvent =
   | { kind: 'slip'; slip: PermissionSlip }
   | { kind: 'slipRemove'; id: string }
   | { kind: 'slipSign'; slip: string; student: string; by: string | null }
+  | { kind: 'payment'; payment: CampPayment }
+  | { kind: 'paymentConfirm'; id: string }
+  | { kind: 'paymentRemove'; id: string }
   | { kind: 'parentMsg'; msg: ParentMessage }
   /** A student checks themselves in (RPC: only their own row, only tonight). */
   | { kind: 'selfCheckin'; date: string };

@@ -56,7 +56,12 @@ export function FamilyTonightCard({ v, onSign, onRead }: { v: FamilyView; onSign
         <div key={p.id} className="flex flex-col gap-2 border-t border-divider px-[15px] py-3">
           <div className="flex items-center gap-[9px]">
             <Icon name={'ph ' + (p.signed ? 'ph-check-circle' : 'ph-signature')} className="text-[16px] text-accent-300" />
-            <span className="flex-1 text-[12.5px] font-medium leading-[1.3] text-neutral-100">{p.title}</span>
+            <span className="flex-1 text-[12.5px] font-medium leading-[1.3] text-neutral-100">
+              {p.title}
+              <span className="mt-[2px] block text-[10.5px] font-normal leading-[1.35] text-neutral-500">
+                {p.kind} · {p.blocks ? 'a trip waits on it' : 'optional — trips don’t wait on it'}
+              </span>
+            </span>
             <span className="text-[10.5px] text-neutral-500">{p.due}</span>
           </div>
           {p.signed ? (

@@ -10,7 +10,7 @@ const LEADER = [
   '/dashboard', '/dashboard/score', '/dashboard/more', '/dashboard/live', '/dashboard/calendar', '/dashboard/chat', '/dashboard/bible', '/dashboard/night-recap', '/dashboard/prep-week',
   '/dashboard/serving', '/dashboard/parents', '/dashboard/door', '/dashboard/huddle', '/dashboard/games', '/dashboard/game-rules', '/dashboard/attendance', '/dashboard/approvals', '/dashboard/races',
   '/dashboard/awards', '/dashboard/badges', '/dashboard/library', '/dashboard/media', '/dashboard/notifications', '/dashboard/settings', '/dashboard/follow-ups', '/dashboard/season-plan',
-  '/dashboard/walkthrough', '/dashboard/events', '/dashboard/audit', '/dashboard/access-requests', '/dashboard/recap', '/dashboard/submit-points', '/dashboard/parent-link', '/dashboard/team'
+  '/dashboard/walkthrough', '/dashboard/events', '/dashboard/audit', '/dashboard/access-requests', '/dashboard/recap', '/dashboard/submit-points', '/dashboard/parent-link', '/dashboard/team', '/dashboard/events/e5'
 ];
 const OTHERS: [string, 'member' | 'parent' | 'coach' | 'captain' | null][] = [
   ['/dashboard', 'member'], ['/dashboard/live', 'member'], ['/dashboard/here', 'member'], ['/dashboard/bible', 'member'], ['/dashboard', 'parent'], ['/dashboard', 'coach'],

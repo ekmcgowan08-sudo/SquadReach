@@ -201,3 +201,28 @@ test('a chat thread can be muted, left unread, or flagged for a leader who reads
   await banner.getByRole('button', { name: 'Mark read' }).click();
   await expect(banner).toHaveCount(0);
 });
+
+test('a trip waits on signed forms and tracks money until the office counts it', async ({ page, context, baseURL }) => {
+  /* A student whose medical form isn't signed can't say they're going. */
+  await as(context, 'member', baseURL!);
+  await page.goto('/dashboard/events/e5');
+  await ready(page);
+  await expect(page.getByRole('status').filter({ hasText: /Not signed yet: .*Medical & allergies/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Going/ })).toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('button', { name: /Maybe/ }).click();
+  await expect(page.getByRole('button', { name: /Maybe/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Pay online — not open' })).toBeDisabled();
+
+  /* A leader sees who can't go yet, marks a payment, and counts it. */
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/events/e5');
+  await ready(page);
+  await expect(page.getByRole('region', { name: 'Forms for this trip' })).toContainText('Ellison Reid');
+  const cash = page.getByRole('region', { name: 'Trip money' });
+  await expect(cash).toContainText('$125 counted · $85 waiting to be counted');
+  await cash.getByLabel('Who paid').selectOption('Ellison Reid');
+  await cash.getByRole('button', { name: 'Mark paid' }).click();
+  await expect(cash).toContainText('$125 counted · $170 waiting to be counted');
+  await cash.getByRole('button', { name: 'Count $85 from Hannah Duff' }).click();
+  await expect(cash).toContainText('$210 counted · $85 waiting to be counted');
+});

@@ -13,7 +13,8 @@ import { audienceKids, audienceLabel, clock, newFamilyToken, newMessage, slipDue
 import { isoDay, nowMs } from '@/lib/dates';
 import { uid } from '@/lib/store/app-store';
 import { useAppApi } from '@/lib/store/provider';
-import type { Family, PermissionSlip } from '@/lib/types/model';
+import { FORM_KINDS, formKind } from '@/lib/forms';
+import type { Family, FormKind, PermissionSlip } from '@/lib/types/model';
 
 /** What a leader does for families: send a message, move pickup, mark a
  *  paper slip signed. The phone and the desk share these. */
@@ -109,7 +110,13 @@ export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
         return (
           <div key={v.slip.id} className="sr-card flex flex-col gap-2 px-[14px] py-[13px]">
             <div className="flex items-baseline gap-2">
-              <span className="flex-1 text-[13px] font-medium leading-[1.3] text-neutral-100">{v.slip.title}</span>
+              <span className="flex-1 text-[13px] font-medium leading-[1.3] text-neutral-100">
+                {v.slip.title}
+                <span className="mt-[3px] block text-[10.5px] font-normal leading-[1.3] text-neutral-500">
+                  {formKind(v.slip).label} · {formKind(v.slip).blocks ? 'blocks trips until signed' : 'warns only'}
+                  {v.slip.event ? ' · ' + (d.events.find((e) => e.id === v.slip.event)?.title ?? 'one trip') : ''}
+                </span>
+              </span>
               <span className="tabular text-[11px] text-neutral-500">
                 {v.signedN} of {v.total}
               </span>
@@ -300,8 +307,19 @@ export function NewSlipSheet({ open, onClose, defaultDay }: { open: boolean; onC
   const [who, setWho] = useState<'all' | 'pick'>('all');
   const [kids, setKids] = useState<string[]>([]);
   const [q, setQ] = useState('');
+  const [kind, setKind] = useState<FormKind>('permission');
+  const [trip, setTrip] = useState('');
+  const trips = d.events.filter((e) => e.trip);
   const create = () => {
-    const slip: PermissionSlip = { id: uid(), title: title.trim(), due: (day || defaultDay) + (time ? 'T' + time : ''), kids: who === 'all' ? 'all' : kids, at: nowMs() };
+    const slip: PermissionSlip = {
+      id: uid(),
+      title: title.trim(),
+      due: (day || defaultDay) + (time ? 'T' + time : ''),
+      kids: who === 'all' ? 'all' : kids,
+      at: nowMs(),
+      kind,
+      event: kind === 'waiver' && trip ? trip : null
+    };
     api().mutate((x) => void x.slips.unshift(slip));
     api().emit({ kind: 'slip', slip });
     api().logActivity('Permission slip out: ' + slip.title + ' · ' + m.displayName);
@@ -317,6 +335,34 @@ export function NewSlipSheet({ open, onClose, defaultDay }: { open: boolean; onC
       <div className="flex flex-col gap-[10px]">
         <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">New permission slip</div>
         <input className="input" placeholder="What it’s for — Fall retreat · Nov 13–15" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Slip title" />
+        <label className="field">
+          <span className="sr-label">What kind of form</span>
+          <select className="input" value={kind} onChange={(e) => setKind(e.target.value as FormKind)}>
+            {FORM_KINDS.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">
+          {FORM_KINDS.find((k) => k.id === kind)?.blocks
+            ? 'Until it’s signed, a student can’t sign up for a trip. They still take part on a normal night.'
+            : 'Only a warning: leaders see who hasn’t signed, and nobody is kept off a trip for it.'}
+        </div>
+        {kind === 'waiver' ? (
+          <label className="field">
+            <span className="sr-label">For which trip</span>
+            <select className="input" value={trip} onChange={(e) => setTrip(e.target.value)}>
+              <option value="">Every trip</option>
+              {trips.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.title} · {e.date}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <div className="flex gap-2">
           <input className="input flex-1" type="date" value={day || defaultDay} onChange={(e) => setDay(e.target.value)} aria-label="Due date" />
           <input className="input w-[120px]" type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Due time (optional)" />

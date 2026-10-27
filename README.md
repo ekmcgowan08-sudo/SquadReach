@@ -88,6 +88,7 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261027120000_access_role.sql` | `decide_access` can approve someone as a different role than they asked for (owner only by an owner), kept as `granted_role` |
    | `20261027130000_access_notice.sql` | A decided request keeps who decided it (`decided_by`); `access_notice_emails`, which only the server may call, lists the leaders and owners to tell about a new one |
    | `20261027140000_chat_flags.sql` | `chat_flags`: a thread flagged for a leader, with who flagged it; `chat_flag_seen`; `chat_can` lets leaders read (not post in) a flagged thread |
+   | `20261027150000_trips_and_forms.sql` | A slip's kind and trip; trip events and their cost; `rsvp_trip_gate` (no "going" to a trip with a blocking form unsigned); `camp_payments` and `camp_payment_confirm`; `family_view` shows each form's kind |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -262,6 +263,17 @@ Where the prototype left a call open, the build took the safer default:
 - **Direct messages.** Adults can message each other privately. Any thread
   with a student in it is an open door: leaders can read it but not post in
   it. Students can’t message each other.
+- **Forms block trips, never tonight.** A slip has a kind: medical &
+  allergies, emergency contact, general permission and trip waivers block;
+  a photo release only warns. A waiver can belong to one trip. Until the
+  blocking forms are signed a student can't answer "going" to a trip — the
+  database refuses it too (`rsvp_trip_gate`) — but they still check in on
+  a normal night, and Night recap lists who's here without one so a leader
+  can text the parent.
+- **Camp money is tracking only.** A trip can carry a cost. A coach or
+  leader marks a payment at the door; it stays unconfirmed until a leader
+  counts it, and a mistake comes off only before then. "Pay online" is
+  drawn but not open — SquadRise takes no cards.
 - **An undo after the night closes comes with a correction.** Leader
   reports go out when the night is closed at the debrief; reversing a point
   from before that posts a correction notice to leaders (and the audit
