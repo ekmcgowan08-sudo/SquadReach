@@ -561,3 +561,17 @@ test('tournament bracket: seeded from the standings, winners advance and pay onc
   await expect(page.getByText('Yellow wins the tournament')).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Tournament bracket' }).getByRole('button', { name: 'Red wins final match 1' })).toBeEnabled();
 });
+
+test('reports at a glance: views turn off and stay off, and a week shows its value on focus', async ({ page }) => {
+  await page.goto('/console?tab=reports');
+  await ready(page);
+  await expect(page.getByRole('heading', { name: 'Attendance over the season' })).toBeVisible();
+  await page.getByRole('img', { name: /^Week 1: \d+%$/ }).focus();
+  await expect(page.getByRole('tooltip')).toContainText('Week 1');
+  await page.getByRole('group', { name: 'Views shown' }).getByRole('button', { name: 'Squad rosters' }).click();
+  await expect(page.getByRole('heading', { name: 'Squad rosters' })).toHaveCount(0);
+  await page.reload();
+  await ready(page);
+  await expect(page.getByRole('heading', { name: 'Squad rosters' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Squad trends' })).toBeVisible();
+});

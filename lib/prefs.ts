@@ -45,6 +45,8 @@ export interface Prefs {
   walkthroughDone: Record<string, boolean>;
   /** The planner's printed one-pager: paper size and ground. */
   onePager: { paper: 'letter' | 'a4'; ground: 'light' | 'dark' };
+  /** Console › Reports: the at-a-glance views this person has turned off. */
+  reportViewsOff: Record<string, boolean>;
 }
 
 const DEFAULTS: Prefs = {
@@ -57,7 +59,8 @@ const DEFAULTS: Prefs = {
   deskTour: { on: false, i: 0 },
   cyclePreview: null,
   walkthroughDone: {},
-  onePager: { paper: 'letter', ground: 'light' }
+  onePager: { paper: 'letter', ground: 'light' },
+  reportViewsOff: {}
 };
 
 let current: Prefs = DEFAULTS;

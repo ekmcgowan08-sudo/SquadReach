@@ -1,6 +1,7 @@
 'use client';
 /* Reports: the season as spreadsheets. Each one is built from the same rows
    the app reads — nothing here is a stored total. */
+import { ReportViews } from '@/components/console/report-views';
 import { Section } from '@/components/console/kit';
 import { DeliveriesSection, ReportBuilderSection } from '@/components/console/report-builder';
 import { Btn, Icon } from '@/components/ui';
@@ -142,6 +143,7 @@ export function ReportsTab() {
         ))}
             </div>
     </Section>
+    <ReportViews />
     </>
   );
 }
