@@ -649,6 +649,8 @@ export interface LiveEffect {
   penaltyId: string;
   startAt: number;
   sec: number;
+  /** The squad that used it on another, when one did. */
+  by?: string | null;
 }
 
 export interface GameState {

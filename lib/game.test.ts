@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PENALTIES, clock, emptyGame, flipNote, heatRows, laneSec, penaltySec, placementAwards, soloSec, startLane, stopLane } from '@/lib/game';
+import { DEFAULT_PENALTIES, clock, emptyGame, flipNote, heatRows, laneSec, penaltySec, placementAwards, soloSec, startLane, stopLane, withEffect } from '@/lib/game';
 import type { GameState, Team } from '@/lib/types/model';
 
 const teams: Team[] = [
@@ -67,5 +67,18 @@ describe('heat results', () => {
   it('only races the two picked squads head-to-head', () => {
     const h: GameState = { ...g, mode: 'h2h', h2hPick: ['blue', 'green'] };
     expect(heatRows(h, teams, DEFAULT_PENALTIES, 0).map((r) => r.team.id)).toEqual(['blue', 'green']);
+  });
+});
+
+describe('effects on the room screen', () => {
+  it('puts one on each squad for as long as it costs, at most thirty seconds, and drops the expired', () => {
+    let n = 0;
+    const g = { ...emptyGame(), effects: [{ key: 'old', teamId: 'red', penaltyId: 'freeze', startAt: 0, sec: 10 }] };
+    const freeze = DEFAULT_PENALTIES[0];
+    const fx = withEffect(g, { ...freeze, sec: 45 }, ['blue', 'green'], 'red', 60_000, () => 'k' + ++n);
+    expect(fx.map((e) => [e.teamId, e.sec, e.by])).toEqual([
+      ['blue', 30, 'red'],
+      ['green', 30, 'red']
+    ]);
   });
 });

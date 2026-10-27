@@ -115,6 +115,7 @@ function Board() {
                     <Icon name={'ph-fill ' + (p.icon ?? 'ph-sparkle')} className="text-[56px]" style={{ color: p.color, filter: 'drop-shadow(0 0 18px ' + p.color + ')' }} />
                     <div className="text-center text-[34px] font-bold uppercase leading-none tracking-[.05em] text-white">{p.label}</div>
                     {p.rule ? <div className="max-w-[78%] text-center text-[13px] font-medium leading-[1.5] text-white/85 text-pretty">{p.rule}</div> : null}
+                    {fx.by ? <div className="text-[13px] font-semibold uppercase tracking-[.08em] text-white/80">{teamOf(d, fx.by).name} used it</div> : null}
                     <div className="rounded-full px-3 py-1 text-[15px] font-semibold leading-none text-white" style={{ background: 'rgba(0,0,0,.35)' }}>
                       {remain}s
                     </div>
@@ -143,7 +144,7 @@ function Board() {
               </div>
             ))}
           </div>
-          {ticker ? (
+          {ticker && !liveEffects(g, now).length ? (
             <div className="w-full max-w-[960px] overflow-hidden rounded-full bg-surface py-[10px]" style={{ boxShadow: 'inset 0 0 0 1px var(--color-neutral-800)' }}>
               <div className="flex w-max animate-sr-marquee whitespace-nowrap">
                 <span className="px-7 text-[15px] font-medium leading-none text-neutral-400">{ticker}</span>
@@ -155,6 +156,41 @@ function Board() {
           ) : null}
         </div>
       )}
+      {!showLanes ? <EffectBanner now={now} /> : null}
+    </div>
+  );
+}
+
+/* An effect a leader set off from the console, shown over the standings or
+   the solo clock: what it is, who it's on, who used it, and how long. */
+function EffectBanner({ now }: { now: number }) {
+  const d = useApp((s) => s.data);
+  const live = liveEffects(d.game, now);
+  if (!live.length) return null;
+  const groups = new Map<string, typeof live>();
+  for (const e of live) groups.set(e.penaltyId + '|' + e.startAt, [...(groups.get(e.penaltyId + '|' + e.startAt) ?? []), e]);
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-10 flex flex-col items-center gap-3 px-10">
+      {[...groups.values()].slice(-2).map((fx) => {
+        const p = d.config.penalties.find((x) => x.id === fx[0].penaltyId);
+        if (!p) return null;
+        const remain = Math.max(0, Math.ceil(fx[0].sec - (now - fx[0].startAt) / 1000));
+        return (
+          <div key={fx[0].key} role="status" className="flex w-full max-w-[900px] items-center gap-5 rounded-[22px] px-7 py-5" style={{ background: 'color-mix(in srgb, ' + (p.color ?? '#968ae0') + ' 30%, #06070d)', boxShadow: '0 0 0 1px ' + (p.color ?? '#968ae0') }}>
+            <Icon name={'ph-fill ' + (p.icon ?? 'ph-sparkle')} className="text-[52px]" style={{ color: p.color, filter: 'drop-shadow(0 0 16px ' + p.color + ')', animation: EFFECT_ANIM[p.style ?? 'glow'] ?? EFFECT_ANIM.glow }} />
+            <div className="min-w-0 flex-1">
+              <div className="text-[30px] font-bold uppercase leading-none tracking-[.05em] text-white">
+                {p.label} <span className="text-[22px] font-semibold normal-case tracking-normal text-white/85">on {fx.map((e) => teamOf(d, e.teamId).name).join(', ')}</span>
+              </div>
+              {p.rule ? <div className="mt-2 text-[15px] leading-[1.45] text-white/85">{p.rule}</div> : null}
+              {fx[0].by ? <div className="mt-1 text-[13px] font-semibold uppercase tracking-[.08em] text-white/75">{teamOf(d, fx[0].by).name} used it</div> : null}
+            </div>
+            <div className="tabular rounded-full px-4 py-2 text-[22px] font-semibold leading-none text-white" style={{ background: 'rgba(0,0,0,.35)' }}>
+              {remain}s
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

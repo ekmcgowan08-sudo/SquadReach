@@ -12,7 +12,7 @@ const PHONE = [
 const DESK = [
   '/planner', '/planner/prep', '/planner/prep?view=recap', '/planner/people', '/planner/roadmap', '/planner/roadmap?view=journey', '/planner/roadmap?density=one', '/planner/roadmap?view=checks', '/planner/roadmap?view=suggestions', '/planner/year', '/planner/season', '/planner/season?view=month', '/planner/season?view=night', '/planner/coverage',
   '/planner/liturgical', '/planner/live', '/planner/live?tab=run', '/planner/settings', '/planner/setup', '/planner/one-pager', '/console', '/console?tab=season', '/console?tab=teams', '/console?tab=draft',
-  '/console?tab=scoring', '/console?tab=challenges', '/console?tab=bible', '/console?tab=groups', '/console?tab=awards', '/console?tab=media', '/console?tab=overlay', '/console?tab=huddle', '/console?tab=reports', '/console?tab=people', '/console?tab=notifs', '/console?tab=calendar', '/console?tab=walkthrough', '/projector', '/live/room'
+  '/console?tab=scoring', '/console?tab=live', '/console?tab=challenges', '/console?tab=bible', '/console?tab=groups', '/console?tab=awards', '/console?tab=media', '/console?tab=overlay', '/console?tab=huddle', '/console?tab=reports', '/console?tab=people', '/console?tab=notifs', '/console?tab=calendar', '/console?tab=walkthrough', '/projector', '/live/room'
 ];
 
 for (const path of [...PHONE, ...DESK]) {

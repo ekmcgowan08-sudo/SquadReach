@@ -476,3 +476,24 @@ test('console access requests: change and approve as another role, or deny', asy
   await page.getByRole('button', { name: /Activity/ }).click();
   await expect(page.getByText('Approved Chris Sandoval as Scorekeeper (asked for Coach)')).toBeVisible();
 });
+
+test('console live control sets off an effect on the room screen and edits the effect buttons', async ({ page }) => {
+  await page.goto('/console?tab=live');
+  await ready(page);
+  await page.getByRole('group', { name: 'Effect', exact: true }).getByRole('button', { name: 'Freeze' }).click();
+  await page.getByRole('group', { name: 'Used by', exact: true }).getByRole('button', { name: 'Red' }).click();
+  await page.getByRole('group', { name: 'Applies to', exact: true }).getByRole('button', { name: 'Blue' }).click();
+  await page.getByRole('button', { name: 'Trigger on screen' }).click();
+  await expect(page.getByText('Freeze on Blue')).toBeVisible();
+
+  const fog = page.getByRole('group', { name: 'Effect: Fog Out' });
+  await fog.getByLabel('Name', { exact: true }).fill('Blackout');
+  await fog.getByLabel('Name', { exact: true }).press('Enter');
+  await expect(page.getByRole('group', { name: 'Effect: Blackout' })).toBeVisible();
+
+  await page.goto('/projector');
+  await ready(page);
+  const banner = page.getByRole('status').filter({ hasText: 'Freeze' });
+  await expect(banner).toContainText('on Blue');
+  await expect(banner).toContainText('Red used it');
+});

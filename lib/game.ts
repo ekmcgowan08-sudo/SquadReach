@@ -2,7 +2,7 @@
    how long it has been running since its start stamp, so every screen that
    reads the same state — the timekeeper's phone, the projector — shows the
    same clock without anything ticking in the data. */
-import type { GameState, HeatLane, Penalty, Team } from '@/lib/types/model';
+import type { GameState, HeatLane, LiveEffect, Penalty, Team } from '@/lib/types/model';
 
 export const DEFAULT_PENALTIES: Penalty[] = [
   { id: 'freeze', label: 'Freeze', sec: 30, kind: 'add', icon: 'ph-snowflake', color: '#38bdf8', style: 'blur', rule: 'Team must stand completely still — no talking, no moving — until it clears.' },
@@ -98,3 +98,10 @@ export function placementAwards(rows: HeatRow[], base: number): { team: string; 
 
 /** Effects still on screen at `now`. */
 export const liveEffects = (g: GameState, now = Date.now()) => g.effects.filter((e) => now < e.startAt + e.sec * 1000);
+
+/** Put an effect on screen for some squads: one per squad, for as long as
+ *  it costs (thirty seconds at most), dropping any that have run out. */
+export function withEffect(g: GameState, p: Penalty, teamIds: string[], by: string | null, now: number, id: () => string): LiveEffect[] {
+  const sec = Math.min(p.sec, 30) || 10;
+  return liveEffects(g, now).concat(teamIds.map((teamId) => ({ key: id(), teamId, penaltyId: p.id, startAt: now, sec, by })));
+}

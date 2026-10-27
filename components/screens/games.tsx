@@ -7,7 +7,7 @@ import { useState, type CSSProperties } from 'react';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, tint } from '@/components/ui';
 import {
-  activeTeams, clock, emptyLane, flipNote, heatRows, laneOf, laneSec, placementAwards, soloSec, startLane, stopLane
+  activeTeams, clock, emptyLane, flipNote, heatRows, laneOf, laneSec, placementAwards, soloSec, startLane, stopLane, withEffect
 } from '@/lib/game';
 import { nowMs } from '@/lib/dates';
 import { postedLabel, wasHeld } from '@/lib/held';
@@ -82,7 +82,7 @@ export function GamesScreen() {
       l.counts = { ...l.counts, [p.id]: Math.max(0, (l.counts[p.id] ?? 0) + delta) };
       x.lanes[teamId] = l;
       /* A penalty shows on the projector for as long as it costs. */
-      if (delta > 0) x.effects = x.effects.filter((e) => nowMs() < e.startAt + e.sec * 1000).concat({ key: uid(), teamId, penaltyId: p.id, startAt: nowMs(), sec: Math.min(p.sec, 30) || 10 });
+      if (delta > 0) x.effects = withEffect(x, p, [teamId], null, nowMs(), uid);
     }, true);
   };
 

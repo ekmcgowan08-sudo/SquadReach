@@ -13,6 +13,7 @@ import { DraftTab } from '@/components/console/draft-tab';
 import { GroupsTab } from '@/components/console/groups-tab';
 import { HomeTab } from '@/components/console/home-tab';
 import { HuddleTab } from '@/components/console/huddle-tab';
+import { LiveTab } from '@/components/console/live-tab';
 import { MediaTab } from '@/components/console/media-tab';
 import { NotifsTab } from '@/components/console/notifs-tab';
 import { OverlayTab } from '@/components/console/overlay-tab';
@@ -37,6 +38,7 @@ const TABS = [
   { id: 'teams', label: 'Squads', icon: 'ph ph-shield-check' },
   { id: 'draft', label: 'Draft & trades', icon: 'ph ph-arrows-left-right' },
   { id: 'scoring', label: 'Scoring', icon: 'ph ph-trophy' },
+  { id: 'live', label: 'Live control', icon: 'ph ph-lightning' },
   { id: 'calendar', label: 'Calendar', icon: 'ph ph-calendar-dots' },
   { id: 'challenges', label: 'Challenges', icon: 'ph ph-flag-checkered' },
   { id: 'bible', label: 'Bible & memory', icon: 'ph ph-book-open-text' },
@@ -73,7 +75,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'calendar' ? <CalendarTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'groups' ? <GroupsTab /> : tab === 'awards' ? <AwardsTab /> : tab === 'media' ? <MediaTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'notifs' ? <NotifsTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
+        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'live' ? <LiveTab /> : tab === 'calendar' ? <CalendarTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'groups' ? <GroupsTab /> : tab === 'awards' ? <AwardsTab /> : tab === 'media' ? <MediaTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'notifs' ? <NotifsTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );
