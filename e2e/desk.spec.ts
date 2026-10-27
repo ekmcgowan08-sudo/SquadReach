@@ -316,3 +316,14 @@ test('the recording overlay settings move the scoreboard on the preview and stic
   await expect(page.getByRole('img', { name: /top, 100% size/ })).toBeVisible();
   await expect(page.getByRole('checkbox', { name: 'Game clock' })).not.toBeChecked();
 });
+
+test('the console opens on Home, and Export everything hands over one file', async ({ page }) => {
+  await page.goto('/console');
+  await ready(page);
+  await expect(page.getByText(/You’re signed in as Ministry Leader at Grace Community Students/)).toBeVisible();
+  await expect(page.getByText('Week 9 of 9')).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export everything' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^grace-community-students-\d{4}-\d{2}-\d{2}\.json$/);
+});

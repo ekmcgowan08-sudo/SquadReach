@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { BibleTab } from '@/components/console/bible-tab';
 import { ChallengesTab } from '@/components/console/challenges-tab';
 import { DraftTab } from '@/components/console/draft-tab';
+import { HomeTab } from '@/components/console/home-tab';
 import { HuddleTab } from '@/components/console/huddle-tab';
 import { OverlayTab } from '@/components/console/overlay-tab';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
@@ -20,12 +21,13 @@ import { SeasonTab } from '@/components/console/season-tab';
 import { WalkthroughChapters } from '@/components/walkthrough-chapters';
 import { Btn, Icon, Switch2 } from '@/components/ui';
 import { isoDay, parseLocalISO } from '@/lib/dates';
-import { pointBase, fmt } from '@/lib/scoring';
+import { pointBase, fmt, teamTotal } from '@/lib/scoring';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { Team } from '@/lib/types/model';
 
 const TABS = [
+  { id: 'home', label: 'Home', icon: 'ph ph-house' },
   { id: 'setup', label: 'Setup', icon: 'ph ph-sliders-horizontal' },
   { id: 'season', label: 'Season builder', icon: 'ph ph-map-trifold' },
   { id: 'teams', label: 'Squads', icon: 'ph ph-shield-check' },
@@ -44,7 +46,7 @@ type TabId = (typeof TABS)[number]['id'];
 export function ConsoleScreen() {
   const params = useSearchParams();
   const router = useRouter();
-  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'setup') as TabId;
+  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'home') as TabId;
   return (
     <div className="mx-auto flex max-w-[1080px] flex-col gap-5 px-4 pb-16 pt-5 md:flex-row">
       <nav className="flex flex-none gap-[6px] overflow-x-auto md:w-[200px] md:flex-col" aria-label="Console sections">
@@ -62,7 +64,7 @@ export function ConsoleScreen() {
         ))}
       </nav>
       <div className="min-w-0 flex-1">
-        {tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
+        {tab === 'home' ? <HomeTab /> : tab === 'setup' ? <SetupTab /> : tab === 'season' ? <SeasonTab /> : tab === 'teams' ? <TeamsTab /> : tab === 'draft' ? <DraftTab /> : tab === 'scoring' ? <ScoringTab /> : tab === 'challenges' ? <ChallengesTab /> : tab === 'bible' ? <BibleTab /> : tab === 'overlay' ? <OverlayTab /> : tab === 'people' ? <PeopleTab /> : tab === 'huddle' ? <HuddleTab /> : tab === 'walkthrough' ? <WalkthroughTab /> : <ReportsTab />}
       </div>
     </div>
   );
@@ -300,7 +302,9 @@ function TeamsTab() {
                 ))}
               </div>
               <span className="flex-1" />
-              <span className="pb-3 text-[12px] text-neutral-500">{d.roster.filter((r) => r.team === t.id).length} students</span>
+              <span className="pb-3 text-[12px] text-neutral-500">
+                {d.roster.filter((r) => r.team === t.id).length} students · {d.roster.filter((r) => r.team === t.id && r.captain).length} captains · {fmt(teamTotal(d.ledger, t.id))} pts
+              </span>
               <Btn
                 variant="ghost"
                 className="px-3"
