@@ -293,7 +293,8 @@ function Parents() {
   const [text, setText] = useState('');
   const [all, setAll] = useState<Record<string, boolean>>({});
   const [newSlip, setNewSlip] = useState(false);
-  const [famQ, setFamQ] = useState('');
+  const params = useSearchParams();
+  const [famQ, setFamQ] = useState(() => params.get('q') ?? '');
   const [fam, setFam] = useState<string | null>(null);
   const kids = d.roster.filter((s) => d.families[s.name]);
   const [kid, setKid] = useState(kids.find((s) => s.name === 'Ellison Reid')?.name ?? kids[0]?.name ?? '');

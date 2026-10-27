@@ -1,6 +1,7 @@
 'use client';
 /* People: the student roster (squads, grades, captains, CSV import) and the
    adults and students who hold a role in the app. */
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { PcoSection } from '@/components/pco';
 import { AccessSection } from '@/components/console/access-section';
@@ -19,7 +20,8 @@ export function PeopleTab() {
   const d = useApp((s) => s.data);
   const m = useApp((s) => s.membership);
   const api = useAppApi();
-  const [q, setQ] = useState('');
+  const params = useSearchParams();
+  const [q, setQ] = useState(() => params.get('q') ?? '');
   const [squad, setSquad] = useState<string>('');
   const [paste, setPaste] = useState('');
   const [newName, setNewName] = useState('');

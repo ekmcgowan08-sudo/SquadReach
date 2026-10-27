@@ -497,3 +497,16 @@ test('console live control sets off an effect on the room screen and edits the e
   await expect(banner).toContainText('on Blue');
   await expect(banner).toContainText('Red used it');
 });
+
+test('console student search opens a student’s card, and Edit on People finds them', async ({ page }) => {
+  await page.goto('/console');
+  await ready(page);
+  await page.getByRole('combobox', { name: 'Search students by name' }).fill('ellison');
+  await page.getByRole('option', { name: /Ellison Reid/ }).click();
+  const card = page.getByRole('dialog', { name: 'Student: Ellison Reid' });
+  await expect(card.getByText('Points this season')).toBeVisible();
+  await expect(card.getByText('Recent points')).toBeVisible();
+  await card.getByRole('link', { name: 'Edit on People' }).click();
+  await expect(page).toHaveURL(/tab=people&q=Ellison/);
+  await expect(page.getByLabel('Search the roster')).toHaveValue('Ellison Reid');
+});

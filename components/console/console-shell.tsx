@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
+import { StudentSearch } from '@/components/console/student-search';
 import { PushBanner, Ready, Toast } from '@/components/shell/phone-shell';
 import { Icon } from '@/components/ui';
 import { useApp } from '@/lib/store/provider';
@@ -17,6 +18,9 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
           </div>
           <span className="text-neutral-700">/</span>
           <div className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-200">{name} · Console</div>
+          <Suspense fallback={null}>
+            <StudentSearch />
+          </Suspense>
           {offline ? <span className="rounded-full border border-neutral-700 px-2 py-1 text-[10.5px] text-neutral-400">No signal — changes wait</span> : null}
           <Link href="/planner" className="hidden min-h-11 items-center gap-[6px] rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-300 sm:flex">
             <Icon name="ph ph-map-trifold" className="text-[14px]" />
