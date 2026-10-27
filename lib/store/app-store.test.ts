@@ -95,3 +95,39 @@ describe('documents whose save couldn’t go', () => {
     expect(store.getState().unsavedDocs).toEqual([]);
   });
 });
+
+describe('ministry settings changed without signal', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+  const configs = (sent: SyncEvent[]) => sent.flatMap((e) => (e.kind === 'config' ? [e] : []));
+
+  it('are held and sent once, as they stand, when the signal comes back', () => {
+    const { backend, sent } = flaky();
+    const store = createAppStore(backend, leader, demoMinistry());
+    store.getState().toggleOfflineSim();
+    store.getState().mutate((d) => void (d.config.gameName = 'Capture the flag'));
+    store.getState().emit({ kind: 'config', config: store.getState().data.config });
+    store.getState().mutate((d) => void (d.config.gameName = 'Pipeline relay'));
+    store.getState().emit({ kind: 'config', config: store.getState().data.config });
+    expect(configs(sent)).toHaveLength(0);
+    expect(store.getState().unsavedConfig).toBe(true);
+
+    store.getState().toggleOfflineSim();
+    expect(configs(sent)).toHaveLength(1);
+    expect(configs(sent)[0].config.gameName).toBe('Pipeline relay');
+    expect(store.getState().unsavedConfig).toBe(false);
+  });
+
+  it('are tried again after a save fails with signal', async () => {
+    const { backend, sent, state } = flaky();
+    const store = createAppStore(backend, leader, demoMinistry());
+    state.down = true;
+    store.getState().emit({ kind: 'config', config: store.getState().data.config });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.getState().unsavedConfig).toBe(true);
+    state.down = false;
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(configs(sent)).toHaveLength(1);
+    expect(store.getState().unsavedConfig).toBe(false);
+  });
+});

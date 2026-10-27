@@ -72,6 +72,8 @@ export interface AppState {
   netOnline: boolean;
   /** Documents edited here whose save hasn't gone through yet. */
   unsavedDocs: DocKey[];
+  /** The ministry's settings were changed here and haven't saved yet. */
+  unsavedConfig: boolean;
   /** When each document last saved from here. */
   docSavedAt: Partial<Record<DocKey, number>>;
   offlineSim: boolean;
@@ -242,6 +244,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
         staleHeld: null,
         netOnline: true,
         unsavedDocs: [],
+        unsavedConfig: false,
         docSavedAt: {},
         offlineSim: false,
         lastOnlineAt: Date.now(),
@@ -344,12 +347,17 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           get().emit({ kind: 'activity', line: entry });
         },
         emit(e) {
-          /* Documents (the plan, reports, small groups…) are the exception:
-             a save that can't go now is remembered and made again — from
-             the newest copy, merged with anyone else's — when it can. */
-          const hold = (key: DocKey) => set((s) => void (s.unsavedDocs = [...new Set([...s.unsavedDocs, key])]));
+          /* Documents (the plan, reports, small groups…) and the ministry's
+             settings are the exception: a save that can't go now is
+             remembered and made again — from the newest copy, merged with
+             anyone else's for a document — when it can. */
+          const hold = () =>
+            set((s) => {
+              if (e.kind === 'doc') s.unsavedDocs = [...new Set([...s.unsavedDocs, e.key])];
+              if (e.kind === 'config') s.unsavedConfig = true;
+            });
           if (get().offline()) {
-            if (e.kind === 'doc') hold(e.key);
+            hold();
             return;
           }
           const sent = get().backend.sync(e);
@@ -357,16 +365,21 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           sent.catch(() => {
             /* Other non-score writes are not queued: the screens that make
                them say they need a connection rather than pretending to. */
-            if (e.kind !== 'doc') return;
-            hold(e.key);
+            if (e.kind !== 'doc' && e.kind !== 'config') return;
+            hold();
             if (!docRetry) docRetry = setTimeout(() => ((docRetry = null), get().saveUnsavedDocs()), 15_000);
           });
         },
         saveUnsavedDocs() {
           const keys = get().unsavedDocs;
-          if (get().offline() || !keys.length) return;
-          set((s) => void (s.unsavedDocs = []));
+          const config = get().unsavedConfig;
+          if (get().offline() || (!keys.length && !config)) return;
+          set((s) => {
+            s.unsavedDocs = [];
+            s.unsavedConfig = false;
+          });
           for (const key of keys) get().emit({ kind: 'doc', key, value: get().data[key] });
+          if (config) get().emit({ kind: 'config', config: get().data.config });
         },
         mutate(recipe) {
           set((s) => {

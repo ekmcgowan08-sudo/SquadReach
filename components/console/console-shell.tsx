@@ -9,6 +9,7 @@ import { useApp } from '@/lib/store/provider';
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const name = useApp((s) => s.data.config.ministryName);
   const offline = useApp((s) => !s.netOnline || s.offlineSim);
+  const waiting = useApp((s) => s.outboxSyncing || s.outbox.length > 0 || s.unsavedDocs.length > 0 || s.unsavedConfig);
   return (
     <div className="relative min-h-dvh bg-bg">
       <header className="sticky top-0 z-30 border-b border-divider backdrop-blur-[10px]" style={{ background: 'color-mix(in srgb, var(--color-bg) 88%, #000)' }}>
@@ -21,7 +22,14 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
           <Suspense fallback={null}>
             <StudentSearch />
           </Suspense>
-          {offline ? <span className="rounded-full border border-neutral-700 px-2 py-1 text-[10.5px] text-neutral-400">No signal — changes wait</span> : null}
+          {offline ? (
+            <span className="rounded-full border border-neutral-700 px-2 py-1 text-[10.5px] text-neutral-400">No signal — changes wait</span>
+          ) : (
+            <span role="status" className="hidden items-center gap-1 whitespace-nowrap text-[11.5px] text-neutral-400 lg:flex">
+              <Icon name={waiting ? 'ph ph-circle-notch animate-spin' : 'ph ph-check'} className="text-[12px]" />
+              {waiting ? 'Saving…' : 'All changes saved'}
+            </span>
+          )}
           <Link href="/planner" className="hidden min-h-11 items-center gap-[6px] rounded-full border border-neutral-800 px-3 text-[12px] font-medium text-neutral-300 sm:flex">
             <Icon name="ph ph-map-trifold" className="text-[14px]" />
             Planner

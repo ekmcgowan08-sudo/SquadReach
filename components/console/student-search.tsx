@@ -125,7 +125,7 @@ export function StudentSearch() {
           if (e.key === 'Enter' && hits[0]) pick(hits[0].name);
           if (e.key === 'Escape') setQ('');
         }}
-        className="input min-h-11 w-[220px]"
+        className="input min-h-11 w-[196px]"
         placeholder="Search students by name…"
         aria-label="Search students by name"
         role="combobox"
