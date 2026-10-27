@@ -71,3 +71,14 @@ describe('studentItemValue — the only place a row is valued', () => {
     expect(sheetTotal(s, ctx)).toBe(80);
   });
 });
+
+describe('a category’s own base', () => {
+  const c = { pointBase: 900, weekGrowthPct: 8, weekNumber: 9, catCfg: { visitors: { base: 1200, growth: null }, games: { base: null, growth: 0 } } };
+  it('starts from its own base and grows at its own rate, following the season for what it leaves empty', () => {
+    expect(pointBase(c)).toBe(1476);
+    expect(pointBase(c, 'general')).toBe(1476);
+    expect(pointBase(c, 'visitors')).toBe(1968);
+    expect(pointBase(c, 'games')).toBe(900);
+    expect(pointBase(c, 'visitors', 1)).toBe(1200);
+  });
+});

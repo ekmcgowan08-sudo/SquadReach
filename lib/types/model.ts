@@ -250,6 +250,9 @@ export interface MinistryConfig {
   /** Spots to film or play on the night: mascot bits, commercials, hype
    *  videos. Weeks as for challenges: absent means every week. */
   mediaSpots?: MediaSpot[];
+  /** A category's own starting base and weekly growth; an empty field
+   *  follows the season number (pointBase). */
+  catCfg?: Record<string, { base?: number | null; growth?: number | null }>;
   /** Places games are played, as the ministry named them; picking one in
    *  Scoring adds it to a game. Absent means the common six. */
   savedSpaces?: string[];

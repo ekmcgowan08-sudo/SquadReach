@@ -117,7 +117,7 @@ export function StudentSheet({ open, onClose, initialTeam, initialName }: { open
       <div className="flex flex-col gap-[5.6px]">
         {STUDENT_ITEMS.map((it) => {
           const on = !!sh.picks[it.id];
-          const val = on ? studentItemValue(it, sh, ctx) : it.mult ? base * it.mult : it.pts ?? 0;
+          const val = on ? studentItemValue(it, sh, ctx) : it.mult ? (ctx.baseFor?.(it.cat) ?? base) * it.mult : it.pts ?? 0;
           const isOpen = on && expanded === it.id;
           const count = Math.max(1, sh.counts[it.id] || 1);
           const vc = verseCount(it, sh, ctx);
@@ -157,7 +157,7 @@ export function StudentSheet({ open, onClose, initialTeam, initialName }: { open
                     value={String(count)}
                     onLess={() => patch({ counts: { ...sh.counts, [it.id]: Math.max(1, count - 1) } })}
                     onMore={() => patch({ counts: { ...sh.counts, [it.id]: Math.min(12, count + 1) } })}
-                    right={count + ' × ' + fmt(base * (it.mult || 1)) + ' = ' + fmt(base * (it.mult || 1) * count) + ' pts'}
+                    right={count + ' × ' + fmt((ctx.baseFor?.(it.cat) ?? base) * (it.mult || 1)) + ' = ' + fmt((ctx.baseFor?.(it.cat) ?? base) * (it.mult || 1) * count) + ' pts'}
                   />
                 </Panel>
               ) : null}

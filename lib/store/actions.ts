@@ -4,7 +4,7 @@
    own confirmation — every caller's success message must tell the truth
    about whether the points landed. */
 import {
-  CHECKIN_PRESENT_PTS, CHECKIN_QUESTIONS, PROOF_BONUS, STUDENT_ITEMS, checkinQuestionPts, fmt, parseFriendNames,
+  CHECKIN_PRESENT_PTS, CHECKIN_QUESTIONS, PROOF_BONUS, STUDENT_ITEMS, checkinQuestionPts, fmt, parseFriendNames, pointBase,
   sheetDetail, sheetFriendCount, studentItemValue, verseCount, type SheetState, type ValueCtx
 } from '@/lib/scoring';
 import { autoApproves } from '@/lib/permissions';
@@ -28,7 +28,7 @@ export function earnAchievement(get: Get, who: string, team: string, id: string,
   return true;
 }
 
-export const valueCtx = (get: Get): ValueCtx => ({ base: get().base(), versePts: get().data.config.versePts, verseBoard: get().data.config.verseBoard });
+export const valueCtx = (get: Get): ValueCtx => ({ base: get().base(), baseFor: (cat) => pointBase(get().data.config, cat), versePts: get().data.config.versePts, verseBoard: get().data.config.verseBoard });
 
 /** The full per-student check-in sheet: one tap posts the points, the visitor
  *  names, the verse log and the achievements. Nothing is entered twice. */

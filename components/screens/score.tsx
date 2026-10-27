@@ -7,7 +7,7 @@ import { LiveNow } from '@/components/dashboard/standings-list';
 import { StudentSheet } from '@/components/dashboard/student-sheet';
 import { Btn, Icon, Screen } from '@/components/ui';
 import { autoApproves } from '@/lib/permissions';
-import { fmt, teamTotal } from '@/lib/scoring';
+import { fmt, pointBase, teamTotal } from '@/lib/scoring';
 import { catOf, teamOf } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { useSearchParams } from 'next/navigation';
@@ -32,6 +32,7 @@ export function ScoreScreen() {
   const [note, setNote] = useState('');
   const [studentOpen, setStudentOpen] = useState(false);
   const base = api().base();
+  const catBase = cat ? pointBase(d.config, cat) : base;
   const live = autoApproves(persona);
   const t = team ? teamOf(d, team) : null;
   const c = cat ? catOf(d, cat) : null;
@@ -166,7 +167,7 @@ export function ScoreScreen() {
             {t && c ? c.label + ' points to ' + t.name + ' · Week ' + d.config.weekNumber + ' scale' : 'Pick a squad and a category, then award.'}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {[-2 * base, -base, base, 2 * base].map((n) => (
+            {[-2 * catBase, -catBase, catBase, 2 * catBase].map((n) => (
               <button
                 key={n}
                 onClick={() => quick(n)}

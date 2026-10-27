@@ -7,7 +7,7 @@ import { Field, Section, useSaveConfig } from '@/components/console/kit';
 import { GameFormatEditor, GamePlaces, GameTemplates, RulesAudience } from '@/components/console/game-setup';
 import { Bracket } from '@/components/game/bracket';
 import { Btn, Icon } from '@/components/ui';
-import { CHECKIN_PRESENT_PTS } from '@/lib/scoring';
+import { CHECKIN_PRESENT_PTS, fmt, pointBase } from '@/lib/scoring';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { Category } from '@/lib/types/model';
 
@@ -51,7 +51,7 @@ export function ScoringTab() {
       >
         <div className="flex flex-col gap-3">
           {d.cats.map((cat) => (
-            <div key={cat.id} className="flex flex-col gap-2 rounded-lg border border-neutral-800 p-3">
+            <div key={cat.id} role="group" aria-label={'Category: ' + cat.label} className="flex flex-col gap-2 rounded-lg border border-neutral-800 p-3">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-md" style={{ background: 'color-mix(in srgb, ' + cat.color + ' 22%, transparent)', color: cat.color }}>
                   <Icon name={cat.icon} className="text-[18px]" />
@@ -87,6 +87,7 @@ export function ScoringTab() {
                   </button>
                 ))}
               </div>
+              <CatBase id={cat.id} />
             </div>
           ))}
         </div>
@@ -290,6 +291,31 @@ function FieldMap() {
         >
           Save map
         </Btn>
+      </div>
+    </div>
+  );
+}
+
+/* A category's own starting base and weekly growth. Empty fields follow
+   the season number in Setup › Point values. */
+function CatBase({ id }: { id: string }) {
+  const c = useApp((s) => s.data.config);
+  const save = useSaveConfig();
+  const own = c.catCfg?.[id] ?? {};
+  const set = (patch: { base?: number | null; growth?: number | null }) => save((cc) => ({ catCfg: { ...cc.catCfg, [id]: { ...cc.catCfg?.[id], ...patch } } }));
+  const num = (v: string) => (v.trim() === '' ? null : Math.max(0, Math.round(Number(v)) || 0));
+  const follows = own.base == null && own.growth == null;
+  return (
+    <div className="flex flex-wrap items-end gap-3 border-t border-divider pt-2">
+      <div className="w-32">
+        <Field label="Starting base" type="number" value={own.base ?? ''} placeholder={String(c.pointBase)} onSave={(v) => set({ base: num(v) })} />
+      </div>
+      <div className="w-32">
+        <Field label="Weekly growth %" type="number" value={own.growth ?? ''} placeholder={String(c.weekGrowthPct)} onSave={(v) => set({ growth: num(v) })} />
+      </div>
+      <div className="pb-2 text-[11.5px] leading-[1.4] text-neutral-400">
+        Week 1 {fmt(pointBase(c, id, 1))} → week {c.seasonWeeks} {fmt(pointBase(c, id, c.seasonWeeks))}
+        <span className="block text-neutral-500">{follows ? 'Following the season number' : 'Its own number'}</span>
       </div>
     </div>
   );

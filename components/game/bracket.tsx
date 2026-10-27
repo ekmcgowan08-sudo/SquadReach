@@ -20,7 +20,7 @@ export function Bracket({ editable }: { editable: boolean }) {
   const seeds = bracketSeeds(d.teams, d.ledger, b);
   const rounds = buildBracket(seeds, b.winners);
   const champ = bracketChampion(rounds);
-  const base = pointBase(d.config);
+  const base = pointBase(d.config, 'games');
   const name = (id: string | null) => d.teams.find((t) => t.id === id)?.name ?? '';
   const color = (id: string | null) => d.teams.find((t) => t.id === id)?.color ?? 'var(--color-neutral-700)';
 

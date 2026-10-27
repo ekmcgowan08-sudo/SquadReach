@@ -245,7 +245,7 @@ export function Recorder({ open, onClose }: { open: boolean; onClose: () => void
     if (br.enabled) {
       const res = settleFromClip(data.teams, data.ledger, br, playing, drawState.current.tally);
       if (res && bracketWinPayable(br, res.matchKey, res.winner)) {
-        const amt = pointBase(data.config);
+        const amt = pointBase(data.config, 'games');
         s.award({ team: res.winner, cat: 'games', amount: amt, why: 'won a bracket game · from the filmed game', by: 'Tournament' });
         const { next } = advanceBracket(br, bracketSeeds(data.teams, data.ledger, br), res.matchKey, res.winner);
         s.mutate((x) => void (x.game.bracket = next));

@@ -190,7 +190,13 @@ function SetupTab() {
           <Field label="Weekly growth %" type="number" value={c.weekGrowthPct} onSave={(v) => save({ weekGrowthPct: Math.max(0, Number(v) || 0) })} />
           <Field label="Points per goal" type="number" value={c.goalValue} onSave={(v) => save({ goalValue: Math.max(1, Number(v) || c.goalValue) })} />
           <Field label="Points per verse recited" type="number" value={c.versePts} onSave={(v) => save({ versePts: Math.max(0, Number(v) || 0) })} />
-          <Field label="Verse board bonus" type="number" value={c.verseBoard} onSave={(v) => save({ verseBoard: Math.max(0, Number(v) || 0) })} />
+          <Field
+            label="Verses on the board"
+            type="number"
+            value={c.verseBoard}
+            onSave={(v) => save({ verseBoard: Math.max(0, Number(v) || 0) })}
+            hint={c.verseBoard ? c.versePts + ' per verse · all ' + c.verseBoard + ' is ' + fmt(c.versePts * c.verseBoard) + ' pts for one student' : 'The verse board is off.'}
+          />
         </div>
       </Section>
 

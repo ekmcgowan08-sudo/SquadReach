@@ -614,3 +614,21 @@ test('game setup: the format in a line, a saved place, who reads the rules, and 
   await expect(page.getByText(/3 rounds × 5 min/)).toBeVisible();
   await expect(page.getByText(/sharing the full rules with/)).toBeVisible();
 });
+
+test('a category with its own starting base scores at its own number', async ({ page }) => {
+  await page.goto('/console?tab=scoring');
+  await ready(page);
+  const visitors = page.getByRole('group', { name: 'Category: Visitors' });
+  await visitors.getByLabel('Starting base').fill('1200');
+  await visitors.getByLabel('Starting base').press('Enter');
+  await expect(visitors.getByText('Its own number')).toBeVisible();
+  await expect(visitors.getByText(/Week 1 1,200 → week 9 1,968/)).toBeVisible();
+
+  await page.goto('/dashboard/score');
+  await ready(page);
+  await page.getByRole('button', { name: /^Red/ }).first().click();
+  await page.getByRole('button', { name: /^Visitors/ }).click();
+  await expect(page.getByRole('button', { name: '+1,968' })).toBeVisible();
+  await page.getByRole('button', { name: /^General/ }).click();
+  await expect(page.getByRole('button', { name: '+1,476' })).toBeVisible();
+});

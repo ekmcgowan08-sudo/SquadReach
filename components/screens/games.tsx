@@ -96,7 +96,7 @@ export function GamesScreen() {
       api().say(wasHeld(posted) ? 'Already recorded and held. Reset the heat to run it again.' : 'Already posted. Reset the heat to run it again.');
       return;
     }
-    const awards = placementAwards(rows, pointBase(d.config));
+    const awards = placementAwards(rows, pointBase(d.config, 'games'));
     if (awards.length < 2) {
       api().say('Run at least two squads before posting.');
       return;
@@ -351,7 +351,7 @@ export function GamesScreen() {
               Reset the heat
             </Btn>
             <div className="text-[10.5px] leading-[1.6] text-neutral-500 text-pretty">
-              Placement pays {fmt(pointBase(d.config))} a place to Games. Penalty seconds are set per season, not per night — they live behind the sliders icon above, which is why the fastest raw run does not always win.
+              Placement pays {fmt(pointBase(d.config, 'games'))} a place to Games. Penalty seconds are set per season, not per night — they live behind the sliders icon above, which is why the fastest raw run does not always win.
             </div>
           </div>
         </>

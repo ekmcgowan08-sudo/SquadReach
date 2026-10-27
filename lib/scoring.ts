@@ -5,9 +5,14 @@ import type { Category, EntryDetail, LedgerEntry, MinistryConfig, Student, Team 
 export const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
 export const signed = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(Math.abs(n));
 
-/** The point base grows through the season, so week 9 is worth more than week 1. */
-export function pointBase(c: Pick<MinistryConfig, 'pointBase' | 'weekGrowthPct' | 'weekNumber'>): number {
-  return Math.round(c.pointBase * (1 + (Math.max(1, c.weekNumber) - 1) * (c.weekGrowthPct / 100)));
+/** The point base grows through the season, so week 9 is worth more than
+ *  week 1. A category can start from its own base and grow at its own
+ *  rate; whatever it leaves empty follows the season number. */
+export function pointBase(c: Pick<MinistryConfig, 'pointBase' | 'weekGrowthPct' | 'weekNumber'> & Partial<Pick<MinistryConfig, 'catCfg'>>, catId?: string, week = c.weekNumber): number {
+  const own = catId ? c.catCfg?.[catId] : undefined;
+  const base = own?.base ?? c.pointBase;
+  const growth = own?.growth ?? c.weekGrowthPct;
+  return Math.round(base * (1 + (Math.max(1, week) - 1) * (growth / 100)));
 }
 
 /** Only approved entries count. A pending row is a request, not a score. */
@@ -158,6 +163,8 @@ export const emptySheet = (): SheetState => ({ picks: {}, counts: {}, articles: 
 
 export interface ValueCtx {
   base: number;
+  /** A category's own base, when it has one. */
+  baseFor?: (cat: string) => number;
   versePts: number;
   verseBoard: number;
 }
@@ -167,7 +174,7 @@ export const verseCount = (it: StudentItem, sh: SheetState, ctx: ValueCtx) =>
 
 export function studentItemValue(it: StudentItem, sh: SheetState, ctx: ValueCtx): number {
   if (!sh.picks[it.id]) return 0;
-  if (it.expand === 'friends') return ctx.base * (it.mult || 1) * Math.max(1, sh.counts[it.id] || 1);
+  if (it.expand === 'friends') return (ctx.baseFor?.(it.cat) ?? ctx.base) * (it.mult || 1) * Math.max(1, sh.counts[it.id] || 1);
   if (it.expand === 'articles') {
     const n = Math.max(1, sh.articles || 1);
     return (it.pts || 0) * n + (n >= 5 ? ENSEMBLE_BONUS : 0);
@@ -176,7 +183,7 @@ export function studentItemValue(it: StudentItem, sh: SheetState, ctx: ValueCtx)
   if (it.expand === 'verses') return Math.max(1, ctx.versePts) * verseCount(it, sh, ctx);
   /* Trust first: the row's own value stands with no photo. */
   if (it.expand === 'proof') return (it.pts || 0) + (sh.proof[it.id] ? PROOF_BONUS : 0);
-  return it.mult ? ctx.base * it.mult : it.pts || 0;
+  return it.mult ? (ctx.baseFor?.(it.cat) ?? ctx.base) * it.mult : it.pts || 0;
 }
 
 export function sheetDetail(it: StudentItem, sh: SheetState, ctx: ValueCtx): EntryDetail | null {
