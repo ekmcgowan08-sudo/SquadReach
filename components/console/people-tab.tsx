@@ -1,9 +1,9 @@
 'use client';
 /* People: the student roster (squads, grades, captains, CSV import) and the
    adults and students who hold a role in the app. */
-import Link from 'next/link';
 import { useState } from 'react';
 import { PcoSection } from '@/components/pco';
+import { AccessSection } from '@/components/console/access-section';
 import { RolesMatrix } from '@/components/console/roles-matrix';
 import { Section } from '@/components/console/kit';
 import { Btn, Icon } from '@/components/ui';
@@ -30,7 +30,6 @@ export function PeopleTab() {
     .filter((r) => !squad || (squad === 'none' ? !r.team : r.team === squad))
     .filter((r) => !needle || r.name.toLowerCase().includes(needle))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const pending = d.accessRequests.filter((r) => r.status === 'pending').length;
 
   const saveStudent = (s: Student) => {
     api().mutate((x) => {
@@ -60,16 +59,10 @@ export function PeopleTab() {
 
   return (
     <>
+      <AccessSection />
       <Section
         title={'Roster · ' + d.roster.length + ' students'}
         sub="Squad, grade and captain for every student. Names here are what coaches tap at check-in."
-        right={
-          pending ? (
-            <Link href="/dashboard/access-requests" className="btn btn-secondary min-h-11 px-3">
-              {pending} waiting on access
-            </Link>
-          ) : undefined
-        }
       >
         <div className="flex flex-wrap gap-2">
           <input value={q} onChange={(e) => setQ(e.target.value)} className="input min-w-[200px] flex-1" placeholder="Search the roster" aria-label="Search the roster" />

@@ -16,8 +16,8 @@ import { deltaLabel, fmt, studentTotal } from '@/lib/scoring';
 import { bibleStats } from '@/lib/bible';
 import { catOf, eventLabel, myTeamId, teamMetaLabel, teamOf, teamRoster, upcomingEvents } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
-import { personaDef } from '@/lib/types/domain';
-import type { MinistryEvent } from '@/lib/types/model';
+import { MEMBERSHIP_ROLES, personaDef, type Persona } from '@/lib/types/domain';
+import type { AccessRequest, MinistryEvent } from '@/lib/types/model';
 
 const RSVP_FG: Record<string, string> = { going: '#8fd8b0', maybe: '#e3c98d', out: '#e0a3a3' };
 const RSVP_LABEL: Record<string, string> = { going: 'Going', maybe: 'Maybe', out: 'Can’t' };
@@ -454,24 +454,44 @@ export function AdminViewScreen() {
 }
 
 /** One access request, with Approve / Deny inline. Approving grants the role. */
-export function AccessRow({ id }: { id: string }) {
-  const d = useApp((s) => s.data);
+/** Approve (as asked, or as another role), or deny. Only an owner makes an
+ *  owner; the database holds the same line (decide_access). */
+export function useDecideAccess() {
   const api = useAppApi();
-  const q = d.accessRequests.find((r) => r.id === id);
-  if (!q) return null;
-  const decide = (approve: boolean) => {
-    if (approve && q.requestedRole === 'parent' && api().membership.mode === 'supabase') {
-      api().say('Parent is not a role the database has yet — see the open decisions in the README.');
+  return (q: AccessRequest, approve: boolean, role: Persona = q.requestedRole) => {
+    const m = api().membership;
+    if (approve && role === 'owner' && m.persona !== 'owner') return api().say('Only an owner can make someone an owner.');
+    if (approve && (role === 'parent' || role === 'congregation') && m.mode === 'supabase') {
+      api().say(personaDef(role).label + ' is not a role the database has yet — see the open decisions in the README.');
       return;
     }
+    const changed = approve && role !== q.requestedRole;
     api().mutate((x) => {
-      const r = x.accessRequests.find((y) => y.id === id);
-      if (r) r.status = approve ? 'approved' : 'denied';
+      const r = x.accessRequests.find((y) => y.id === q.id);
+      if (!r) return;
+      r.status = approve ? 'approved' : 'denied';
+      if (changed) r.grantedRole = role;
     });
-    api().emit({ kind: 'accessDecide', request: q, approve });
-    api().logActivity((approve ? 'Approved ' : 'Denied ') + q.name + ' as ' + personaDef(q.requestedRole).label);
-    api().say(approve ? q.name + ' is in as ' + personaDef(q.requestedRole).label + '.' : 'Denied. ' + q.name + ' was told.');
+    api().emit({ kind: 'accessDecide', request: q, approve, role: changed ? role : undefined });
+    api().logActivity(approve ? 'Approved ' + q.name + ' as ' + personaDef(role).label + (changed ? ' (asked for ' + personaDef(q.requestedRole).label + ')' : '') : 'Denied ' + q.name + ' as ' + personaDef(q.requestedRole).label);
+    api().say(approve ? q.name + ' is in as ' + personaDef(role).label + '.' : 'Denied. ' + q.name + ' was told.');
   };
+}
+
+/** The roles a request can be approved as: the one asked for, then every
+ *  role in the app (owner only for an owner). */
+export function grantableRoles(q: AccessRequest, me: Persona): Persona[] {
+  return [q.requestedRole, ...MEMBERSHIP_ROLES.filter((r) => r !== q.requestedRole && (r !== 'owner' || me === 'owner'))];
+}
+
+export function AccessRow({ id }: { id: string }) {
+  const d = useApp((s) => s.data);
+  const me = useApp((s) => s.membership.persona);
+  const decide = useDecideAccess();
+  const q = d.accessRequests.find((r) => r.id === id);
+  const [role, setRole] = useState<Persona | null>(null);
+  if (!q) return null;
+  const as = role ?? q.requestedRole;
   return (
     <div className="flex flex-col gap-2 border-t border-divider pt-[9px]">
       <div>
@@ -486,12 +506,19 @@ export function AccessRow({ id }: { id: string }) {
           <div className="text-[10.5px] leading-[1.4] text-neutral-300 text-pretty">Parent link unconfirmed — verify the household before approving.</div>
         </div>
       ) : null}
+      <select className="input" aria-label={'Approve ' + q.name + ' as'} value={as} onChange={(e) => setRole(e.target.value as Persona)}>
+        {grantableRoles(q, me).map((r) => (
+          <option key={r} value={r}>
+            {r === q.requestedRole ? personaDef(r).label + ' (asked for)' : personaDef(r).label}
+          </option>
+        ))}
+      </select>
       <div className="flex gap-2">
-        <Btn variant="ghost" className="flex-1 justify-center" onClick={() => decide(false)}>
+        <Btn variant="ghost" className="flex-1 justify-center" onClick={() => decide(q, false)}>
           Deny
         </Btn>
-        <Btn className="flex-[2] justify-center" onClick={() => decide(true)}>
-          Approve
+        <Btn className="flex-[2] justify-center" onClick={() => decide(q, true, as)}>
+          {as === q.requestedRole ? 'Approve' : 'Approve as ' + personaDef(as).label}
         </Btn>
       </div>
     </div>

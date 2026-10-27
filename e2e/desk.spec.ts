@@ -459,3 +459,20 @@ test('a lesson draft from Claude is reviewed before it saves, with a challenge p
   await ready(page);
   await expect(page.locator('input[value="One good work nobody sees"]')).toBeVisible();
 });
+
+test('console access requests: change and approve as another role, or deny', async ({ page }) => {
+  await page.goto('/console?tab=people');
+  await ready(page);
+  const chris = page.getByRole('group', { name: 'Request from Chris Sandoval' });
+  await chris.getByLabel('Or assign Chris Sandoval as').selectOption({ label: 'Scorekeeper' });
+  await chris.getByRole('button', { name: 'Change & approve Chris Sandoval as Scorekeeper' }).click();
+  await expect(page.getByText('Scorekeeper (asked for Coach)')).toBeVisible();
+  await page.getByRole('group', { name: 'Request from Renee Boyd' }).getByRole('button', { name: 'Deny Renee Boyd' }).click();
+  await expect(page.getByText('Nothing pending right now.')).toBeVisible();
+  await expect(page.getByText('Denied', { exact: true })).toBeVisible();
+
+  await page.goto('/dashboard/audit');
+  await ready(page);
+  await page.getByRole('button', { name: /Activity/ }).click();
+  await expect(page.getByText('Approved Chris Sandoval as Scorekeeper (asked for Coach)')).toBeVisible();
+});

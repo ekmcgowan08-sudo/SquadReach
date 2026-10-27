@@ -35,7 +35,7 @@ export function HomeTab() {
   const swaps = d.serving.swaps.filter((s) => s.status === 'pending').length;
   const waiting = [
     pendingPoints ? { label: pendingPoints + (pendingPoints === 1 ? ' point request' : ' point requests'), href: '/dashboard/approvals' } : null,
-    access ? { label: access + (access === 1 ? ' person' : ' people') + ' asking for access', href: '/dashboard/access-requests' } : null,
+    access ? { label: access + (access === 1 ? ' person' : ' people') + ' asking for access', href: '/console?tab=people' } : null,
     swaps ? { label: swaps + (swaps === 1 ? ' swap request' : ' swap requests'), href: '/planner/people' } : null
   ].filter((x): x is { label: string; href: string } => !!x);
   const stats = [

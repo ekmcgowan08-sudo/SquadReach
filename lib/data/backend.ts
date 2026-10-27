@@ -7,7 +7,7 @@
 
    The store never knows which one it is talking to. */
 import type { LiveAnswer, LiveRoom } from '@/lib/live';
-import type { ScoreEntryStatus } from '@/lib/types/domain';
+import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CareReminder, Category, Challenge, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
   GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, PracticeRow,
@@ -33,7 +33,7 @@ export type SyncEvent =
   | { kind: 'prayerAnswered'; id: string; on: boolean }
   | { kind: 'careAdd'; item: CareReminder }
   | { kind: 'careDone'; id: string }
-  | { kind: 'accessDecide'; request: AccessRequest; approve: boolean }
+  | { kind: 'accessDecide'; request: AccessRequest; approve: boolean; role?: Persona }
   | { kind: 'huddle'; huddle: HuddleState }
   | { kind: 'config'; config: MinistryConfig }
   | { kind: 'team'; team: Team }

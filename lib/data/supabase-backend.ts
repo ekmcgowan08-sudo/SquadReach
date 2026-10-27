@@ -159,7 +159,7 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           await db.from('care_notes').update({ done: true }).eq('id', e.id);
           return;
         case 'accessDecide':
-          await db.rpc('decide_access', { p_request: e.request.id, p_approve: e.approve });
+          await db.rpc('decide_access', { p_request: e.request.id, p_approve: e.approve, p_role: e.role && e.role !== e.request.requestedRole ? e.role : null });
           return;
         case 'huddle':
           await db.from('nights').upsert({ org_id: org, meeting_date: tonight, huddle: e.huddle, updated_at: new Date().toISOString() });

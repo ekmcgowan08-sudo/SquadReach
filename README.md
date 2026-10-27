@@ -83,6 +83,9 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261025120000_live_cast.sql` | Cast links: the room screen on a TV or cast device, for one evening, with no sign-in |
    | `20261025130000_library_reports.sql` | Reports on shared library units: hidden from a ministry that reports one, and from everyone once two do |
    | `20261026100000_planning_center.sql` | `pco_connections` (a ministry's Planning Center tokens, server-only) and `pco_status`; attendance can record a Planning Center check-in |
+   | `20261027100000_challenge_weeks.sql` | The weeks each challenge runs in |
+   | `20261027110000_award_windows.sql` | `award_vote_open`: votes and nominations only inside an award's voting window |
+   | `20261027120000_access_role.sql` | `decide_access` can approve someone as a different role than they asked for (owner only by an owner), kept as `granted_role` |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -92,7 +95,8 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
 5. Run `npm run dev` (or deploy) and sign in. A first-time user can either:
    - create a ministry and become its owner; or
    - ask to join one with an invite code or a `/join/<code>` link. A leader
-     approves the request under **Access requests**.
+     approves the request under **Access requests** (on the phone, or
+     Console › People), as asked or as the role that fits.
 
 Set both variables or neither. With only one set, the app stays in demo mode.
 
