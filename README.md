@@ -222,7 +222,11 @@ Rules the code holds to:
 - **Derived, not stored.** Standings, coverage, plan checks, suggestions and
   what a publish would change are all computed when read. Three statuses
   only — healthy, attention needed, gap — each with its reason, and no
-  composite score anywhere.
+  composite score anywhere. Player stats are the same: a goal is a Games
+  entry credited to whoever scored (with the assist in its detail), the
+  MVP of a game is another, and goals, assists, MVPs and a game's score
+  are all read back from the ledger, so taking a goal back is a reversal
+  like any other.
 - **Suggest, never act.** Plan suggestions — rule-based, or from Claude on
   request — are drafts with their reason and passage references. Adding one makes a dashed draft; confirming
   it, publishing, and messaging always take a leader’s tap.

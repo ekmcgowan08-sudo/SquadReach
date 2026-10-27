@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Sheet } from '@/components/sheet';
 import { Icon, cx, initialsOf, tint } from '@/components/ui';
+import { playerStats } from '@/lib/goals';
 import { fmt, studentRanks } from '@/lib/scoring';
 import { TIER_COLOR, catOf, computeBadges, teamOf } from '@/lib/selectors';
 import { useApp } from '@/lib/store/provider';
@@ -21,6 +22,7 @@ function StudentCard({ name }: { name: string }) {
   const here = !!d.tonight.presence[name];
   const recent = d.ledger.filter((e) => e.student === name).sort((a, b) => b.at - a.at).slice(0, 6);
   const fam = d.families[name];
+  const play = playerStats(d.ledger).find((p) => p.name === name);
   const stats = [
     { label: 'Points this season', value: fmt(rank?.total ?? 0), hint: rank ? '#' + rank.rank + ' of ' + d.roster.length : '' },
     { label: 'Attendance streak', value: (badge?.attendStreak ?? 0) + ' wks', hint: badge?.tier ? badge.tier + ' badge' : 'no badge yet' },
@@ -55,6 +57,13 @@ function StudentCard({ name }: { name: string }) {
           </div>
         ))}
       </div>
+      {play ? (
+        <div className="flex items-center gap-2 text-[12.5px] text-neutral-300">
+          <Icon name="ph-fill ph-soccer-ball" className="text-[14px] text-accent-300" />
+          {play.goals} {play.goals === 1 ? 'goal' : 'goals'} · {play.assists} {play.assists === 1 ? 'assist' : 'assists'}
+          {play.mvp ? ' · MVP ' + (play.mvp === 1 ? 'once' : play.mvp + ' times') : ''}
+        </div>
+      ) : null}
       <div className="flex flex-col">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[.12em] text-neutral-500">Recent points</div>
         {recent.length ? (

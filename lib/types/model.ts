@@ -51,6 +51,11 @@ export interface EntryDetail {
   verseSet?: 'sunday' | 'week';
   /** Photo proof, shrunk on the phone to a small JPEG data URL. */
   photo?: string;
+  /** A goal in a game with goal scoring on: the scorer is the entry's
+   *  student; who set it up, if anyone. */
+  goal?: { assist?: string | null };
+  /** The MVP of a game (the entry's student). */
+  mvp?: boolean;
 }
 
 /** Every point change in the app is one of these. Nothing writes a total. */
@@ -659,6 +664,10 @@ export interface GameState {
   lanes: Record<string, HeatLane>;
   solo: { mode: 'up' | 'down'; targetSec: number; elapsedMs: number; startedAt: number | null };
   effects: LiveEffect[];
+  /** Goal scoring for this game: goals and the MVP post to the ledger as
+   *  Games points; this game's count is everything since `goalsSince`. */
+  goalsOn?: boolean;
+  goalsSince?: number;
 }
 
 export interface TonightState {

@@ -6,6 +6,7 @@
    effects, never a control. */
 import { useState } from 'react';
 import { Blur, Section, useSaveConfig } from '@/components/console/kit';
+import { GoalPanel } from '@/components/game/goal-panel';
 import { Btn, Icon, cx } from '@/components/ui';
 import { emptyLane, liveEffects, withEffect } from '@/lib/game';
 import { uid } from '@/lib/store/app-store';
@@ -150,6 +151,8 @@ export function LiveTab() {
           </div>
         ) : null}
       </Section>
+
+      <GoalPanel teams={d.teams} />
 
       <Section
         title="Effect & bonus templates"

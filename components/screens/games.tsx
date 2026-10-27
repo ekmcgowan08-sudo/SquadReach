@@ -4,6 +4,7 @@
    award(), so a timed game lands on the board like any other score. */
 import Link from 'next/link';
 import { useState, type CSSProperties } from 'react';
+import { GoalPanel } from '@/components/game/goal-panel';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, tint } from '@/components/ui';
 import {
@@ -114,6 +115,8 @@ export function GamesScreen() {
     change((x) => {
       x.lanes = {};
       x.effects = [];
+      /* A new heat is a new game: goals count from zero again. */
+      if (x.goalsOn) x.goalsSince = nowMs();
     }, true);
     api().say(api().offline() ? 'Heat cleared. Points already recorded stay held for sending.' : 'Heat cleared. Posted points stay in the ledger.');
   };
@@ -349,6 +352,8 @@ export function GamesScreen() {
           </div>
         </>
       ) : null}
+
+      <GoalPanel teams={activeTeams(g, d.teams).length ? activeTeams(g, d.teams) : d.teams} />
 
       <PenaltyEditor open={editor} onClose={() => setEditor(false)} canEdit={canApprove(m.persona)} />
     </Screen>

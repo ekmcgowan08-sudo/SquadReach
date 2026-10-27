@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Ready } from '@/components/shell/phone-shell';
 import { Icon, tint } from '@/components/ui';
 import { clock, heatRows, liveEffects, soloSec } from '@/lib/game';
+import { gameGoals } from '@/lib/goals';
 import { fmt, standings } from '@/lib/scoring';
 import { catOf, teamOf } from '@/lib/selectors';
 import { useApp } from '@/lib/store/provider';
@@ -38,6 +39,7 @@ function Board() {
   const soloRunning = g.mode === 'single' && g.solo.startedAt != null;
   const showLanes = g.mode !== 'single' && heatRows(g, d.teams, d.config.penalties).some((r) => r.ran || r.running);
   const now = useNow(true, lanesRunning || soloRunning ? 100 : 1000);
+  const goals = gameGoals(d.ledger, g.goalsSince ?? 0);
   const [full, setFull] = useState(false);
 
   /* Keep the TV from sleeping mid-game, where the browser allows it. */
@@ -109,6 +111,11 @@ function Board() {
                 <div className="text-[15px] text-neutral-500">
                   {r.place ? '#' + r.place + ' · ' : ''}raw {clock(r.raw)} {r.pen ? '· ' + (r.pen > 0 ? '+' : '') + r.pen + 's' : ''}
                 </div>
+                {g.goalsOn ? (
+                  <div className="tabular text-[30px] font-semibold leading-none text-accent-300" aria-label={r.team.name + ' goals'}>
+                    {goals.byTeam[r.team.id] ?? 0} <span className="text-[15px] font-medium text-neutral-500">{(goals.byTeam[r.team.id] ?? 0) === 1 ? 'goal' : 'goals'}</span>
+                  </div>
+                ) : null}
                 {fx && p ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-[14px]" style={{ background: 'color-mix(in srgb, ' + (p.color ?? r.team.color) + ' 26%, #06070d)' }}>
                     <div className="flex flex-col items-center gap-[14px]" style={{ animation: EFFECT_ANIM[p.style ?? 'glow'] ?? EFFECT_ANIM.glow, ['--fx-color' as string]: p.color }}>
@@ -156,6 +163,17 @@ function Board() {
           ) : null}
         </div>
       )}
+      {!showLanes && g.goalsOn ? (
+        <div className="pointer-events-none absolute right-[44px] top-[78px] flex items-center gap-4 rounded-full bg-surface px-5 py-3" style={{ boxShadow: 'inset 0 0 0 1px var(--color-neutral-800)' }} aria-label="Goals this game">
+          <Icon name="ph-fill ph-soccer-ball" className="text-[18px] text-accent-300" />
+          {d.teams.map((t) => (
+            <span key={t.id} className="flex items-center gap-2 text-[18px] font-semibold text-neutral-100">
+              <span className="h-3 w-3 rounded-full" style={{ background: t.color }} />
+              <span className="tabular">{goals.byTeam[t.id] ?? 0}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       {!showLanes ? <EffectBanner now={now} /> : null}
     </div>
   );

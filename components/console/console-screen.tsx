@@ -188,7 +188,7 @@ function SetupTab() {
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Week 1 point base" type="number" value={c.pointBase} onSave={(v) => save({ pointBase: Math.max(1, Number(v) || c.pointBase) })} />
           <Field label="Weekly growth %" type="number" value={c.weekGrowthPct} onSave={(v) => save({ weekGrowthPct: Math.max(0, Number(v) || 0) })} />
-          <Field label="Points per goal (filming)" type="number" value={c.goalValue} onSave={(v) => save({ goalValue: Math.max(1, Number(v) || c.goalValue) })} />
+          <Field label="Points per goal" type="number" value={c.goalValue} onSave={(v) => save({ goalValue: Math.max(1, Number(v) || c.goalValue) })} />
           <Field label="Points per verse recited" type="number" value={c.versePts} onSave={(v) => save({ versePts: Math.max(0, Number(v) || 0) })} />
           <Field label="Verse board bonus" type="number" value={c.verseBoard} onSave={(v) => save({ verseBoard: Math.max(0, Number(v) || 0) })} />
         </div>

@@ -510,3 +510,32 @@ test('console student search opens a student’s card, and Edit on People finds 
   await expect(page).toHaveURL(/tab=people&q=Ellison/);
   await expect(page.getByLabel('Search the roster')).toHaveValue('Ellison Reid');
 });
+
+test('goal scoring: goals credited to a scorer, taken back, an MVP, and the room screen', async ({ page }) => {
+  await page.goto('/console?tab=live');
+  await ready(page);
+  const goals = page.getByRole('region', { name: 'Goal scoring' });
+  await goals.getByRole('button', { name: 'Off' }).click();
+  await goals.getByRole('button', { name: 'Goal for Red' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Log a goal' });
+  await sheet.getByLabel('Who scored').selectOption({ index: 1 });
+  const scorer = await sheet.getByLabel('Who scored').inputValue();
+  await sheet.getByRole('button', { name: /Log the goal/ }).click();
+  await expect(goals.getByLabel('Red goals')).toHaveText('1');
+  await goals.getByRole('button', { name: 'Goal for Red' }).click();
+  await page.getByRole('dialog', { name: 'Log a goal' }).getByRole('button', { name: /Log the goal/ }).click();
+  await expect(goals.getByLabel('Red goals')).toHaveText('2');
+  await goals.getByRole('button', { name: 'Take back Red’s last goal' }).click();
+  await expect(goals.getByLabel('Red goals')).toHaveText('1');
+  await goals.getByLabel('MVP of the game').selectOption(scorer);
+  await goals.getByRole('button', { name: 'Name MVP' }).click();
+  await expect(goals.getByText(scorer)).toBeVisible();
+
+  await page.getByRole('combobox', { name: 'Search students by name' }).fill(scorer);
+  await page.getByRole('option', { name: new RegExp(scorer) }).click();
+  await expect(page.getByRole('dialog', { name: 'Student: ' + scorer }).getByText(/1 goal · 0 assists · MVP once/)).toBeVisible();
+
+  await page.goto('/projector');
+  await ready(page);
+  await expect(page.getByLabel('Goals this game')).toBeVisible();
+});

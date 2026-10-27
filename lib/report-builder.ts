@@ -12,6 +12,7 @@
    day — never stored on the delivery, so a trade can't leave a stale list. */
 import { history } from '@/lib/cycle';
 import { isoDay, parseLocalISO, weekOf } from '@/lib/dates';
+import { playerStats } from '@/lib/goals';
 import { categoryTotals, standings, studentRanks } from '@/lib/scoring';
 import type { CustomReport, Delivery, DeliveryAudience, MinistryData, ReportFieldKind, ReportFilter } from '@/lib/types/model';
 
@@ -40,6 +41,7 @@ export const REPORT_SOURCES: ReportSource[] = [
   { id: 'verses', label: 'Verse board', hint: 'Verses recited, per student', fields: [f('student', 'Student'), f('squad', 'Squad', 'enum'), f('verses', 'Verses', 'num'), f('points', 'Points', 'num'), f('nights', 'Nights', 'num')] },
   { id: 'volunteers', label: 'Volunteers', hint: 'The crew and the bench', fields: [f('name', 'Name'), f('job', 'Job', 'enum'), f('post', 'Post'), f('squad', 'Squad', 'enum'), f('tonight', 'Tonight', 'enum'), f('list', 'Crew or bench', 'enum'), f('check', 'Background check', 'enum')] },
   { id: 'care', label: 'Care follow-ups', hint: 'Open care reminders', fields: [f('name', 'Name'), f('note', 'Note'), f('flaggedBy', 'Flagged by', 'enum'), f('done', 'Done', 'enum')] },
+  { id: 'players', label: 'Player stats', hint: 'Goals, assists and MVPs, per student', fields: [f('name', 'Name'), f('squad', 'Squad', 'enum'), f('goals', 'Goals', 'num'), f('assists', 'Assists', 'num'), f('mvp', 'MVPs', 'num')] },
   { id: 'games', label: 'Game stats', hint: 'Game points by squad and week', fields: [f('week', 'Week', 'num'), f('squad', 'Squad', 'enum'), f('points', 'Points', 'num'), f('entries', 'Entries', 'num')] },
   { id: 'awards', label: 'Awards', hint: 'Each award and how it is decided', fields: [f('award', 'Award'), f('decidedBy', 'Decided by', 'enum'), f('recipient', 'Goes to', 'enum'), f('votingOpen', 'Voting open', 'enum'), f('nominees', 'Nominees', 'num')] },
   { id: 'squads', label: 'Squad totals', hint: 'The board, as a table', fields: [f('rank', 'Rank', 'num'), f('squad', 'Squad'), f('total', 'Total', 'num'), f('roster', 'Roster', 'num'), f('visitors', 'Visitor points', 'num'), f('games', 'Game points', 'num')] }
@@ -157,6 +159,8 @@ export function sourceRows(d: MinistryData, source: string): Row[] {
       }
       return [...by.values()];
     }
+    case 'players':
+      return playerStats(d.ledger, (n) => d.roster.find((r) => r.name === n)?.team ?? '').map((p) => ({ name: p.name, squad: team(p.team), goals: p.goals, assists: p.assists, mvp: p.mvp }));
     case 'awards':
       return d.awards.map((a) => ({ award: a.name, decidedBy: a.decidedBy, recipient: a.recipientType ?? 'team', votingOpen: yesNo(!!a.votingOpen), nominees: a.nominees?.length ?? 0 }));
     case 'squads':
