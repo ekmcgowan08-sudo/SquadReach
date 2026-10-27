@@ -92,9 +92,9 @@ export function planBrief(p: Plan, nowYear: number, max = 6): string {
 
 /** A passage reference: a book (optionally numbered) and a chapter, maybe
  *  verses or a range. "Psalm 23", "1 Corinthians 13:4–7", "Acts 1–2". */
-const REF = /^(?:[1-3] )?[A-Z][a-z]+(?: (?:of )?[A-Z][a-z]+)*\.? \d{1,3}(?::\d{1,3}(?:[–-]\d{1,3})?)?(?:[–-]\d{1,3}(?::\d{1,3})?)?$/;
+export const REF = /^(?:[1-3] )?[A-Z][a-z]+(?: (?:of )?[A-Z][a-z]+)*\.? \d{1,3}(?::\d{1,3}(?:[–-]\d{1,3})?)?(?:[–-]\d{1,3}(?::\d{1,3})?)?$/;
 /** Anything that looks like a quotation of more than a few words. */
-const QUOTE = /["“”‘’][^"“”]{24,}["“”]/;
+export const QUOTE = /["“”‘’][^"“”]{24,}["“”]/;
 
 export interface AiSuggestion {
   id: string;

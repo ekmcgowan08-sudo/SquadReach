@@ -242,6 +242,9 @@ export interface MinistryConfig {
   /** Spots to film or play on the night: mascot bits, commercials, hype
    *  videos. Weeks as for challenges: absent means every week. */
   mediaSpots?: MediaSpot[];
+  /** Small-group guides saved to start new ones from (Console › Small
+   *  groups), beside the built-in templates in lib/small-groups. */
+  sgTemplates?: SmallGroupTemplate[];
   /** Quick starts staff see when they add or propose an event. Absent
    *  means DEFAULT_EVENT_TYPES. */
   eventTypes?: EventType[];
@@ -444,12 +447,21 @@ export interface SmallGroupScreen {
   timerSeconds?: number;
 }
 
+export interface SmallGroupTemplate {
+  id: string;
+  title: string;
+  notes: string;
+  screens: SmallGroupScreen[];
+}
+
 export interface SmallGroup {
   id: string;
   title: string;
   notes: string;
   screens: SmallGroupScreen[];
   weekNumber: number;
+  /** The squads it's for (team ids). Absent or null: every squad. */
+  teams?: string[] | null;
   deepDive?: {
     title: string;
     verseRef: string;

@@ -8,9 +8,10 @@ import { ytEmbedUrl } from '@/components/screens/games';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf, tint } from '@/components/ui';
 import { kindOf } from '@/lib/library';
+import { sgForTeam } from '@/lib/small-groups';
 import { challengesIn, runningIn } from '@/lib/feeds';
 import { canApprove, canScore } from '@/lib/permissions';
-import { TIER_COLOR, catOf, computeBadges, eventLabel, teamOf } from '@/lib/selectors';
+import { TIER_COLOR, catOf, computeBadges, eventLabel, myTeamId, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { SmallGroup, SmallGroupScreen } from '@/lib/types/model';
@@ -121,7 +122,7 @@ function Weeks() {
   );
 }
 
-function saveGroups(api: ReturnType<typeof useAppApi>, fn: (list: SmallGroup[]) => SmallGroup[]) {
+export function saveGroups(api: ReturnType<typeof useAppApi>, fn: (list: SmallGroup[]) => SmallGroup[]) {
   api().mutate((x) => void (x.smallGroups = fn(x.smallGroups)));
   api().emit({ kind: 'doc', key: 'smallGroups', value: api().data.smallGroups });
 }
@@ -132,8 +133,10 @@ function Groups({ onEdit }: { onEdit: (g: SmallGroup) => void }) {
   const api = useAppApi();
   const [playing, setPlaying] = useState<SmallGroup | null>(null);
   const [deep, setDeep] = useState<string | null>(null);
+  const coachTeam = useApp((s) => s.coachTeam);
   const edit = canApprove(m.persona);
-  const groups = [...d.smallGroups].sort((a, b) => b.weekNumber - a.weekNumber);
+  const mine = myTeamId(m, d, coachTeam);
+  const groups = [...d.smallGroups].filter((g) => edit || sgForTeam(g, mine)).sort((a, b) => b.weekNumber - a.weekNumber);
   return (
     <>
       <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Discussion guides for after-game small group time. Coaches and captains open these to lead their squad — they’re saved on this phone with everything else, so they play without signal (videos need it).</div>
@@ -150,6 +153,7 @@ function Groups({ onEdit }: { onEdit: (g: SmallGroup) => void }) {
                   <span className="flex-none whitespace-nowrap pt-[2px] text-[9.5px] font-semibold uppercase leading-none tracking-[.08em] text-neutral-500">Week {g.weekNumber}</span>
                 </div>
                 {g.notes ? <div className="text-[12px] leading-[1.5] text-neutral-500 text-pretty">{g.notes}</div> : null}
+                {g.teams?.length ? <div className="text-[10.5px] leading-none text-accent-300">For {g.teams.map((t) => teamOf(d, t).name).join(', ')}</div> : null}
                 <div className="text-[10.5px] leading-none text-neutral-500">
                   {g.screens.length} {g.screens.length === 1 ? 'screen' : 'screens'} · about {sgMinutes(g.screens)} min
                 </div>
@@ -434,6 +438,18 @@ function Interactive({ sc, color }: { sc: SmallGroupScreen; color: string }) {
 /* ── the editor: leaders build a guide screen by screen ────────────────── */
 function GroupEditor({ group, onClose }: { group: SmallGroup; onClose: () => void }) {
   const d = useApp((s) => s.data);
+  return (
+    <Sheet open onClose={onClose} label="Small group editor" maxH="94%">
+      <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">{d.smallGroups.some((x) => x.id === group.id) ? 'Edit small group' : 'New small group'}</div>
+      <GroupForm group={group} onDone={onClose} />
+    </Sheet>
+  );
+}
+
+/** The guide's fields and screens, saved together: in a sheet on the
+ *  phone, inline in the console. */
+export function GroupForm({ group, onDone }: { group: SmallGroup; onDone: () => void }) {
+  const d = useApp((s) => s.data);
   const api = useAppApi();
   const [g, setG] = useState<SmallGroup>(() => structuredClone(group));
   const patchScreen = (k: number, p: Partial<SmallGroupScreen>) => setG({ ...g, screens: g.screens.map((s, j) => (j === k ? { ...s, ...p } : s)) });
@@ -450,12 +466,17 @@ function GroupEditor({ group, onClose }: { group: SmallGroup; onClose: () => voi
     saveGroups(api, (list) => (exists ? list.map((x) => (x.id === g.id ? g : x)) : [...list, g]));
     api().logActivity((exists ? 'Edited' : 'Added') + ' the small group “' + g.title + '” for Week ' + g.weekNumber);
     api().say('Saved. Coaches see it on Season › Small groups.');
-    onClose();
+    onDone();
   };
   const lines = (v: string) => v.split('\n').map((x) => x.trim()).filter(Boolean);
+  const toggleTeam = (id: string) => {
+    const on = new Set(g.teams?.length ? g.teams : []);
+    if (on.has(id)) on.delete(id);
+    else on.add(id);
+    setG({ ...g, teams: on.size && on.size < d.teams.length ? d.teams.map((t) => t.id).filter((t) => on.has(t)) : null });
+  };
   return (
-    <Sheet open onClose={onClose} label="Small group editor" maxH="94%">
-      <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">{d.smallGroups.some((x) => x.id === g.id) ? 'Edit small group' : 'New small group'}</div>
+    <>
       <label className="field">
         <span className="sr-label">Title</span>
         <input className="input" value={g.title} onChange={(e) => setG({ ...g, title: e.target.value })} placeholder="Week 10 · Who do you text at 2am?" />
@@ -472,6 +493,19 @@ function GroupEditor({ group, onClose }: { group: SmallGroup; onClose: () => voi
           </select>
         </label>
         <div className="flex-1 self-end pb-3 text-[11px] leading-none text-neutral-500">about {sgMinutes(g.screens)} min</div>
+      </div>
+      <div className="flex flex-wrap items-center gap-[6px]" role="group" aria-label="Which squads it’s for">
+        <button onClick={() => setG({ ...g, teams: null })} aria-pressed={!g.teams?.length} className={'min-h-11 rounded-full border px-3 text-[12px] font-medium leading-none ' + (!g.teams?.length ? 'border-accent-500 text-accent-100' : 'border-neutral-800 text-neutral-400')}>
+          All squads
+        </button>
+        {d.teams.map((t) => {
+          const on = !!g.teams?.includes(t.id);
+          return (
+            <button key={t.id} onClick={() => toggleTeam(t.id)} aria-pressed={on} className="min-h-11 rounded-full border px-3 text-[12px] font-medium leading-none" style={{ borderColor: on ? t.color : 'var(--color-neutral-800)', color: on ? 'var(--color-neutral-100)' : 'var(--color-neutral-400)', background: on ? 'color-mix(in srgb, ' + t.color + ' 16%, transparent)' : 'transparent' }}>
+              {t.name}
+            </button>
+          );
+        })}
       </div>
       <label className="field">
         <span className="sr-label">Notes for coaches</span>
@@ -517,14 +551,14 @@ function GroupEditor({ group, onClose }: { group: SmallGroup; onClose: () => voi
         + Add a screen
       </Btn>
       <div className="flex gap-2">
-        <Btn variant="ghost" className="min-h-12 flex-1 justify-center" onClick={onClose}>
+        <Btn variant="ghost" className="min-h-12 flex-1 justify-center" onClick={onDone}>
           Cancel
         </Btn>
         <Btn className="min-h-12 flex-[2] justify-center" onClick={save}>
           Save guide
         </Btn>
       </div>
-    </Sheet>
+    </>
   );
 }
 

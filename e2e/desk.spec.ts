@@ -412,3 +412,50 @@ test('notification defaults set in the console are what a phone starts with', as
   await page.getByRole('button', { name: 'Back to the ministry’s settings' }).click();
   await expect(weekly).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('console small groups: a template becomes a guide, and a guide for some squads hides from the rest', async ({ page, context, baseURL }) => {
+  await page.goto('/console?tab=groups');
+  await ready(page);
+  await page.getByRole('button', { name: /^Icebreaker Night/ }).click();
+  const editor = page.getByRole('region', { name: 'Small group editor' });
+  await expect(editor.getByLabel('Title')).toHaveValue('Week 9 · Icebreaker Night');
+  await editor.getByRole('button', { name: 'Save guide' }).click();
+  await expect(page.getByRole('group', { name: 'Guide: Week 9 · Icebreaker Night' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Duplicate Week 8 · Handling pressure' }).click();
+  await expect(page.getByRole('group', { name: 'Guide: Week 8 · Handling pressure (copy)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save as template Week 8 · Handling pressure', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Handling pressure\s*3 screens/ })).toBeVisible();
+
+  await page.getByRole('group', { name: 'Squads for Week 8 · Handling pressure', exact: true }).getByRole('button', { name: 'Red' }).click();
+  await as(context, 'member', baseURL!);
+  await page.goto('/dashboard/season-plan?tab=groups');
+  await ready(page);
+  await expect(page.getByText('Week 9 · Icebreaker Night')).toBeVisible();
+  await expect(page.getByText('Week 8 · Handling pressure', { exact: true })).toHaveCount(0);
+});
+
+test('a lesson draft from Claude is reviewed before it saves, with a challenge per squad', async ({ page }) => {
+  await page.route('**/api/small-groups/draft', (route) =>
+    route.fulfill({
+      json: {
+        dropped: 1,
+        challenges: [{ id: 'dc1', kind: 'Team', title: 'One good work nobody sees', body: 'Tell the squad next week.', pointsLabel: '', status: 'Not started', done: false, team: 'red', weeks: [9] }],
+        group: { id: 'dg1', title: 'Made on purpose', notes: 'Split by grade.', weekNumber: 9, screens: [{ id: 'ds1', type: 'scripture', title: 'Read it', body: 'Read it aloud, one verse each.', ref: 'Ephesians 2:8–10' }] }
+      }
+    })
+  );
+  await page.goto('/console?tab=groups');
+  await ready(page);
+  await page.getByRole('button', { name: 'Passage only' }).click();
+  await page.getByLabel('Passage').fill('Ephesians 2:1–10');
+  await page.getByRole('button', { name: 'Generate draft' }).click();
+  await expect(page.getByRole('heading', { name: 'Made on purpose' })).toBeVisible();
+  await expect(page.getByText('One part broke the rules')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Guide: Made on purpose' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save the guide' }).click();
+  await expect(page.getByRole('group', { name: 'Guide: Made on purpose' })).toBeVisible();
+  await page.goto('/console?tab=challenges');
+  await ready(page);
+  await expect(page.locator('input[value="One good work nobody sees"]')).toBeVisible();
+});

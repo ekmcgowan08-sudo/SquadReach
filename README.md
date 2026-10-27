@@ -100,7 +100,9 @@ Set both variables or neither. With only one set, the app stays in demo mode.
 
 Set `ANTHROPIC_API_KEY` on the server. Leaders then get “Ask Claude for
 ideas” on Planner › Roadmap › Suggestions (`/api/planner/suggest`, one ask per
-leader every 30 seconds). The demo is off unless `PLANNER_AI_IN_DEMO=1`.
+leader every 30 seconds), and Console › Small groups gets “Build from this
+week’s lesson” (`/api/small-groups/draft`, same limit). The demo is off for
+both unless `PLANNER_AI_IN_DEMO=1`.
 
 ### Report emails (optional)
 
@@ -253,6 +255,14 @@ Where the prototype left a call open, the build took the safer default:
   dashed draft only when a leader taps it. If the model declines, a
   fallback model is tried server-side; if that declines too, the leader is
   told so.
+- **Small-group drafts keep the same rules.** “Build from this week’s
+  lesson” sends the leader's lesson, passage or topic with the room, the
+  minutes and the squads' names (never students'). Claude answers with a
+  guide, one challenge per squad and a five-day go-deeper week; every part
+  is checked (real passage references, no quotations, no video links it
+  would have to invent, squads that exist) and anything that fails is
+  dropped. Scripture screens carry the reference only: the leader adds the
+  text in their own translation. Nothing is saved until a leader saves it.
 - **Back goes back.** On the phone, Back returns to whatever opened the
   screen (an event opened from the calendar returns to the calendar); only
   a screen loaded cold falls back to its parent. More keeps a Recent row of
