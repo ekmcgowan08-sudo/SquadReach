@@ -99,7 +99,13 @@ export interface AppState {
   say(msg: string): void;
   sayPosted(onlineMsg: string, offlineMsg: string): void;
   doneFlag(): 'posted' | 'held';
+  /** A banner at the top of this phone. */
   firePush(title: string, body: string, href?: string): void;
+  /** Something that pushes someone else's phone. With Supabase the database
+   *  queued it when the write landed, so this asks the server to send it
+   *  now; the demo has one phone standing in for everyone, so it shows the
+   *  banner they would get. */
+  notify(title: string, body: string, href?: string): void;
   /** An audit line. `serverWrites`: the database function behind this
    *  action logs it itself, so on Supabase it's only shown here, not sent. */
   logActivity(line: string, serverWrites?: boolean): void;
@@ -339,6 +345,11 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           });
           if (pushT) clearTimeout(pushT);
           pushT = setTimeout(() => set((s) => { s.push = null; }), 4600);
+        },
+        notify(title, body, href) {
+          const b = get().backend;
+          if (b.mode === 'supabase') b.pushNow?.();
+          else get().firePush(title, body, href);
         },
         logActivity(line, serverWrites = false) {
           const entry: ActivityLine = { id: uid(), line, at: Date.now() };

@@ -671,6 +671,19 @@ export interface ChatFlag {
   seenAt?: number;
 }
 
+/** A captain (or an adult) checking on a student who isn't here yet:
+ *  'push' goes to the student, 'home' asks a leader to text the household.
+ *  One of each per student a night. */
+export interface Nudge {
+  id: string;
+  date: string;
+  student: string;
+  kind: 'push' | 'home';
+  /** Stamped by the database with Supabase. */
+  by: string;
+  at: number;
+}
+
 export interface ChatMessage {
   id: string;
   /** Display labels; derived from `at` for real messages. */
@@ -808,6 +821,8 @@ export interface MinistryData {
   chatMsgs: Record<string, ChatMessage[]>;
   chatUnread: Record<string, number>;
   chatFlags: ChatFlag[];
+  /** Tonight's nudges: the ones you sent, or got (leaders and coaches see all). */
+  nudges: Nudge[];
   rsvps: Record<string, Record<string, Rsvp>>;
   /** Supabase: head counts from rsvp_counts(), for roles that can't read names. */
   rsvpCounts?: Record<string, RsvpCount>;

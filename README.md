@@ -89,6 +89,7 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261027130000_access_notice.sql` | A decided request keeps who decided it (`decided_by`); `access_notice_emails`, which only the server may call, lists the leaders and owners to tell about a new one |
    | `20261027140000_chat_flags.sql` | `chat_flags`: a thread flagged for a leader, with who flagged it; `chat_flag_seen`; `chat_can` lets leaders read (not post in) a flagged thread |
    | `20261027150000_trips_and_forms.sql` | A slip's kind and trip; trip events and their cost; `rsvp_trip_gate` (no "going" to a trip with a blocking form unsigned); `camp_payments` and `camp_payment_confirm`; `family_view` shows each form's kind |
+   | `20261028100000_push.sql` | `push_subscriptions` (one phone, one account: `push_subscribe`, `push_prefs`); `push_outbox`, which only the server reads, filled by triggers on access requests, event proposals, prayer requests, swaps, door flags, chat flags, run-sheet owners and bench asks; `nudges` from a captain or an adult, one of each kind per student a night |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -150,6 +151,29 @@ that phone couldn't.
 The same email setup tells a ministry's leaders and owners when someone
 asks to join (right after the request is filed). It's best effort: the
 request stands whether or not the mail goes.
+
+### Push notifications (optional)
+
+Notifications always show in the app. To push them to phones as well:
+
+1. Make a VAPID key pair: `npx web-push generate-vapid-keys`.
+2. Set `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (and
+   `SUPABASE_SERVICE_ROLE_KEY`) on the server. `VAPID_SUBJECT` is a contact
+   for the push services (`mailto:` or `https:`); without it your site's
+   origin is used.
+3. Each person turns push on from Notifications on their own phone. On an
+   iPhone that needs SquadRise on the Home Screen first; the card says so.
+
+What gets pushed, and to whom, is decided in the database: a trigger on the
+row that causes it queues the push with its recipients and wording, so a
+phone can't push its own text to anyone. The phone that made the change
+asks `/api/push/flush` to send what's waiting, and the 15-minute cron sends
+anything a phone didn't. A push more than 15 minutes old is dropped rather
+than sent late. Each phone's own notification choices go with its
+subscription, so the server filters a push the same way the in-app list
+does, and a phone the push service says is gone is forgotten. Signing out
+drops this phone's subscription. "Send a test" on Notifications goes the
+whole way, through the push service, to your own phones.
 
 ### Planning Center (optional)
 
@@ -279,6 +303,12 @@ Where the prototype left a call open, the build took the safer default:
   leader marks a payment at the door; it stays unconfirmed until a leader
   counts it, and a mistake comes off only before then. "Pay online" is
   drawn but not open — SquadRise takes no cards.
+- **A captain's "text home" goes through a leader.** The design lets a
+  captain text a missing student's household. Students never hold a
+  family's number, so the captain's tap asks the ministry's leaders, who
+  get a push that opens the family's card with the text drafted. A nudge to
+  the student themselves is theirs in the app, and pushed if push is on for
+  their phone. One of each per student a night — more gets ignored.
 - **An undo after the night closes comes with a correction.** Leader
   reports go out when the night is closed at the debrief; reversing a point
   from before that posts a correction notice to leaders (and the audit
@@ -399,6 +429,10 @@ Where the prototype left a call open, the build took the safer default:
 
 - **Congregation members** are a demo persona only. Parents have the family
   link and the public board.
+- **Who gets the lead-change push.** "Yellow just took the lead" shows on
+  each phone that has SquadRise open, worked out from the standings it
+  already has; it isn't pushed to closed phones, because a busy night
+  would push everyone every few minutes.
 - **Text-message delivery.** The prototype offers Text as a report delivery
   channel. It needs phone numbers on file and a rule for messaging minors
   and their parents, so it's a decision before it's code. Deliveries land in

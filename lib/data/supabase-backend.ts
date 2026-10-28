@@ -19,7 +19,7 @@ import { chatStamp } from '@/lib/selectors';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, Category, ChatMessage, ChatThread, CheckinVia, LibraryFlag, LibraryFlagReason, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData,
-  MinistryEvent, PermissionSlip, Rsvp, RsvpCount, Student, Team
+  MinistryEvent, Nudge, PermissionSlip, Rsvp, RsvpCount, Student, Team
 } from '@/lib/types/model';
 
 interface EntryRow {
@@ -117,6 +117,7 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
   };
 
   let tonight = '';
+  let pushAsked = false;
 
   /* Ministry documents several leaders edit: saved over the revision this
      client last saw, merged when someone got there first (lib/data/doc-sync). */
@@ -330,6 +331,11 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         case 'chatFlag': {
           /* Who flagged it and when are stamped by the database. */
           const r = await db.from('chat_flags').insert({ id: e.flag.id, org_id: org, thread_id: e.flag.thread, thread_name: e.flag.threadName });
+          if (r.error) throw r.error;
+          return;
+        }
+        case 'nudge': {
+          const r = await db.from('nudges').insert({ id: e.nudge.id, org_id: org, meeting_date: e.nudge.date, student: e.nudge.student, kind: e.nudge.kind });
           if (r.error) throw r.error;
           return;
         }
@@ -599,12 +605,17 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       if (g && Object.keys(g).length) d.game = { ...d.game, ...g };
 
       /* RSVPs (yours, or everyone's for the volunteer set) and head counts. */
-      const [rs, counts, chat, chatFlags] = await Promise.all([
+      const [rs, counts, chat, chatFlags, nudges] = await Promise.all([
         db.from('rsvps').select('event_id, name, status, guests').eq('org_id', org),
         db.rpc('rsvp_counts', { p_org: org }),
         db.from('chat_messages').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(400),
-        db.from('chat_flags').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(100)
+        db.from('chat_flags').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(100),
+        db.from('nudges').select('id, meeting_date, student, kind, by_name, created_at').eq('org_id', org).eq('meeting_date', tonight)
       ]);
+      /* Tonight's nudges: yours, about you, or (adults) everyone's. */
+      d.nudges = ((nudges.data ?? []) as { id: string; meeting_date: string; student: string; kind: Nudge['kind']; by_name: string; created_at: string }[]).map((n) => ({
+        id: n.id, date: n.meeting_date, student: n.student, kind: n.kind, by: n.by_name, at: new Date(n.created_at).getTime()
+      }));
       /* Flags: a leader sees them all, anyone else only their own. */
       d.chatFlags = ((chatFlags.data ?? []) as { id: string; thread_id: string; thread_name: string; by_name: string; created_at: string; seen_by: string | null; seen_at: string | null }[]).map((f) => ({
         id: f.id, thread: f.thread_id, threadName: f.thread_name, by: f.by_name, at: new Date(f.created_at).getTime(),
@@ -785,6 +796,18 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       const run = queue.then(() => apply(e));
       queue = run.catch(() => undefined);
       return run;
+    },
+
+    /* Several pushes from one tap (a sheet with three owners) are one ask. */
+    pushNow() {
+      if (typeof window === 'undefined' || pushAsked) return;
+      pushAsked = true;
+      void queue
+        .then(() => {
+          pushAsked = false;
+          return fetch('/api/push/flush', { method: 'POST' });
+        })
+        .catch(() => undefined);
     },
 
     async fileUrl(path: string) {

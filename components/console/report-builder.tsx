@@ -318,7 +318,7 @@ export function DeliveriesSection() {
     api().emit({ kind: 'doc', key: 'reportSendLog', value: log });
     const groups = deliveryRecipientGroups(d, dl);
     api().logActivity('Sent now: ' + deliverySentence(d, dl) + ' — ' + groups.reduce((n, g) => n + g.names.length, 0) + ' people');
-    api().firePush(reportSpec(d, dl.report)?.label ?? 'Report', 'Sent to ' + groups.map((g) => g.label).join(', '), '/dashboard/notifications');
+    api().notify(reportSpec(d, dl.report)?.label ?? 'Report', 'Sent to ' + groups.map((g) => g.label).join(', '), '/dashboard/notifications');
     if (m.mode !== 'supabase') api().say('Sent. It’s in each person’s notifications with a download.');
   };
 

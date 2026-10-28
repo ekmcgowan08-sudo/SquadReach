@@ -249,3 +249,50 @@ test('texting a volunteer opens the phone’s own messages, with the text writte
   const text = page.getByRole('link', { name: /^Text .+ from your phone$/ });
   await expect(text).toHaveAttribute('href', /^sms:\?&body=Hi%20/);
 });
+
+test('a captain’s nudge reaches the student, and a text home goes through a leader', async ({ page, context, baseURL }) => {
+  await as(context, 'captain', baseURL!);
+  await page.goto('/dashboard/captain-view');
+  await ready(page);
+  const rows = page.locator('div.flex.min-h-11').filter({ has: page.getByRole('button', { name: /^(Nudge|Close)$/ }) });
+
+  const me = rows.filter({ hasText: 'Ellison Reid' });
+  await me.getByRole('button', { name: 'Nudge' }).click();
+  await page.getByRole('button', { name: /^Push to their phone/ }).click();
+  await expect(page.getByText('Nudged. Ellison sees it in SquadRise, and as a push if it’s on for their phone.')).toBeVisible();
+  await expect(me).toContainText('nudged');
+  await me.getByRole('button', { name: 'Nudge' }).click();
+  await page.getByRole('button', { name: /^Push to their phone/ }).click();
+  await expect(page.getByText('Already nudged tonight — one is enough. Go find them?')).toBeVisible();
+
+  const other = rows.filter({ hasNotText: 'Ellison Reid' }).first();
+  const name = (await other.locator('.truncate').first().innerText()).trim();
+  await other.getByRole('button', { name: 'Nudge' }).click();
+  await page.getByRole('button', { name: /^Get a leader to text home/ }).click();
+  await expect(page.getByText('Asked. A leader texts ' + name.split(' ')[0] + '’s household — they have the number.')).toBeVisible();
+
+  await as(context, 'member', baseURL!);
+  await page.goto('/dashboard/notifications');
+  await ready(page);
+  await expect(page.getByRole('link', { name: /Your squad is looking for you/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /household\?/ })).toHaveCount(0);
+
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/notifications');
+  await ready(page);
+  await page.getByRole('link', { name: new RegExp('Text ' + name + '’s household\\?') }).click();
+  await expect(page).toHaveURL(/\/dashboard\/parents\?family=/);
+  const card = page.getByRole('dialog', { name: 'Family' });
+  await expect(card).toContainText('Ellison Reid asked for a text home at');
+  await expect(card.getByRole('link', { name: /^Text / })).toHaveAttribute('href', /^sms:\+?\d+\?&body=Hi%20.+coming%20tonight%3F$/);
+  await expect(card.getByRole('link', { name: /^Call / })).toHaveAttribute('href', /^tel:/);
+});
+
+test('notifications say what push does on this phone', async ({ page, context, baseURL }) => {
+  await as(context, 'member', baseURL!);
+  await page.goto('/dashboard/notifications');
+  await ready(page);
+  await expect(page.getByRole('group', { name: 'Push on this phone' })).toContainText('In the demo this phone stands in for everyone');
+  await page.getByRole('button', { name: 'Notification settings' }).click();
+  await expect(page.getByRole('button', { name: /Nudges from your squad/ })).toHaveAttribute('aria-pressed', 'true');
+});

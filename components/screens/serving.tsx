@@ -242,7 +242,7 @@ function MyNights({ nights }: { nights: string[] }) {
     const swap: SwapRequest = { id: uid(), from: me.name, night, role, to, why: why.trim(), status: 'pending', at: nowMs() };
     api().mutate((x) => void x.serving.swaps.unshift(swap));
     api().emit({ kind: 'swap', swap });
-    api().firePush('Swap request', me.name + ' can’t do ' + role.toLowerCase() + ' on ' + nightLabel(night), '/dashboard/serving');
+    api().notify('Swap request', me.name + ' can’t do ' + role.toLowerCase() + ' on ' + nightLabel(night), '/dashboard/serving');
     setAsking(null);
     setWhy('');
     setTo(null);

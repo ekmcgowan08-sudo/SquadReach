@@ -7,6 +7,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { notifyLeaders } from '@/lib/server/access-notice';
+import { sendQueuedPushes } from '@/lib/server/push';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export interface FormState {
@@ -36,9 +37,13 @@ export async function requestToJoin(_: FormState, form: FormData): Promise<FormS
   const supabase = await supabaseServer();
   const { data, error } = await supabase.rpc('request_access', { p_code: code, p_role: role, p_name: me, p_note: note });
   if (error) return { error: error.message.includes('no ministry') ? 'No ministry has that code — check it with whoever sent it.' : error.message };
-  /* The ministry's leaders hear about it by email, once this answer is sent. */
+  /* The ministry's leaders hear about it by email and push (the database
+     queued that), once this answer is sent. */
   const h = await headers();
   const appUrl = (h.get('x-forwarded-proto') ?? 'https') + '://' + (h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost') + '/console?tab=people#access-requests';
-  if (typeof data === 'string') after(() => notifyLeaders(data, appUrl).then(() => undefined, () => undefined));
+  if (typeof data === 'string')
+    after(() =>
+      Promise.allSettled([notifyLeaders(data, appUrl), sendQueuedPushes(appUrl)]).then(() => undefined)
+    );
   return { done: 'Sent. A leader approves you, and then this page opens the app.' };
 }

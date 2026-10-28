@@ -19,6 +19,7 @@ import { canApprove, canNightRecap, canPrepWeek, canRunLive, canServe, canSwitch
 import { attendanceStats, checkinOpen, followups, isAfter, myNights, nextReminder, reminders, slipsView, weekday } from '@/lib/cycle';
 import { computeNotifications, eventLabel, myBible, myTeamId, openFollowups, teamOf, upcomingEvents } from '@/lib/selectors';
 import { notifOn, usePrefs } from '@/lib/prefs';
+import { dropPushHere } from '@/lib/push-client';
 import { clearRecents, recentsOwner, recentsSnapshot, subscribeRecents } from '@/lib/recents';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { MORE_GROUPS, MORE_ROWS, moreRowShows, type MoreRow, type MoreRowId } from '@/lib/screen-map';
@@ -99,7 +100,17 @@ export function MoreScreen() {
         window.location.reload();
       }
     }),
-    signOut: row('signOut', { meta: m.displayName, href: '/logout', onClick: clearRecents }),
+    /* This phone stops getting their pushes before the session ends. */
+    signOut: row('signOut', {
+      meta: m.displayName,
+      onClick: () => {
+        clearRecents();
+        void dropPushHere().then(() => {
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.assign('/logout');
+        });
+      }
+    }),
     bible: row('bible', { meta: myBible(d, m).due + ' due' }),
     care: row('care', { meta: d.prayerQueue.length + ' to review · ' + openFollowups(d).length + ' follow-ups' }),
     wall: row('wall', { meta: d.prayers.length + ' on the wall' }),

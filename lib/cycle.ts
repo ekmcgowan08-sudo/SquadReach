@@ -470,6 +470,19 @@ export function familyFeed(d: MinistryData, kid: string, iso: string, now: numbe
   return list.sort((a, b) => b.at - a.at);
 }
 
+/** A family's card on Message parents, opened. */
+export const familyHref = (student: string) => '/dashboard/parents?family=' + encodeURIComponent(student);
+
+/** How a family's contact can be reached from this phone: a number texts
+ *  and calls, an address emails. */
+export function contactLinks(contact: string, body = ''): { sms?: string; tel?: string; mail?: string } {
+  const c = contact.trim();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)) return { mail: 'mailto:' + c + (body ? '?body=' + encodeURIComponent(body) : '') };
+  const num = c.replace(/[^\d+]/g, '');
+  if (num.replace(/\D/g, '').length < 7) return {};
+  return { sms: 'sms:' + num + (body ? '?&body=' + encodeURIComponent(body) : ''), tel: 'tel:' + num };
+}
+
 export function newFamilyToken(): string {
   const a = new Uint8Array(20);
   globalThis.crypto.getRandomValues(a);

@@ -19,3 +19,38 @@ describe('asked from the huddle to cover a post', () => {
     expect(computeNotifications(d, person('Kara Judd')).some((n) => n.label.startsWith('Can you cover'))).toBe(false);
   });
 });
+
+describe('a captain’s nudge', () => {
+  const nudged = () => {
+    const d = demoMinistry();
+    d.nudges = [
+      { id: 'n1', date: d.tonight.date, student: 'Ellison Reid', kind: 'push', by: 'Luke Jarvis', at: 0 },
+      { id: 'n2', date: d.tonight.date, student: 'Ellison Reid', kind: 'home', by: 'Luke Jarvis', at: 0 }
+    ];
+    return d;
+  };
+  const student = { ...person('Ellison Reid', 'member'), studentName: 'Ellison Reid' };
+
+  it('tells the student their squad is looking for them, and only them', () => {
+    const d = nudged();
+    expect(computeNotifications(d, student).filter((n) => n.trigger === 'nudge').map((n) => n.label + ' · ' + n.meta)).toEqual(['Your squad is looking for you · Luke checked — are you coming tonight?']);
+    expect(computeNotifications(d, { ...student, displayName: 'Rory Banks', studentName: 'Rory Banks' }).some((n) => n.trigger === 'nudge')).toBe(false);
+  });
+
+  it('asks a leader — never the student — to text home, opening the family’s card', () => {
+    const d = nudged();
+    const home = (m: Membership) => computeNotifications(d, m).filter((n) => n.label.endsWith('household?'));
+    expect(home(person('Pastor Mike', 'leader')).map((n) => n.href)).toEqual(['/dashboard/parents?family=Ellison%20Reid']);
+    expect(home(student)).toEqual([]);
+    expect(home(person('Coach Chris'))).toEqual([]);
+  });
+
+  it('goes quiet once they’re here, and on another night', () => {
+    const d = nudged();
+    d.tonight.presence['Ellison Reid'] = true;
+    expect(computeNotifications(d, student).some((n) => n.trigger === 'nudge')).toBe(false);
+    const e = nudged();
+    e.nudges = e.nudges.map((n) => ({ ...n, date: '2026-10-21' }));
+    expect(computeNotifications(e, person('Pastor Mike', 'leader')).some((n) => n.label.endsWith('household?'))).toBe(false);
+  });
+});

@@ -201,6 +201,7 @@ function ThreadView({ id }: { id: string }) {
     const f = { id: uid(), thread: id, threadName: t.name, by: m.displayName, at: Date.now() };
     api().mutate((x) => void x.chatFlags.push(f));
     api().emit({ kind: 'chatFlag', flag: f });
+    api().notify('A chat was flagged for you', m.displayName + ' flagged the ' + t.name + ' thread', '/dashboard/chat?t=' + encodeURIComponent(id));
     api().logActivity('Flagged the ' + t.name + ' thread for a leader to read');
     api().say('Flagged. The ministry’s leaders get the thread, with your name on the flag.');
   };

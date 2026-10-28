@@ -399,7 +399,7 @@ test('notification defaults set in the console are what a phone starts with', as
   await page.goto('/console?tab=notifs');
   await ready(page);
   await page.getByRole('checkbox', { name: /Weekly summary/ }).uncheck();
-  await expect(page.getByText('10 of 11 on')).toBeVisible();
+  await expect(page.getByText('11 of 12 on')).toBeVisible();
 
   await page.goto('/dashboard/notifications');
   await ready(page);

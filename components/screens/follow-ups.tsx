@@ -73,7 +73,7 @@ function PrayerWall() {
     });
     api().emit({ kind: 'prayerSubmit', item, anonymous: anon });
     api().logActivity('Prayer request submitted by ' + who + ' — waiting on a leader');
-    api().firePush('New prayer request', who + ' sent one in · nothing is public yet', '/dashboard/follow-ups');
+    api().notify('New prayer request', who + ' sent one in · nothing is public yet', '/dashboard/follow-ups');
     setDraft('');
     setAnon(false);
     api().say(reviewer ? 'Filed with the requests below. Post it or hold it from there.' : 'Sent. A leader prays over it before anything is posted.');

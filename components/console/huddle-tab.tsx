@@ -48,7 +48,7 @@ export function HuddleTab() {
     });
     for (const it of untold) {
       const who = h.crew.find((c) => c.id === it.assignedTo)?.name;
-      if (who) api().firePush('You own ' + it.time + ' · ' + it.label, who + ', it’s yours tonight. ' + (it.where ? 'Where: ' + it.where + '.' : ''), '/dashboard/huddle');
+      if (who) api().notify('You own ' + it.time + ' · ' + it.label, who + ', it’s yours tonight. ' + (it.where ? 'Where: ' + it.where + '.' : ''), '/dashboard/huddle');
     }
     api().logActivity('Published the run sheet — ' + told.length + ' assignment notice' + (told.length === 1 ? '' : 's') + (told.length ? ' (' + told.join(', ') + ')' : '') + ' · ' + me);
     api().say(told.length ? told.length + ' told. Everyone serving sees the new sheet.' : 'Sheet published to everyone serving.');

@@ -17,7 +17,10 @@ import { bibleStats } from '@/lib/bible';
 import { catOf, eventLabel, myTeamId, teamMetaLabel, teamOf, teamRoster, upcomingEvents } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { MEMBERSHIP_ROLES, personaDef, type Persona } from '@/lib/types/domain';
-import type { AccessRequest, MinistryEvent } from '@/lib/types/model';
+import { clock, familyHref } from '@/lib/cycle';
+import { nowMs } from '@/lib/dates';
+import { uid } from '@/lib/store/app-store';
+import type { AccessRequest, MinistryEvent, Nudge } from '@/lib/types/model';
 
 const RSVP_FG: Record<string, string> = { going: '#8fd8b0', maybe: '#e3c98d', out: '#e0a3a3' };
 const RSVP_LABEL: Record<string, string> = { going: 'Going', maybe: 'Maybe', out: 'Can’t' };
@@ -214,9 +217,13 @@ export function CaptainViewScreen() {
     .slice(0, 5);
   const top = earners[0]?.pts ?? 0;
 
-  /* A nudge is a push notification, so it has no outbox — offline it simply
-     cannot go, and says so rather than pretending to queue. */
-  const reach = (name: string, how: 'push' | 'parent' | 'find') => {
+  /* A nudge goes now or not at all — offline it simply cannot go, and says
+     so rather than pretending to queue. It lands in the student's
+     notifications, and the database pushes it to their phone if they
+     turned push on. Students never hold a family's number, so "text home"
+     asks a leader, who does. One of each a night is enough. */
+  const nudgedTonight = (name: string, kind: Nudge['kind']) => d.nudges.find((n) => n.student === name && n.kind === kind && n.date === d.tonight.date);
+  const reach = async (name: string, how: Nudge['kind'] | 'find') => {
     const first = name.split(' ')[0];
     setNudgeFor(null);
     if (how === 'find') {
@@ -225,16 +232,31 @@ export function CaptainViewScreen() {
       return;
     }
     if (offline) {
-      api().say('No signal — that message needs a connection. "Go find them" still works.');
+      api().say('No signal — a nudge needs a connection. "Go find them" still works.');
       return;
     }
-    if (how === 'parent') {
-      api().logActivity('Texted ' + name + '’s household about tonight');
-      api().say('Text sent to ' + first + '’s household.');
+    const already = how === 'push' ? 'Already nudged tonight — one is enough. Go find them?' : 'A leader was already asked to text ' + first + '’s household tonight.';
+    if (nudgedTonight(name, how)) {
+      api().say(already);
       return;
     }
-    api().logActivity('Nudged ' + name + ' about tonight');
-    api().say(first + ' got a push notification.');
+    const n: Nudge = { id: uid(), date: d.tonight.date, student: name, kind: how, by: m.displayName, at: nowMs() };
+    try {
+      await api().backend.sync({ kind: 'nudge', nudge: n });
+    } catch (e) {
+      api().say(/duplicate|unique/i.test((e as Error).message ?? '') ? already : 'That nudge didn’t go — try again, or go find them.');
+      return;
+    }
+    api().mutate((x) => void x.nudges.push(n));
+    if (how === 'push') {
+      api().logActivity('Nudged ' + name + ' about tonight');
+      api().notify('Your squad is looking for you', m.firstName + ' checked — are you coming tonight?', '/dashboard');
+      api().say('Nudged. ' + first + ' sees it in SquadRise, and as a push if it’s on for their phone.');
+    } else {
+      api().logActivity('Asked a leader to text ' + name + '’s household about tonight');
+      api().notify('Text ' + name + '’s household?', m.firstName + ' says they aren’t here yet.', familyHref(name));
+      api().say('Asked. A leader texts ' + first + '’s household — they have the number.');
+    }
   };
 
   return (
@@ -268,9 +290,10 @@ export function CaptainViewScreen() {
                 const np = !!noPhone[r.name];
                 const first = r.name.split(' ')[0];
                 const open = nudgeFor === r.name;
+                const pushed = nudgedTonight(r.name, 'push');
                 const options = [
-                  np ? null : { label: 'Push to their phone', hint: 'Lands in a second, if they have signal', icon: 'ph ph-bell-ringing', go: () => reach(r.name, 'push') },
-                  { label: 'Text whoever brings them', hint: 'Goes to the guardians on their household', icon: 'ph ph-chat-circle-text', go: () => reach(r.name, 'parent') },
+                  np ? null : { label: 'Push to their phone', hint: pushed ? 'Nudged at ' + clock(pushed.at) + ' — one a night is enough' : 'In their notifications, and a push if it’s on for their phone', icon: 'ph ph-bell-ringing', go: () => reach(r.name, 'push') },
+                  { label: 'Get a leader to text home', hint: 'Leaders have the household’s number', icon: 'ph ph-chat-circle-text', go: () => reach(r.name, 'home') },
                   { label: 'Go find them', hint: 'Puts it on your list — no notification sent', icon: 'ph ph-footprints', go: () => reach(r.name, 'find') },
                   np
                     ? { label: first + ' does have a phone', hint: 'Puts the push option back', icon: 'ph ph-arrow-counter-clockwise', go: () => { setNoPhone((x) => ({ ...x, [r.name]: false })); api().say('Push is back on for ' + first + '.'); } }
@@ -281,7 +304,7 @@ export function CaptainViewScreen() {
                     <div className="flex min-h-11 items-center gap-[9px]">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[12.5px] font-medium leading-[1.2] text-neutral-200">{r.name}</div>
-                        <div className="mt-[3px] text-[10.5px] leading-[1.3] text-neutral-500">{(r.captain ? 'captain · ' : '') + 'grade ' + r.grade + (np ? ' · no phone' : '')}</div>
+                        <div className="mt-[3px] text-[10.5px] leading-[1.3] text-neutral-500">{(r.captain ? 'captain · ' : '') + 'grade ' + r.grade + (np ? ' · no phone' : '') + (pushed ? ' · nudged ' + clock(pushed.at) : '')}</div>
                       </div>
                       <Btn variant="ghost" className="flex-none px-3" onClick={() => setNudgeFor(open ? null : r.name)}>
                         {open ? 'Close' : np ? 'Reach them' : 'Nudge'}
@@ -290,7 +313,7 @@ export function CaptainViewScreen() {
                     {open ? (
                       <div className="-mt-[2px] mb-[6px] flex flex-col gap-[6px] rounded-md border border-neutral-800 bg-neutral-900 p-[11px]">
                         <div className="text-[10.5px] leading-[1.45] text-neutral-500 text-pretty">
-                          {np ? first + ' does not carry a phone, so a push will not land. These two will.' : 'A nudge is a push to their own phone. If they do not carry one, use one of the others.'}
+                          {np ? first + ' does not carry a phone, so a push will not land. These two will.' : 'A nudge lands on their own phone. If they do not carry one, use one of the others.'}
                         </div>
                         {options.map((o) => (
                           <button key={o.label} onClick={o.go} className="flex min-h-11 items-center gap-[9px] rounded-md border border-neutral-800 px-[11px] text-left hover:border-accent-600">

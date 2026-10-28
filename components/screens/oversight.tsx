@@ -4,7 +4,7 @@
    writes — nothing here keeps its own copy of anything. */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { InviteSheet } from '@/components/dashboard/invite-sheet';
 import { WaitingOnYou, usePendingGroups } from '@/components/screens/home';
 import { AccessRow } from '@/components/screens/role-views';
@@ -14,7 +14,8 @@ import { Btn, EmptyNote, Icon, Screen, ScreenHeader } from '@/components/ui';
 import { decidedRequests, decisionLine } from '@/lib/access';
 import { ago } from '@/lib/dates';
 import { canApprove } from '@/lib/permissions';
-import { HOME_SECTIONS, NOTIF_TRIGGERS, notifOn, setPrefs, usePrefs } from '@/lib/prefs';
+import { HOME_SECTIONS, NOTIF_TRIGGERS, notifOn, setPrefs, usePrefs, type Prefs } from '@/lib/prefs';
+import { pushState, sendTestPush, syncPushPrefs, turnOffPush, turnOnPush, type PushState } from '@/lib/push-client';
 import { fmt, signed } from '@/lib/scoring';
 import { catOf, computeNotifications, teamOf } from '@/lib/selectors';
 import { useApp, useAppApi } from '@/lib/store/provider';
@@ -55,10 +56,51 @@ export function NotificationsScreen() {
   const [settings, setSettings] = useState(false);
   const on = notifOn(d.config.notifDefaults, prefs.notifMine);
   const list = useMemo(() => computeNotifications(d, m, notifOn(d.config.notifDefaults, prefs.notifMine)), [d, m, prefs.notifMine]);
+  const live = m.mode === 'supabase';
+  const [push, setPush] = useState<PushState>('checking');
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    if (!live) return;
+    let on = true;
+    void pushState().then((s) => on && setPush(s), () => on && setPush('unsupported'));
+    return () => {
+      on = false;
+    };
+  }, [live]);
+  /* What this phone switches on or off, the server filters its pushes by. */
+  const setMine = (mine: Prefs['notifMine']) => {
+    setPrefs({ notifMine: mine });
+    if (live && push === 'on') void syncPushPrefs(mine).catch(() => undefined);
+  };
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (push === 'on') {
+        await turnOffPush();
+        setPush('off');
+        api().say('Push is off for this phone. Notifications still show here.');
+      } else {
+        const s = await turnOnPush(prefs.notifMine);
+        setPush(s);
+        api().say(s === 'on' ? 'Push is on for this phone.' : s === 'blocked' ? 'Notifications are blocked for this site — allow them in your browser settings.' : 'This phone can’t take push yet.');
+      }
+    } catch {
+      api().say('Couldn’t change push on this phone — try again with a signal.');
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
-  /* A real notification from this phone, so a leader can check the device
-     will actually show them before relying on it on a Wednesday night. */
+  /* A real notification on this phone, so a leader can check the device
+     will actually show them before relying on it on a Wednesday night. With
+     Supabase it goes the whole way, through the push service. */
   const test = async () => {
+    if (live) {
+      if (push !== 'on') return api().say('Turn push on for this phone first — then a test goes through the push service.');
+      const r = await sendTestPush().catch(() => ({ error: 'Couldn’t reach the server.' }) as { error: string; sent?: number });
+      api().say(r.error ? r.error : r.sent ? 'Sent. It shows on this phone in a few seconds.' : 'The push service didn’t take it. Turn push off and on again.');
+      return;
+    }
     const title = 'SquadRise is set up on this phone';
     const body = 'This is what a lead change or an approval will look like.';
     api().firePush(title, body, '/dashboard/notifications');
@@ -93,6 +135,7 @@ export function NotificationsScreen() {
           </div>
         }
       />
+      <PushCard state={live ? push : 'demo'} busy={pushBusy} onToggle={togglePush} />
       {list.length ? (
         <div className="sr-card overflow-hidden">
           {list.map((n, i) => (
@@ -111,14 +154,14 @@ export function NotificationsScreen() {
 
       <Sheet open={settings} onClose={() => setSettings(false)} label="Notification settings" z={85} maxH="85%">
         <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">Notification settings</div>
-        <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Choose what shows up in your notifications on this phone. Your ministry sets what’s on to begin with; what you change here is yours. Approvals you’re responsible for still appear on Home.</div>
+        <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Choose what shows up in your notifications on this phone — and, with push on, what reaches it. Your ministry sets what’s on to begin with; what you change here is yours. Approvals you’re responsible for still appear on Home.</div>
         <div className="flex flex-col gap-[5.6px]">
           {NOTIF_TRIGGERS.map((t) => (
-            <CheckRow key={t.key} on={on[t.key]} label={t.label} hint={t.hint} onClick={() => setPrefs((p) => ({ notifMine: { ...p.notifMine, [t.key]: !on[t.key] } }))} />
+            <CheckRow key={t.key} on={on[t.key]} label={t.label} hint={t.hint} onClick={() => setMine({ ...prefs.notifMine, [t.key]: !on[t.key] })} />
           ))}
         </div>
         {Object.keys(prefs.notifMine).length ? (
-          <Btn variant="ghost" className="min-h-11 justify-center text-accent-300" onClick={() => setPrefs({ notifMine: {} })}>
+          <Btn variant="ghost" className="min-h-11 justify-center text-accent-300" onClick={() => setMine({})}>
             Back to the ministry’s settings
           </Btn>
         ) : null}
@@ -127,6 +170,38 @@ export function NotificationsScreen() {
         </Btn>
       </Sheet>
     </Screen>
+  );
+}
+
+/** Whether this phone gets pushes, and what to do about it if not. */
+const PUSH_LINES: Record<PushState | 'demo', string> = {
+  demo: 'In the demo this phone stands in for everyone, so a push shows as a banner at the top of the app. With your ministry’s own SquadRise, each one reaches the phone it’s for.',
+  checking: 'Checking this phone…',
+  unsupported: 'This browser can’t take push notifications. They still show here when you open SquadRise.',
+  install: 'On iPhone, add SquadRise to your Home Screen first — Share, then Add to Home Screen — and turn push on from there.',
+  'not-set-up': 'Push isn’t set up on your ministry’s server yet, so notifications show here when you open SquadRise.',
+  blocked: 'Notifications are blocked for this site. Allow them in your browser’s settings, then come back.',
+  off: 'Off. Turn it on and what’s switched on in your settings reaches this phone, even with SquadRise closed.',
+  on: 'On. What’s switched on in your settings reaches this phone, even with SquadRise closed.'
+};
+
+function PushCard({ state, busy, onToggle }: { state: PushState | 'demo'; busy: boolean; onToggle: () => void }) {
+  const can = state === 'on' || state === 'off';
+  return (
+    <div className="sr-card flex items-center gap-[11px] px-[15px] py-[12px]" role="group" aria-label="Push on this phone">
+      <Icon name={state === 'on' ? 'ph-fill ph-bell-ringing' : 'ph ph-bell-slash'} className="flex-none text-[17px]" style={{ color: state === 'on' ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }} />
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-medium leading-[1.25] text-neutral-100">Push on this phone</div>
+        <div className="mt-[3px] text-[11px] leading-[1.45] text-neutral-500 text-pretty" aria-live="polite">
+          {PUSH_LINES[state]}
+        </div>
+      </div>
+      {can ? (
+        <Btn variant={state === 'on' ? 'ghost' : 'secondary'} className="flex-none px-3" disabled={busy} onClick={onToggle}>
+          {busy ? 'One sec…' : state === 'on' ? 'Turn off' : 'Turn on'}
+        </Btn>
+      ) : null}
+    </div>
   );
 }
 

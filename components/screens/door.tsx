@@ -47,7 +47,7 @@ export function DoorKioskScreen() {
     const f = { id: uid(), name, at: nowMs() };
     saveNight(iso, (n) => void n.doorFlags.push(f));
     api().emit({ kind: 'doorFlag', date: iso, flag: f });
-    api().firePush('Someone new at the door', name + ' isn’t on a roster — go say hi', '/dashboard/night-recap');
+    api().notify('Someone new at the door', name + ' isn’t on a roster — go say hi', '/dashboard/night-recap');
     setDone({ name, line: 'A leader is on the way. Hang tight right here.' });
     reset();
     window.setTimeout(() => setDone(null), 5000);

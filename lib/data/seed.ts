@@ -511,6 +511,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
     chatMsgs: CHAT_SEED,
     chatUnread: { all: 2, leaders: 1, 'team-blue': 3, parents: 0, 'dm-mike': 0, 'dm-zoe': 1 },
     chatFlags: [],
+    nudges: [],
     /* Retreat money marked at the door; the office has counted two. */
     payments: [
       { id: 'pay1', event: 'e5', student: 'Melanie Russell', amount: 85, by: 'Coach Chris', at: now - 9 * DAY, confirmedBy: 'Pastor Mike', confirmedAt: now - 8 * DAY },

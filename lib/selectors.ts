@@ -4,7 +4,7 @@ import { corrections } from '@/lib/corrections';
 import { uncoveredPosts } from '@/lib/feeds';
 import { fmt, pointBase } from '@/lib/scoring';
 import { canApprove, canCoordinateServing, canHuddle, canMessageParents, canNightRecap, canPrepWeek, holdsSheet } from '@/lib/permissions';
-import { cycleNeeds, reminders, selfName, type CycleNeed } from '@/lib/cycle';
+import { cycleNeeds, familyHref, reminders, selfName, type CycleNeed } from '@/lib/cycle';
 import { personaDef, type Persona } from '@/lib/types/domain';
 import { bibleStats } from '@/lib/bible';
 import { isoDay } from '@/lib/dates';
@@ -114,6 +114,15 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
       list.push({ icon: 'ph ph-arrow-counter-clockwise', label: 'Correction: ' + c.line, meta: 'Sent after the night’s report went out', href: '/dashboard/audit', trigger: 'weeklySummary' });
     for (const f of openChatFlags(d))
       list.push({ icon: 'ph ph-flag', label: f.by + ' flagged the ' + f.threadName + ' thread', meta: 'Read it, then mark it read', href: '/dashboard/chat?t=' + encodeURIComponent(f.thread), trigger: 'chatFlag' });
+  }
+  /* Nudged tonight and not here yet: your squad checking you're coming —
+     and, for leaders, a captain asking for a text home. */
+  for (const n of d.nudges ?? []) {
+    if (n.date !== d.tonight.date || d.tonight.presence[n.student]) continue;
+    if (n.kind === 'push' && n.student === m.studentName)
+      list.push({ icon: 'ph ph-hand-waving', label: 'Your squad is looking for you', meta: (n.by.split(' ')[0] || 'Your captain') + ' checked — are you coming tonight?', href: '/dashboard', trigger: 'nudge' });
+    if (n.kind === 'home' && canMessageParents(p))
+      list.push({ icon: 'ph ph-chat-circle-text', label: 'Text ' + n.student + '’s household?', meta: (n.by || 'Their captain') + ' says they aren’t here yet', href: familyHref(n.student), trigger: 'nightCycle' });
   }
   /* Asked from the huddle to cover a post that's still open. */
   {

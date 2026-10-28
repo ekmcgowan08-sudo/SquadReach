@@ -10,7 +10,7 @@ import type { LiveAnswer, LiveRoom } from '@/lib/live';
 import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CampPayment, CareReminder, Category, Challenge, ChatFlag, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
-  GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, PracticeRow,
+  GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, Nudge, PracticeRow,
   PrayerQueued, Rsvp, RsvpCount, Student, SwapRequest, Team, VolunteerInvite
 } from '@/lib/types/model';
 
@@ -84,6 +84,9 @@ export type SyncEvent =
   | { kind: 'paymentConfirm'; id: string }
   | { kind: 'paymentRemove'; id: string }
   | { kind: 'parentMsg'; msg: ParentMessage }
+  /** Who sent it and when are stamped by the database; a second nudge of
+   *  the same kind for the same student tonight is refused. */
+  | { kind: 'nudge'; nudge: Nudge }
   /** A student checks themselves in (RPC: only their own row, only tonight). */
   | { kind: 'selfCheckin'; date: string };
 
@@ -115,6 +118,9 @@ export interface Backend {
   /** Supabase: lets document saves read the newest local copy and merge
    *  other leaders' saves into it. Demo has nobody else to merge with. */
   bind?(io: DocIO): void;
+  /** Supabase: after the writes made so far, ask the server to send the
+   *  pushes they queued (the database decided what and to whom). */
+  pushNow?(): void;
 }
 
 export interface LiveChannel {

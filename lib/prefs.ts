@@ -16,7 +16,8 @@ export const NOTIF_TRIGGERS = [
   { key: 'bibleReminder', label: 'Bible reading reminder', hint: 'When review is due' },
   { key: 'nightCycle', label: 'The week around the night', hint: 'Prep reminders, swaps, the door, follow-ups' },
   { key: 'reportDelivery', label: 'Scheduled reports', hint: 'When one reaches you, and what goes out today' },
-  { key: 'chatFlag', label: 'Flagged chats', hint: 'When someone flags a thread for a leader to read' }
+  { key: 'chatFlag', label: 'Flagged chats', hint: 'When someone flags a thread for a leader to read' },
+  { key: 'nudge', label: 'Nudges from your squad', hint: 'When your captain checks you’re coming tonight' }
 ] as const;
 export type NotifTrigger = (typeof NOTIF_TRIGGERS)[number]['key'];
 

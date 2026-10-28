@@ -4,12 +4,13 @@
    slips with who has signed, tonight's pickup time, and each family's own
    private link. Parents never get an account: the link is how they see
    their own child, sign slips and read messages. */
+import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { PersonChip } from '@/components/cycle/bits';
 import { useCycle, useNightSave } from '@/components/cycle/use-cycle';
 import { Sheet } from '@/components/sheet';
 import { Btn, Chip, EmptyNote, Icon, Label, Screen, ScreenHeader } from '@/components/ui';
-import { audienceKids, audienceLabel, clock, newFamilyToken, newMessage, slipDueLabel, slipsView, when } from '@/lib/cycle';
+import { audienceKids, audienceLabel, clock, contactLinks, newFamilyToken, newMessage, slipDueLabel, slipsView, when } from '@/lib/cycle';
 import { isoDay, nowMs } from '@/lib/dates';
 import { uid } from '@/lib/store/app-store';
 import { useAppApi } from '@/lib/store/provider';
@@ -59,7 +60,9 @@ export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
   const [whoOpen, setWhoOpen] = useState<string | null>(null);
   const [newSlip, setNewSlip] = useState(false);
   const [famQ, setFamQ] = useState('');
-  const [fam, setFam] = useState<string | null>(null);
+  /* A captain's "text home" ask opens the family's card straight away. */
+  const params = useSearchParams();
+  const [fam, setFam] = useState<string | null>(() => params.get('family'));
   const views = slipsView(d);
   const reach = audienceKids(d, to).length;
   const families = Object.keys(d.families).length;
@@ -226,7 +229,7 @@ export function ParentsScreen({ bare }: { bare?: boolean } = {}) {
 }
 
 export function FamilySheet({ name, onClose }: { name: string | null; onClose: () => void }) {
-  const d = useCycle().d;
+  const { d, m: viewer } = useCycle();
   const api = useAppApi();
   const cur = name ? d.families[name] : undefined;
   const [g, setG] = useState<{ for: string | null; guardian: string; contact: string }>({ for: null, guardian: '', contact: '' });
@@ -239,11 +242,42 @@ export function FamilySheet({ name, onClose }: { name: string | null; onClose: (
     api().emit({ kind: 'family', student: name, family: next });
   };
   const link = cur?.token ? origin + '/f/' + cur.token : '';
+  /* A captain asked for a text home tonight: say so, and draft it. */
+  const asked = name ? d.nudges.find((n) => n.kind === 'home' && n.student === name && n.date === d.tonight.date) : undefined;
+  const here = !!(name && d.tonight.presence[name]);
+  const first = name?.split(' ')[0] ?? '';
+  const who = cur?.guardian || 'the family';
+  const draft = asked && !here ? 'Hi ' + (cur?.guardian ? cur.guardian.split(' ')[0] : 'there') + ', it’s ' + viewer.firstName + ' from ' + d.config.ministryName + ' — is ' + first + ' coming tonight?' : '';
+  const reach = contactLinks(cur?.contact ?? '', draft);
   return (
     <Sheet open={!!name} onClose={onClose} label="Family">
       {name ? (
         <div className="flex flex-col gap-[10px]">
           <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">{name}’s family</div>
+          {asked ? (
+            <div className="rounded-md bg-neutral-900 px-3 py-[10px] text-[11.5px] leading-[1.45] text-neutral-300 text-pretty">
+              {asked.by || 'Their captain'} asked for a text home at {clock(asked.at)}. {here ? first + ' is here now.' : first + ' isn’t here yet.'}
+            </div>
+          ) : null}
+          {reach.sms || reach.tel || reach.mail ? (
+            <div className="flex gap-2">
+              {reach.sms ? (
+                <a className="btn btn-primary flex-1 justify-center text-[12px]" href={reach.sms} aria-label={'Text ' + who}>
+                  Text
+                </a>
+              ) : null}
+              {reach.tel ? (
+                <a className="btn btn-secondary flex-1 justify-center text-[12px]" href={reach.tel} aria-label={'Call ' + who}>
+                  Call
+                </a>
+              ) : null}
+              {reach.mail ? (
+                <a className="btn btn-secondary flex-1 justify-center text-[12px]" href={reach.mail} aria-label={'Email ' + who}>
+                  Email
+                </a>
+              ) : null}
+            </div>
+          ) : null}
           <input className="input" placeholder="Parent or guardian" value={fields.guardian} onChange={(e) => setG({ ...fields, guardian: e.target.value })} aria-label="Guardian" />
           <input className="input" placeholder="Phone or email" value={fields.contact} onChange={(e) => setG({ ...fields, contact: e.target.value })} aria-label="Contact" />
           <Btn

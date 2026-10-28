@@ -156,7 +156,8 @@ export function HuddleScreen() {
       x.subAsks[benchFor] = [...(x.subAsks[benchFor] ?? []), bid];
     });
     api().logActivity('Asked ' + (b?.name ?? 'a volunteer') + ' to cover ' + post);
-    api().say('Asked. ' + (b?.name.split(' ')[0] ?? 'They') + ' sees it in their notifications if they’re in SquadRise — confirm here once they say yes.');
+    api().notify('Can you cover ' + post + ' tonight?', 'Tell the leader yes or no.', '/dashboard/huddle');
+    api().say('Asked. If ' + (b?.name.split(' ')[0] ?? 'they') + ' is in SquadRise, it’s in their notifications (and pushed, if push is on for their phone) — confirm here once they say yes.');
   };
   const confirm = (bid: string) => {
     if (!benchFor) return;

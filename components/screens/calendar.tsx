@@ -277,7 +277,7 @@ function EventComposer({ open, onClose }: { open: boolean; onClose: () => void }
     api().mutate((x) => void x.events.push(e));
     api().emit({ kind: 'event', event: e });
     api().logActivity((leader ? 'Added ' : 'Proposed ') + 'the event “' + e.title + '” for ' + e.date);
-    if (!leader) api().firePush('New event proposal', e.title + ' · ' + m.displayName, '/dashboard/calendar');
+    if (!leader) api().notify('New event proposal', e.title + ' · ' + m.displayName, '/dashboard/calendar');
     api().say(leader ? 'On the calendar for ' + audienceLabel(roles).toLowerCase() + '.' : 'Sent. A leader approves it before anyone sees it.');
     setTitle('');
     setPlace('');
