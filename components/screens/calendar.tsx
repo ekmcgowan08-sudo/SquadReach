@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Sheet } from '@/components/sheet';
 import { useParentActions } from '@/components/screens/parents';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf } from '@/components/ui';
+import { audienceKids } from '@/lib/cycle';
 import { isoDay, nowMs } from '@/lib/dates';
 import { formKind, money, tripBlock, tripMoney, tripRoster } from '@/lib/forms';
 import { canApprove, canMessageParents, canRunDoor } from '@/lib/permissions';
@@ -414,6 +415,7 @@ export function EventDetailScreen({ id }: { id: string }) {
   const m = useApp((s) => s.membership);
   const offline = useApp((s) => !s.netOnline || s.offlineSim);
   const api = useAppApi();
+  const { send: sendParents } = useParentActions();
   const [filter, setFilter] = useState<Rsvp['status']>('going');
   const e = d.events.find((x) => x.id === id);
   if (!e) {
@@ -459,6 +461,36 @@ export function EventDetailScreen({ id }: { id: string }) {
       if (i >= 0) x.events[i] = next;
     });
     api().emit({ kind: 'event', event: next });
+  };
+  /* Once a day for the whole ministry. The database keeps that rule and
+     pushes everyone the event is for who hasn't answered; this posts the
+     announcement-thread reminder and a copy to the families of students
+     who haven't. */
+  const nudgeNoReplies = async () => {
+    if (e.nudgedOn === today) return api().say('Already nudged today.');
+    if (offline) return api().say('No signal — a nudge needs a connection.');
+    const markNudged = () =>
+      api().mutate((x) => {
+        const ev = x.events.find((y) => y.id === e.id);
+        if (ev) ev.nudgedOn = today;
+      });
+    try {
+      await api().backend.sync({ kind: 'eventNudge', id: e.id });
+    } catch (err) {
+      if (!/already nudged/i.test((err as Error).message ?? '')) return api().say('That nudge didn’t go — try again.');
+      markNudged();
+      return api().say('Another leader already nudged today — one is enough.');
+    }
+    sendChat(api, 'all', 'Reminder: let us know if you’re coming to ' + e.title + ' (' + eventLabel(e) + '). Answer on the Calendar.');
+    const families = audienceKids(d, 'noreply:' + e.id).length
+      ? sendParents('noreply:' + e.id, 'Reminder: let us know if your student is coming to ' + e.title + ' (' + eventLabel(e) + '). They can answer on the Calendar in SquadRise.', true)
+      : null;
+    if (m.mode === 'supabase') markNudged();
+    else saveEvent({ nudgedOn: today });
+    api().logActivity('Nudged the people who haven’t answered ' + e.title);
+    api().notify('Are you coming to ' + e.title + '?', eventLabel(e) + ' — answer on the Calendar.', '/dashboard/events/' + e.id);
+    const n = families?.kids.length ?? 0;
+    api().say('Nudged — pushed to whoever hasn’t answered, in the announcement thread' + (n ? ', and on ' + n + (n === 1 ? ' family’s link.' : ' families’ links.') : '.'));
   };
 
   return (
@@ -601,14 +633,9 @@ export function EventDetailScreen({ id }: { id: string }) {
           {[
             {
               label: e.nudgedOn === today ? 'Already nudged today' : 'Nudge the ' + t.noreply + ' who haven’t answered',
-              hint: e.nudgedOn === today ? 'One a day — more than that gets ignored' : 'Posts a reminder in the announcement thread',
+              hint: e.nudgedOn === today ? 'One a day — more than that gets ignored' : 'A push to them, the announcement thread, and their families’ links',
               icon: 'ph ph-bell-ringing',
-              run: () => {
-                if (e.nudgedOn === today) return api().say('Already nudged today.');
-                sendChat(api, 'all', 'Reminder: let us know if you’re coming to ' + e.title + ' (' + eventLabel(e) + '). Answer on the Calendar.');
-                saveEvent({ nudgedOn: today });
-                api().say('Nudged — the reminder is in the announcement thread.');
-              }
+              run: nudgeNoReplies
             },
             {
               label: e.rsvpClosed ? 'Reopen RSVPs' : 'Close RSVPs',

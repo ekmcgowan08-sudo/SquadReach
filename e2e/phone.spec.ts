@@ -296,3 +296,18 @@ test('notifications say what push does on this phone', async ({ page, context, b
   await page.getByRole('button', { name: 'Notification settings' }).click();
   await expect(page.getByRole('button', { name: /Nudges from your squad/ })).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('nudging an event’s no-replies is once a day, and their families get a copy', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/events/e4');
+  await ready(page);
+  await page.getByRole('button', { name: /^Nudge the \d+ who haven’t answered/ }).click();
+  await expect(page.getByText(/^Nudged — pushed to whoever hasn’t answered, in the announcement thread, and on \d+ families’ links\.$/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Already nudged today/ })).toBeVisible();
+  await page.getByRole('button', { name: /^Already nudged today/ }).click();
+  await expect(page.getByText('Already nudged today.')).toBeVisible();
+
+  await page.goto('/dashboard/parents');
+  await ready(page);
+  await expect(page.getByText(/Haven’t answered · Season finale \+ trophy night/).first()).toBeVisible();
+});

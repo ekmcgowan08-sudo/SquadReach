@@ -87,6 +87,9 @@ export type SyncEvent =
   /** Who sent it and when are stamped by the database; a second nudge of
    *  the same kind for the same student tonight is refused. */
   | { kind: 'nudge'; nudge: Nudge }
+  /** A leader nudges an event's no-replies: once a day for the ministry
+   *  (rejects with "already nudged" otherwise), pushed by the database. */
+  | { kind: 'eventNudge'; id: string }
   /** A student checks themselves in (RPC: only their own row, only tonight). */
   | { kind: 'selfCheckin'; date: string };
 

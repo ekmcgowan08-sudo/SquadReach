@@ -126,3 +126,21 @@ reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000005');
 select pg_temp.check((select count(*) from nudges) = 0, 'an outsider sees none');
 reset role;
+
+-- ── nudging an event's no-replies ──────────────────────────────────────
+insert into events (org_id, title, date_label) values (:'org', 'Lock-in', 'Fri, Nov 6') returning id as ev \gset
+select id as m_student from memberships where org_id = :'org' and user_id = '00000000-0000-0000-0000-000000000004' order by created_at limit 1 \gset
+insert into rsvps (event_id, org_id, membership_id, name, status) values (:'ev', :'org', :'m_student', 'Ellison Reid', 'going');
+delete from push_outbox;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000002');
+select pg_temp.denied(format('select public.event_nudge(%L)', :'ev'), 'only a leader nudges an event''s no-replies');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
+select public.event_nudge(:'ev') as nudged \gset
+select pg_temp.check(:'nudged'::int >= 1, 'a leader''s nudge reaches the people who haven''t answered');
+select pg_temp.check(public.event_nudge(:'ev') is null, 'and is once a day, whoever taps it next');
+reset role;
+select pg_temp.check((select title from push_outbox where dedupe like 'rsvp:%') = 'Are you coming to Lock-in?', 'asking whether they''re coming');
+select pg_temp.check((select body from push_outbox where dedupe like 'rsvp:%') = 'Fri, Nov 6 — answer on the Calendar.', 'and when it is');
+select pg_temp.check((select not '00000000-0000-0000-0000-000000000004'::uuid = any(to_users) and '00000000-0000-0000-0000-000000000003'::uuid = any(to_users) from push_outbox where dedupe like 'rsvp:%'), 'never someone who already answered');
+select pg_temp.check((select nudged_at is not null from events where id = :'ev'), 'and the event remembers it was nudged');

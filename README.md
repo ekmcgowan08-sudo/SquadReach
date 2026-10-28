@@ -90,6 +90,7 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261027140000_chat_flags.sql` | `chat_flags`: a thread flagged for a leader, with who flagged it; `chat_flag_seen`; `chat_can` lets leaders read (not post in) a flagged thread |
    | `20261027150000_trips_and_forms.sql` | A slip's kind and trip; trip events and their cost; `rsvp_trip_gate` (no "going" to a trip with a blocking form unsigned); `camp_payments` and `camp_payment_confirm`; `family_view` shows each form's kind |
    | `20261028100000_push.sql` | `push_subscriptions` (one phone, one account: `push_subscribe`, `push_prefs`); `push_outbox`, which only the server reads, filled by triggers on access requests, event proposals, prayer requests, swaps, door flags, chat flags, run-sheet owners and bench asks; `nudges` from a captain or an adult, one of each kind per student a night |
+   | `20261028110000_event_nudge.sql` | `event_nudge`: a leader nudges an event's no-replies once a day for the whole ministry (`events.nudged_at`), queuing a push to everyone the event is for who hasn't answered |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;

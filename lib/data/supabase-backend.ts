@@ -339,6 +339,12 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           if (r.error) throw r.error;
           return;
         }
+        case 'eventNudge': {
+          const r = await db.rpc('event_nudge', { p_event: e.id });
+          if (r.error) throw r.error;
+          if (r.data === null) throw new Error('already nudged today');
+          return;
+        }
         case 'chatFlagSeen': {
           const r = await db.rpc('chat_flag_seen', { p_flag: e.id });
           if (r.error) throw r.error;
@@ -509,12 +515,13 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       d.events = (
         (events.data ?? []) as {
           id: string; title: string; meta: string; date_label: string; color: string; audiences: string[]; day: string | null; time_label: string; place: string; status: 'proposed' | 'approved';
-          proposed_by: string; rsvp_closed: boolean; trip?: boolean; cost?: number | string | null;
+          proposed_by: string; rsvp_closed: boolean; trip?: boolean; cost?: number | string | null; nudged_at?: string | null;
         }[]
       ).map(
         (e): MinistryEvent => ({
           id: e.id, title: e.title, meta: e.meta, date: e.date_label, color: e.color, roles: (e.audiences.length ? e.audiences : [...ALL_AUDIENCES]) as MinistryEvent['roles'],
           iso: e.day, time: e.time_label, place: e.place, status: e.status, by: e.proposed_by, rsvpClosed: e.rsvp_closed,
+          ...(e.nudged_at ? { nudgedOn: isoDay(new Date(e.nudged_at)) } : {}),
           ...(e.trip ? { trip: { cost: e.cost == null ? null : Number(e.cost) } } : {})
         })
       );

@@ -438,6 +438,13 @@ export function audienceKids(d: MinistryData, to: string): string[] {
     if (!v) return [];
     return (to.startsWith('unsigned:') ? v.kids.filter((k) => !k.signed) : v.kids).map((k) => k.name);
   }
+  /* The students an event is for who haven't answered it yet. */
+  if (to.startsWith('noreply:')) {
+    const e = d.events.find((x) => x.id === to.slice(8));
+    if (!e || !(e.roles.includes('members') || e.roles.includes('captains'))) return [];
+    const answered = d.rsvps[e.id] ?? {};
+    return d.roster.filter((s) => !s.guest && !answered[s.name] && (e.roles.includes('members') || s.captain)).map((s) => s.name);
+  }
   return d.roster.some((s) => s.name === to) ? [to] : [];
 }
 
@@ -447,6 +454,7 @@ export function audienceLabel(d: MinistryData, to: string): string {
     const slip = d.slips.find((s) => s.id === to.slice(to.indexOf(':') + 1));
     return (to.startsWith('unsigned:') ? 'Unsigned · ' : '') + (slip?.title ?? 'a slip');
   }
+  if (to.startsWith('noreply:')) return 'Haven’t answered · ' + (d.events.find((x) => x.id === to.slice(8))?.title ?? 'an event');
   const g = d.families[to]?.guardian;
   return g ? g + ' (' + firstName(to) + ')' : to;
 }
