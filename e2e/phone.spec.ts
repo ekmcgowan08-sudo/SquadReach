@@ -102,9 +102,9 @@ test('Back walks the real way back, and More remembers recent screens', async ({
   await expect(page).toHaveURL(/\/dashboard\/calendar$/);
   await page.locator('a[href^="/dashboard/events/"]').first().click();
   await expect(page).toHaveURL(/\/dashboard\/events\//);
-  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard\/calendar$/);
-  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard\/more$/);
   /* Two deep screens visited: Recent shows them, survives a reload, and
      steps aside while searching. */
@@ -310,4 +310,43 @@ test('nudging an event’s no-replies is once a day, and their families get a co
   await page.goto('/dashboard/parents');
   await ready(page);
   await expect(page.getByText(/Haven’t answered · Season finale \+ trophy night/).first()).toBeVisible();
+});
+
+test('a guide saved on this phone plays from the offline page, with no app at all', async ({ page, context, baseURL }) => {
+  await as(context, 'coach', baseURL!);
+  await page.goto('/dashboard/season-plan?tab=groups');
+  await ready(page);
+  const save = page.getByRole('button', { name: 'Save offline: Week 9 · Identity in Christ' });
+  await save.click();
+  await expect(page.getByText('Saved on this phone — it opens with no signal.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Saved offline: Week 9 · Identity in Christ' })).toHaveAttribute('aria-pressed', 'true');
+
+  /* What the service worker shows when SquadRise can't load. */
+  await page.goto('/offline.html');
+  const saved = page.getByRole('region', { name: 'Small groups saved on this phone' });
+  await expect(saved).toContainText('Week 9 · Identity in Christ');
+  await expect(saved).toContainText('Grace Community Students · Week 9 · 6 screens');
+  await saved.getByRole('button', { name: 'Play Week 9 · Identity in Christ' }).click();
+  const player = page.getByRole('dialog', { name: 'Week 9 · Identity in Christ' });
+  await expect(player.getByText('Warm-up thought')).toBeVisible();
+  await expect(player.getByText('1 / 6')).toBeVisible();
+  await player.getByRole('button', { name: 'Next' }).click();
+  await expect(player.getByText('Ephesians 2:10')).toBeVisible();
+  for (let i = 0; i < 3; i++) await player.getByRole('button', { name: 'Next' }).click();
+  await player.getByRole('button', { name: 'Helped a teammate' }).click();
+  await player.getByRole('button', { name: 'Reveal results' }).click();
+  await expect(player.getByText('1 vote from your circle')).toBeVisible();
+  await player.getByRole('button', { name: 'Next' }).click();
+  await player.getByRole('button', { name: /Everyone shares one prayer request/ }).click();
+  await expect(player.getByText('1 of 3 done')).toBeVisible();
+  await player.getByRole('button', { name: 'Finish' }).click();
+  await expect(player).toBeHidden();
+
+  /* Taken off the phone, it's gone from the offline page too. */
+  await page.goto('/dashboard/season-plan?tab=groups');
+  await ready(page);
+  await page.getByRole('button', { name: 'Saved offline: Week 9 · Identity in Christ' }).click();
+  await expect(page.getByText('Taken off this phone. It still opens with signal.')).toBeVisible();
+  await page.goto('/offline.html');
+  await expect(page.getByRole('region', { name: 'Small groups saved on this phone' })).toBeHidden();
 });

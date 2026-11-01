@@ -42,6 +42,7 @@ export function AppProvider({ membership, roles, children }: { membership: Membe
         /* Never show demo data in place of a real ministry's. */
         const real = store.getState().backend.mode === 'supabase';
         store.getState().hydrate(real ? emptyMinistry() : demoMinistry());
+        if (real) store.setState({ loadFailed: true });
         store.getState().say(real ? 'Could not reach your ministry’s data. Check your signal and reopen the app.' : 'Could not load the demo. Starting it fresh.');
       });
 

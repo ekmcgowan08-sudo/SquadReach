@@ -327,7 +327,7 @@ export function FollowupsTab({ grouped }: { grouped?: boolean } = {}) {
             {FU_KINDS.find((k) => k.id === f.kind)?.label} · {f.sub}
           </div>
           {!f.private && !f.done && f.draft ? (
-            <button onClick={() => setOpenId(isOpen ? null : f.id)} aria-expanded={isOpen} className="mt-[6px] min-h-8 text-[11.5px] font-medium text-accent-300">
+            <button onClick={() => setOpenId(isOpen ? null : f.id)} aria-expanded={isOpen} className="mt-[2px] min-h-11 text-[11.5px] font-medium text-accent-300">
               {isOpen ? 'Close draft' : 'Draft a message'}
             </button>
           ) : null}

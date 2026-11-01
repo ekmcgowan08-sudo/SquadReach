@@ -2,6 +2,24 @@
    and copying one without sharing ids. */
 import type { SmallGroup, SmallGroupScreen, SmallGroupTemplate } from '@/lib/types/model';
 
+/** Each kind of screen: its name, colour and backdrop, and roughly how long it runs. */
+export const SG_TYPES = [
+  { id: 'thought', label: 'Fun thought', icon: 'ph ph-lightbulb', color: '#e0a23f', bg: 'radial-gradient(circle at 30% 20%, #3a2f1a, #17181f)', secs: 90 },
+  { id: 'scripture', label: 'Scripture', icon: 'ph ph-book-bookmark', color: '#4f9fd6', bg: 'radial-gradient(circle at 30% 20%, #16283a, #17181f)', secs: 120 },
+  { id: 'game', label: 'Game', icon: 'ph ph-game-controller', color: '#78b579', bg: 'radial-gradient(circle at 30% 20%, #1a3320, #17181f)', secs: 240 },
+  { id: 'pass', label: 'Pass the phone', icon: 'ph ph-hand-arrow-up', color: '#968ae0', bg: 'radial-gradient(circle at 30% 20%, #2a2440, #17181f)', secs: 90 },
+  { id: 'poll', label: 'Live poll', icon: 'ph ph-chart-bar', color: '#d97a9e', bg: 'radial-gradient(circle at 30% 20%, #3a1a2c, #17181f)', secs: 75 },
+  { id: 'checklist', label: 'Hands-on activity', icon: 'ph ph-check-square', color: '#5fbfae', bg: 'radial-gradient(circle at 30% 20%, #123330, #17181f)', secs: 150 },
+  { id: 'video', label: 'Video', icon: 'ph ph-play-circle', color: '#e07a5f', bg: 'radial-gradient(circle at 30% 20%, #3a2018, #17181f)', secs: 180 },
+  { id: 'spinner', label: 'Spinner', icon: 'ph ph-target', color: '#f0c14f', bg: 'radial-gradient(circle at 30% 20%, #3a2f10, #17181f)', secs: 60 },
+  { id: 'timer', label: 'Countdown', icon: 'ph ph-timer', color: '#6fc2e0', bg: 'radial-gradient(circle at 30% 20%, #10303a, #17181f)', secs: 120 },
+  { id: 'prayer', label: 'Prayer requests', icon: 'ph ph-hands-praying', color: '#c98fd6', bg: 'radial-gradient(circle at 30% 20%, #2f1a3a, #17181f)', secs: 180 },
+  { id: 'wyr', label: 'Would you rather', icon: 'ph ph-scales', color: '#e0854f', bg: 'radial-gradient(circle at 30% 20%, #3a2010, #17181f)', secs: 75 }
+] as const;
+export const sgType = (id: string) => SG_TYPES.find((t) => t.id === id) ?? SG_TYPES[0];
+export const sgMinutes = (screens: SmallGroupScreen[]) =>
+  Math.max(1, Math.round(screens.reduce((n, s) => n + (s.type === 'timer' ? s.timerSeconds ?? 120 : sgType(s.type).secs), 0) / 60));
+
 /** A guide is for every squad unless a leader picked some. */
 export const sgForTeam = (g: Pick<SmallGroup, 'teams'>, teamId: string) => !g.teams?.length || g.teams.includes(teamId);
 

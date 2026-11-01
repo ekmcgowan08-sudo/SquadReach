@@ -62,6 +62,9 @@ export interface PushBanner {
 
 export interface AppState {
   ready: boolean;
+  /** The ministry couldn't load (no signal on a live ministry): what's
+   *  shown is a blank stand-in, not the ministry. */
+  loadFailed: boolean;
   backend: Backend;
   membership: Membership;
   data: MinistryData;
@@ -243,6 +246,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
 
       return {
         ready: false,
+        loadFailed: false,
         backend,
         membership,
         data: initial,
@@ -266,6 +270,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           set((s) => {
             s.data = data;
             s.ready = true;
+            s.loadFailed = false;
             if (!data.teams.some((t) => t.id === s.coachTeam)) s.coachTeam = s.membership.teamId ?? data.teams[0]?.id ?? '';
           });
         },

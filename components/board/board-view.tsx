@@ -3,12 +3,10 @@
    its own every half minute. */
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { SNAPSHOT_KEY } from '@/lib/data/demo-backend';
-import { demoMinistry } from '@/lib/data/seed';
+import { readDemo } from '@/lib/data/demo-backend';
 import { isoDay } from '@/lib/dates';
 import { boardFromMinistry, type PublicBoardData } from '@/lib/public-board';
 import { fmt } from '@/lib/scoring';
-import type { MinistryData } from '@/lib/types/model';
 
 export function BoardView({ data }: { data: PublicBoardData }) {
   const top = Math.max(1, data.standings?.[0]?.total ?? 1);
@@ -99,16 +97,7 @@ export function DemoBoard({ code }: { code: string }) {
   const [data, setData] = useState<PublicBoardData | null | 'missing'>(null);
   useEffect(() => {
     const read = () => {
-      let d: MinistryData = demoMinistry();
-      try {
-        const raw = localStorage.getItem(SNAPSHOT_KEY);
-        if (raw) {
-          const p = JSON.parse(raw) as MinistryData;
-          d = { ...d, ...p, config: { ...d.config, ...p.config } };
-        }
-      } catch {
-        /* the seed it is */
-      }
+      const d = readDemo();
       setData(d.config.parentCode === code ? boardFromMinistry(d, isoDay(new Date())) : 'missing');
     };
     const first = window.setTimeout(read, 0);

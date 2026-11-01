@@ -9,6 +9,7 @@ import { SheetAutopublish } from '@/components/shell/sheet-autopublish';
 import { TourCard } from '@/components/shell/tour';
 import { usePrefs } from '@/lib/prefs';
 import { ROLE_TAB, TABS, type TabSlot } from '@/lib/screen-map';
+import { useKeepSavedGuides } from '@/lib/offline-guides';
 import { chatThreadsFor } from '@/lib/selectors';
 import { useApp, useAppApi, useApprovedRoles } from '@/lib/store/provider';
 import { PERSONAS, type Persona } from '@/lib/types/domain';
@@ -286,6 +287,17 @@ function Booting() {
 }
 
 /** Hold the screen until the ministry has loaded on this device. */
+/** Small-group guides saved on this phone follow the ministry's edits. */
+function KeepGuidesSaved() {
+  const groups = useApp((s) => s.data.smallGroups);
+  const org = useApp((s) => s.membership.orgId ?? 'demo');
+  const ministry = useApp((s) => s.data.config.ministryName);
+  const ready = useApp((s) => s.ready);
+  const failed = useApp((s) => s.loadFailed);
+  useKeepSavedGuides(groups, org, ministry, ready, failed);
+  return null;
+}
+
 export function Ready({ children }: { children: ReactNode }) {
   const ready = useApp((s) => s.ready);
   return ready ? <>{children}</> : <Booting />;
@@ -312,7 +324,8 @@ export function PhoneShell({ children }: { children: ReactNode }) {
     >
       <div className="relative flex h-dvh w-full max-w-[440px] flex-col overflow-hidden bg-bg sm:my-0 sm:border-x sm:border-neutral-800">
         <PushBanner />
-      <SheetAutopublish />
+        <SheetAutopublish />
+        <KeepGuidesSaved />
         <div ref={scroller} className="flex flex-1 flex-col overflow-y-auto overscroll-contain" style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)' }}>
           <OfflineBanner />
           <Ready>{children}</Ready>

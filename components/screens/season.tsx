@@ -8,9 +8,11 @@ import { ytEmbedUrl } from '@/components/screens/games';
 import { PictureEditor, PictureFill, PictureFrame } from '@/components/screens/sg-picture';
 import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf, tint } from '@/components/ui';
+import { nowMs } from '@/lib/dates';
 import { kindOf } from '@/lib/library';
+import { forgetGuide, guideKey, offlineCopy, saveGuides, useSavedGuides } from '@/lib/offline-guides';
 import { ideasFor, screenFrom } from '@/lib/small-group-ideas';
-import { sgForTeam } from '@/lib/small-groups';
+import { SG_TYPES, sgForTeam, sgMinutes, sgType } from '@/lib/small-groups';
 import { challengesIn, runningIn } from '@/lib/feeds';
 import { canApprove, canScore } from '@/lib/permissions';
 import { TIER_COLOR, catOf, computeBadges, eventLabel, myTeamId, teamOf } from '@/lib/selectors';
@@ -20,22 +22,8 @@ import type { SmallGroup, SmallGroupScreen } from '@/lib/types/model';
 import { useOverlayHost } from '@/lib/use-overlay-host';
 import { useNow } from '@/lib/use-now';
 
-export const SG_TYPES = [
-  { id: 'thought', label: 'Fun thought', icon: 'ph ph-lightbulb', color: '#e0a23f', bg: 'radial-gradient(circle at 30% 20%, #3a2f1a, #17181f)', secs: 90 },
-  { id: 'scripture', label: 'Scripture', icon: 'ph ph-book-bookmark', color: '#4f9fd6', bg: 'radial-gradient(circle at 30% 20%, #16283a, #17181f)', secs: 120 },
-  { id: 'game', label: 'Game', icon: 'ph ph-game-controller', color: '#78b579', bg: 'radial-gradient(circle at 30% 20%, #1a3320, #17181f)', secs: 240 },
-  { id: 'pass', label: 'Pass the phone', icon: 'ph ph-hand-arrow-up', color: '#968ae0', bg: 'radial-gradient(circle at 30% 20%, #2a2440, #17181f)', secs: 90 },
-  { id: 'poll', label: 'Live poll', icon: 'ph ph-chart-bar', color: '#d97a9e', bg: 'radial-gradient(circle at 30% 20%, #3a1a2c, #17181f)', secs: 75 },
-  { id: 'checklist', label: 'Hands-on activity', icon: 'ph ph-check-square', color: '#5fbfae', bg: 'radial-gradient(circle at 30% 20%, #123330, #17181f)', secs: 150 },
-  { id: 'video', label: 'Video', icon: 'ph ph-play-circle', color: '#e07a5f', bg: 'radial-gradient(circle at 30% 20%, #3a2018, #17181f)', secs: 180 },
-  { id: 'spinner', label: 'Spinner', icon: 'ph ph-target', color: '#f0c14f', bg: 'radial-gradient(circle at 30% 20%, #3a2f10, #17181f)', secs: 60 },
-  { id: 'timer', label: 'Countdown', icon: 'ph ph-timer', color: '#6fc2e0', bg: 'radial-gradient(circle at 30% 20%, #10303a, #17181f)', secs: 120 },
-  { id: 'prayer', label: 'Prayer requests', icon: 'ph ph-hands-praying', color: '#c98fd6', bg: 'radial-gradient(circle at 30% 20%, #2f1a3a, #17181f)', secs: 180 },
-  { id: 'wyr', label: 'Would you rather', icon: 'ph ph-scales', color: '#e0854f', bg: 'radial-gradient(circle at 30% 20%, #3a2010, #17181f)', secs: 75 }
-] as const;
-const typeOf = (id: string) => SG_TYPES.find((t) => t.id === id) ?? SG_TYPES[0];
-export const sgMinutes = (screens: SmallGroupScreen[]) =>
-  Math.max(1, Math.round(screens.reduce((n, s) => n + (s.type === 'timer' ? s.timerSeconds ?? 120 : typeOf(s.type).secs), 0) / 60));
+export { SG_TYPES, sgMinutes };
+const typeOf = sgType;
 const SPIN = ['#e0a23f', '#4f9fd6', '#78b579', '#968ae0', '#d97a9e', '#5fbfae', '#e07a5f', '#f0d75f'];
 
 const pillTabs = (on: boolean) => ({ background: on ? 'color-mix(in srgb, var(--color-accent) 22%, transparent)' : 'transparent', color: on ? 'var(--color-accent-100)' : 'var(--color-neutral-400)' });
@@ -139,15 +127,51 @@ function Groups({ onEdit }: { onEdit: (g: SmallGroup) => void }) {
   const edit = canApprove(m.persona);
   const mine = myTeamId(m, d, coachTeam);
   const groups = [...d.smallGroups].filter((g) => edit || sgForTeam(g, mine)).sort((a, b) => b.weekNumber - a.weekNumber);
+  /* Saved on this phone: the offline page plays them when SquadRise
+     itself can't load — a basement room, a camp with no signal. */
+  const saved = useSavedGuides();
+  const offline = useApp((s) => !s.netOnline || s.offlineSim);
+  const org = m.orgId ?? 'demo';
+  const copy = (g: SmallGroup) => offlineCopy(g, org, d.config.ministryName, nowMs());
+  const toggleSaved = async (g: SmallGroup) => {
+    const k = guideKey(org, g.id);
+    try {
+      if (saved.has(k)) {
+        await forgetGuide(k);
+        api().say('Taken off this phone. It still opens with signal.');
+      } else {
+        await saveGuides([copy(g)]);
+        api().say('Saved on this phone — it opens with no signal.');
+      }
+    } catch {
+      api().say('This phone wouldn’t save it — its storage may be full or blocked.');
+    }
+  };
+  const saveAll = async () => {
+    try {
+      await saveGuides(groups.map(copy));
+      api().say(groups.length === 1 ? 'Saved on this phone — it opens with no signal.' : 'All ' + groups.length + ' guides saved on this phone for no signal.');
+    } catch {
+      api().say('This phone wouldn’t save them — its storage may be full or blocked.');
+    }
+  };
+  const allSaved = groups.length > 0 && groups.every((g) => saved.has(guideKey(org, g.id)));
   return (
     <>
-      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Discussion guides for after-game small group time. Coaches and captains open these to lead their squad — they’re saved on this phone with everything else, so they play without signal (videos need it).</div>
+      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">Discussion guides for after-game small group time. Coaches and captains open these to lead their squad. Save one on this phone and it opens with no signal, even when SquadRise can’t load (videos still need signal).</div>
+      {groups.length ? (
+        <Btn variant="ghost" className="self-start px-3" onClick={saveAll} disabled={allSaved}>
+          <Icon name={allSaved ? 'ph-fill ph-check-circle' : 'ph ph-download-simple'} className="mr-[6px] text-[14px]" />
+          {allSaved ? 'All saved for offline' : 'Save all for offline'}
+        </Btn>
+      ) : null}
       {groups.length ? (
         <div className="flex flex-col gap-2">
           {groups.map((g) => {
             const dd = g.deepDive;
             const open = deep === g.id;
             const approved = dd ? d.deepSubs.filter((s) => s.groupId === g.id && s.status === 'approved').length : 0;
+            const isSaved = saved.has(guideKey(org, g.id));
             return (
               <div key={g.id} className="sr-card flex flex-col gap-[6px] px-[15px] py-[13px]">
                 <div className="flex items-start justify-between gap-2">
@@ -159,12 +183,30 @@ function Groups({ onEdit }: { onEdit: (g: SmallGroup) => void }) {
                 <div className="text-[10.5px] leading-none text-neutral-500">
                   {g.screens.length} {g.screens.length === 1 ? 'screen' : 'screens'} · about {sgMinutes(g.screens)} min
                 </div>
+                {offline && !isSaved && g.screens.length ? (
+                  <div className="flex items-center gap-[6px] self-start rounded-full px-[10px] py-[5px] text-[10.5px] font-medium leading-none text-accent-200" style={{ background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)' }}>
+                    <Icon name="ph ph-wifi-slash" className="text-[12px]" />
+                    Not saved for offline — save it now, while it’s open
+                  </div>
+                ) : null}
                 <div className="mt-1 flex flex-wrap gap-2">
                   {g.screens.length ? (
                     <Btn className="px-3" onClick={() => setPlaying(g)}>
                       <Icon name="ph ph-play" className="mr-[5px] text-[13px]" />
                       Play · {g.screens.length}
                     </Btn>
+                  ) : null}
+                  {g.screens.length ? (
+                    <button
+                      onClick={() => toggleSaved(g)}
+                      aria-pressed={isSaved}
+                      aria-label={(isSaved ? 'Saved offline: ' : 'Save offline: ') + g.title}
+                      className="flex min-h-11 items-center gap-[6px] rounded-md border px-3 text-[12px] font-medium leading-none"
+                      style={{ borderColor: isSaved ? 'var(--color-accent-600)' : 'var(--color-neutral-700)', color: isSaved ? 'var(--color-accent-300)' : 'var(--color-neutral-400)' }}
+                    >
+                      <Icon name={isSaved ? 'ph-fill ph-check-circle' : 'ph ph-download-simple'} className="text-[13px]" />
+                      {isSaved ? 'Saved offline' : 'Save offline'}
+                    </button>
                   ) : null}
                   {dd ? (
                     <button onClick={() => setDeep(open ? null : g.id)} aria-expanded={open} className="flex min-h-11 items-center gap-[6px] rounded-md border border-accent-600 px-3 text-[12px] font-medium leading-none text-accent-200" style={{ background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)' }}>
@@ -312,7 +354,8 @@ function Interactive({ sc, color }: { sc: SmallGroupScreen; color: string }) {
   if (sc.type === 'poll' || sc.type === 'wyr') {
     const opts = sc.options?.length ? sc.options : sc.type === 'wyr' ? ['This one', 'That one'] : [];
     if (!opts.length) return null;
-    const total = Object.values(votes).reduce((a, b) => a + b, 0) || 1;
+    const voteCount = Object.values(votes).reduce((a, b) => a + b, 0);
+    const total = voteCount || 1;
     return (
       <div className="flex w-full max-w-[340px] flex-col gap-2">
         {opts.map((o, k) => {
@@ -334,7 +377,7 @@ function Interactive({ sc, color }: { sc: SmallGroupScreen; color: string }) {
             <div className="mt-[2px] text-[10.5px] leading-[1.4] text-neutral-500">Pass the phone — each tap is a vote, hidden until you reveal · {Object.values(votes).reduce((a, b) => a + b, 0)} so far</div>
           </>
         ) : (
-          <div className="mt-[2px] text-[10.5px] leading-[1.4] text-neutral-500">{Object.values(votes).reduce((a, b) => a + b, 0)} votes from your circle</div>
+          <div className="mt-[2px] text-[10.5px] leading-[1.4] text-neutral-500">{voteCount} {voteCount === 1 ? 'vote' : 'votes'} from your circle</div>
         )}
       </div>
     );

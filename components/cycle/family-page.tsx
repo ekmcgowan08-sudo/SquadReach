@@ -6,8 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FamilyTonightCard } from '@/components/cycle/family-card';
 import { familyView, type FamilyView } from '@/lib/cycle';
 import { useNow } from '@/lib/use-now';
-import { SNAPSHOT_KEY } from '@/lib/data/demo-backend';
-import { demoMinistry } from '@/lib/data/seed';
+import { SNAPSHOT_KEY, readDemo } from '@/lib/data/demo-backend';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '@/lib/env';
 import { familyFromRaw, type FamilyRaw } from '@/lib/family';
 import type { MinistryData } from '@/lib/types/model';
@@ -42,16 +41,7 @@ export function DemoFamily({ token }: { token: string }) {
   const [state, setState] = useState<{ d: MinistryData; kid: string } | null | 'missing'>(null);
   const now = useNow(true, 30_000);
   const read = useCallback(() => {
-    let d = demoMinistry();
-    try {
-      const raw = localStorage.getItem(SNAPSHOT_KEY);
-      if (raw) {
-        const p = JSON.parse(raw) as MinistryData;
-        d = { ...d, ...p, config: { ...d.config, ...p.config } };
-      }
-    } catch {
-      /* the seed it is */
-    }
+    const d = readDemo();
     const kid = Object.entries(d.families ?? {}).find(([, f]) => f.token === token)?.[0];
     setState(kid ? { d, kid } : 'missing');
   }, [token]);

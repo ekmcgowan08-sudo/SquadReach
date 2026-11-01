@@ -1,6 +1,6 @@
 /* The desk: the planner and the console, in demo mode. */
 import { expect, test } from '@playwright/test';
-import { as, ready } from './helpers';
+import { as, demoDate, demoNight, longDay, ready, shortDay } from './helpers';
 
 test.beforeEach(async ({ context, baseURL }) => {
   await as(context, 'leader', baseURL!);
@@ -182,10 +182,11 @@ test('Prep & recap turns to the recap once the night wraps, and the title turns 
 test('People: approve a proposed swap, then take a paper slip on the Parents side', async ({ page }) => {
   await page.goto('/planner/people');
   await ready(page);
-  await expect(page.getByRole('combobox', { name: 'Game lead on Wed, Nov 4' })).toHaveValue('Marcus Hall');
+  const nextWeek = 'Game lead on ' + shortDay(demoDate('2026-11-04'));
+  await expect(page.getByRole('combobox', { name: nextWeek })).toHaveValue('Marcus Hall');
   await page.getByRole('button', { name: 'Approve · Jordan P. takes it' }).click();
   await expect(page.getByText('Marcus H. can’t do game lead')).toHaveCount(0);
-  await expect(page.getByRole('combobox', { name: 'Game lead on Wed, Nov 4' })).toHaveValue('Jordan Pike');
+  await expect(page.getByRole('combobox', { name: nextWeek })).toHaveValue('Jordan Pike');
 
   await page.getByRole('button', { name: 'Parents', exact: true }).click();
   await expect(page).toHaveURL(/tab=parents/);
@@ -201,8 +202,12 @@ test('Season & night opens on the season, and a month card opens its night', asy
   await expect(page.getByText('Gatherings', { exact: true })).toBeVisible();
   await page.getByRole('group', { name: 'View' }).getByRole('button', { name: 'Month' }).click();
   await expect(page.getByText(/^\d+ of \d+ Wednesdays in play/)).toBeVisible();
-  await page.getByRole('button', { name: /^October 21/ }).click();
-  await expect(page).toHaveURL(/night=2026-10-21/);
+  /* Last week's night — a month back, when the month just turned. */
+  const lastWeek = demoDate('2026-10-21');
+  const card = page.getByRole('button', { name: new RegExp('^' + longDay(lastWeek)) });
+  if (!(await card.isVisible())) await page.getByRole('button', { name: 'Previous month' }).click();
+  await card.click();
+  await expect(page).toHaveURL(new RegExp('night=' + lastWeek));
   await expect(page.getByText('Service order')).toBeVisible();
 });
 
@@ -652,6 +657,8 @@ test('game rules drafted from notes are shown first and used only on request', a
 });
 
 test('a run sheet scheduled to publish goes out on its own once it is due', async ({ page }) => {
+  /* The morning of the demo's night: "the day before" has already passed. */
+  await page.clock.setSystemTime(new Date(demoNight() + 'T09:00:00'));
   await page.goto('/console?tab=huddle');
   await ready(page);
   await page.getByRole('button', { name: 'Publish on a schedule' }).click();
@@ -659,7 +666,7 @@ test('a run sheet scheduled to publish goes out on its own once it is due', asyn
   await page.getByLabel('At', { exact: true }).fill('00:00');
   await expect(page.getByText('Goes out Tuesday, the day before, at 12:00 AM.')).toBeVisible();
   await page.getByRole('button', { name: 'Schedule it' }).click();
-  /* Tuesday has passed for the demo's Wednesday night, so it goes at once. */
+  /* Tuesday has passed, so it goes at once. */
   await expect(page.getByRole('button', { name: 'Publish on a schedule' })).toBeVisible();
   await page.goto('/dashboard/audit');
   await ready(page);

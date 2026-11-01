@@ -47,3 +47,15 @@ export async function requestToJoin(_: FormState, form: FormData): Promise<FormS
     );
   return { done: 'Sent. A leader approves you, and then this page opens the app.' };
 }
+
+/** Take back a request that's still waiting — asked with the wrong role or
+ *  the wrong code. Row-level security lets only the asker do it, and only
+ *  before a leader decides. */
+export async function withdrawRequest(form: FormData): Promise<void> {
+  const id = String(form.get('id') ?? '');
+  if (/^[0-9a-f-]{36}$/i.test(id)) {
+    const supabase = await supabaseServer();
+    await supabase.from('access_requests').delete().eq('id', id).eq('status', 'pending');
+  }
+  redirect('/welcome?withdrawn=1');
+}

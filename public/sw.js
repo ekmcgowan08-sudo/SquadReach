@@ -3,7 +3,7 @@
    worse than no offline support. It only keeps the offline page so a phone
    that loses signal mid-navigation lands somewhere useful. Points entered
    without signal are held by the app's outbox, not here. */
-const CACHE = 'squadrise-shell-v2';
+const CACHE = 'squadrise-shell-v3';
 const OFFLINE = ['/offline.html', '/icon.svg'];
 
 self.addEventListener('install', (e) => {

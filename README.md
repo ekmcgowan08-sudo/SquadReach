@@ -25,6 +25,11 @@ npm run dev
 Open http://localhost:3000. On a desktop browser, use the device toolbar at
 phone width (the app is laid out for a 390–430px column).
 
+The demo ministry is always the week before its next Wednesday night (week 9
+of 9): its dates move forward by whole weeks from the night the seed was
+written for (`lib/data/demo-week.ts`), so it never goes stale. Come back a
+week later and your demo moves to the new night, which starts fresh.
+
 Things worth trying first:
 
 | Where | What it shows |
@@ -91,6 +96,7 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261027150000_trips_and_forms.sql` | A slip's kind and trip; trip events and their cost; `rsvp_trip_gate` (no "going" to a trip with a blocking form unsigned); `camp_payments` and `camp_payment_confirm`; `family_view` shows each form's kind |
    | `20261028100000_push.sql` | `push_subscriptions` (one phone, one account: `push_subscribe`, `push_prefs`); `push_outbox`, which only the server reads, filled by triggers on access requests, event proposals, prayer requests, swaps, door flags, chat flags, run-sheet owners and bench asks; `nudges` from a captain or an adult, one of each kind per student a night |
    | `20261028110000_event_nudge.sql` | `event_nudge`: a leader nudges an event's no-replies once a day for the whole ministry (`events.nudged_at`), queuing a push to everyone the event is for who hasn't answered |
+   | `20261101090000_access_withdraw.sql` | Someone who asked to join can withdraw the request while it's pending (`access_withdraw`); a decided one stays, and the leaders' push goes with a withdrawn one |
 
 4. In **Authentication → URL Configuration**:
    - set the Site URL to your deployed origin;
@@ -268,7 +274,11 @@ Rules the code holds to:
   saved yet” until it lands; the console header says “Saving…” until
   everything has, then “All changes saved”. The service worker is network-first
   and caches no pages: a stale score during a live event is worse than no
-  offline support.
+  offline support. The one exception is small-group guides a coach saves
+  for offline (Season › Small groups): they're kept in IndexedDB on that
+  phone, kept current while the app is open, and the offline page the
+  service worker shows when SquadRise can't load lists and plays them on
+  its own — for the basement room with no signal.
 - **Derived, not stored.** Standings, coverage, plan checks, suggestions and
   what a publish would change are all computed when read. Three statuses
   only — healthy, attention needed, gap — each with its reason, and no

@@ -1,7 +1,7 @@
 'use client';
 /* Signed in, in no ministry yet: start one, or ask to join one. */
 import { useActionState, useState } from 'react';
-import { createMinistry, requestToJoin, type FormState } from '@/app/auth/actions';
+import { createMinistry, requestToJoin, withdrawRequest, type FormState } from '@/app/auth/actions';
 import { Btn } from '@/components/ui';
 
 const ROLES = [
@@ -12,9 +12,9 @@ const ROLES = [
   { id: 'leader', label: 'Ministry leader / staff' }
 ];
 
-type Asked = { ministry: string; role: string; at: string };
+type Asked = { id?: string; ministry: string; role: string; at: string };
 
-export function Onboarding({ code, email, pending, denied = [] }: { code?: string; email: string; pending: Asked[]; denied?: Asked[] }) {
+export function Onboarding({ code, email, pending, denied = [], withdrawn = false }: { code?: string; email: string; pending: Asked[]; denied?: Asked[]; withdrawn?: boolean }) {
   const [tab, setTab] = useState<'join' | 'create'>(code || pending.length ? 'join' : 'create');
   const [joinState, join, joining] = useActionState<FormState, FormData>(requestToJoin, {});
   const [createState, create, creating] = useActionState<FormState, FormData>(createMinistry, {});
@@ -24,11 +24,26 @@ export function Onboarding({ code, email, pending, denied = [] }: { code?: strin
         <div className="flex flex-col gap-2 rounded-lg border border-accent-700 px-4 py-3" style={{ background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)' }}>
           <div className="text-[13px] font-medium leading-[1.3] text-accent-100">Waiting on a leader</div>
           {pending.map((p, i) => (
-            <div key={i} className="text-[12px] leading-[1.5] text-neutral-300">
-              {p.ministry} · as {ROLES.find((r) => r.id === p.role)?.label ?? p.role} · asked {p.at}
+            <div key={i} className="flex items-center gap-2">
+              <div className="min-w-0 flex-1 text-[12px] leading-[1.5] text-neutral-300">
+                {p.ministry} · as {ROLES.find((r) => r.id === p.role)?.label ?? p.role} · asked {p.at}
+              </div>
+              {p.id ? (
+                <form action={withdrawRequest} className="flex-none">
+                  <input type="hidden" name="id" value={p.id} />
+                  <button type="submit" aria-label={'Withdraw your request to ' + p.ministry} className="min-h-11 rounded-md px-2 text-[12px] font-medium text-neutral-400 hover:text-neutral-200">
+                    Withdraw
+                  </button>
+                </form>
+              ) : null}
             </div>
           ))}
-          <div className="text-[11.5px] leading-[1.5] text-neutral-500">Once someone approves you, reload this page and you’re in.</div>
+          <div className="text-[11.5px] leading-[1.5] text-neutral-500">Once someone approves you, reload this page and you’re in. Asked as the wrong role, or with the wrong code? Withdraw it and ask again.</div>
+        </div>
+      ) : null}
+      {withdrawn ? (
+        <div role="status" className="rounded-lg border border-neutral-700 px-4 py-3 text-[12.5px] leading-[1.5] text-neutral-300">
+          Request withdrawn. Nobody needs to decide it now — ask again whenever you’re ready.
         </div>
       ) : null}
       {denied.map((p, i) => (

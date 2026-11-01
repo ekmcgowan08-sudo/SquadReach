@@ -11,18 +11,68 @@
   :root { --bg:#161826; --card:#1e2030; --line:#3f424d; --fg:#eef0f6; --mute:#9a9eae; --accent:#b5abfc; --on-accent:#161826; color-scheme:dark; }
   :root[data-theme='light'] { --bg:#f2f3f7; --card:#ffffff; --line:#d7dae3; --fg:#161826; --mute:#5c6070; --accent:#5d51a8; --on-accent:#ffffff; color-scheme:light; }
   * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
   body { margin:0; min-height:100dvh; display:flex; justify-content:center; background:var(--bg); color:var(--fg);
          font:15px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing:antialiased; padding:0 16px; }
   main { width:100%; max-width:420px; padding:56px 0; display:flex; flex-direction:column; gap:20px; }
   .mark { font-weight:700; font-size:15px; letter-spacing:-.01em; color:var(--mute); }
   .mark span { color:var(--accent); }
   h1 { margin:0; font-size:26px; font-weight:500; line-height:1.15; }
+  h2 { margin:0; font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
   p { margin:0; color:var(--mute); font-size:13.5px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; }
   .row { display:flex; gap:10px; font-size:13px; color:var(--fg); }
   .dot { flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:8px; }
   button { appearance:none; border:0; border-radius:999px; min-height:44px; padding:0 20px; font:inherit; font-weight:600;
            background:var(--accent); color:var(--on-accent); cursor:pointer; align-self:flex-start; }
+  button.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  .guides { display:flex; flex-direction:column; gap:8px; }
+  .guide { display:flex; align-items:center; gap:12px; }
+  .guide .what { flex:1; min-width:0; }
+  .guide .title { font-size:14px; font-weight:500; line-height:1.3; }
+  .guide .meta { font-size:11.5px; color:var(--mute); margin-top:3px; }
+  .guide button { flex:none; padding:0 16px; }
+
+  /* The player: one screen at a time, held up for the circle. Always dark,
+     like the app's — each kind of screen brings its own backdrop. */
+  #player { position:fixed; inset:0; z-index:10; display:none; flex-direction:column; color:#eef0f6; color-scheme:dark; }
+  #player.on { display:flex; }
+  #player .behind { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  #player .top { position:relative; display:flex; align-items:center; gap:10px; padding:16px 18px 0; }
+  #player .close { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.25);
+                   border:1px solid #4a4d5c; color:#eef0f6; font-size:18px; font-weight:400; }
+  #player .name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:500; color:#c4c7d3; }
+  #player .count { font-size:11px; font-weight:500; color:#9a9eae; }
+  #player .bars { position:relative; display:flex; gap:4px; margin:12px 18px 0; }
+  #player .bars span { height:3px; flex:1; border-radius:99px; background:rgba(255,255,255,.14); }
+  #player .stage { position:relative; flex:1; overflow:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px 26px; text-align:center; }
+  #player .chip { display:flex; align-items:center; gap:8px; border:1px solid; border-radius:99px; padding:6px 14px; font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
+  #player .chip i { width:7px; height:7px; border-radius:50%; background:currentColor; }
+  #player .headline { max-width:420px; font-size:24px; font-weight:500; line-height:1.3; text-wrap:pretty; }
+  #player .body { max-width:460px; font-size:16px; line-height:1.5; color:#c4c7d3; text-wrap:pretty; }
+  #player .verse { max-width:460px; font-size:18px; font-style:italic; line-height:1.55; color:#dfe1ea; text-wrap:pretty; }
+  #player .ref { font-size:13px; font-weight:500; }
+  #player .frame { width:100%; max-width:240px; height:140px; flex:none; overflow:hidden; border-radius:10px; }
+  #player .fill { width:100%; height:100%; background-size:cover; background-repeat:no-repeat; }
+  #player .tile { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:rgba(255,255,255,.75); }
+  #player .opts { display:flex; flex-direction:column; gap:8px; width:100%; max-width:340px; }
+  #player .opt { position:relative; overflow:hidden; display:flex; align-items:center; gap:10px; min-height:48px; border-radius:10px; padding:0 14px;
+                 background:transparent; border:1px solid #4a4d5c; color:#eef0f6; font-weight:500; font-size:13.5px; text-align:left; align-self:stretch; }
+  #player .opt .bar { position:absolute; inset:0 auto 0 0; width:0; transition:width .3s; }
+  #player .opt .lbl { position:relative; flex:1; }
+  #player .opt .pct { position:relative; font-size:12px; font-weight:600; }
+  #player .box { flex:none; width:20px; height:20px; border-radius:6px; border:1px solid #6b6f80; display:flex; align-items:center; justify-content:center; font-size:12px; }
+  #player .note { font-size:10.5px; line-height:1.4; color:#9a9eae; }
+  #player .big { font-size:34px; font-weight:600; font-variant-numeric:tabular-nums; }
+  #player .pick { font-size:20px; font-weight:600; }
+  #player .controls { display:flex; gap:9px; }
+  #player .controls button, #player .opts button.reveal { align-self:center; }
+  #player .opts button.reveal { background:transparent; border:1px solid #4a4d5c; color:#eef0f6; }
+  #player .foot { position:relative; display:flex; gap:10px; padding:0 18px 28px; }
+  #player .foot button { flex:1; min-height:48px; align-self:auto; }
+  #player .foot .back { background:transparent; color:#eef0f6; border:1px solid #4a4d5c; }
+  #player .foot .next { flex:2; }
+  #player button:disabled { opacity:.4; cursor:default; }
 </style>
 </head>
 <body>
@@ -32,11 +82,264 @@
     <h1>No signal right now</h1>
     <p style="margin-top:8px">This page couldn’t load. Nothing you already entered is lost.</p>
   </div>
+  <section id="saved" class="card" hidden aria-labelledby="saved-h">
+    <h2 id="saved-h">Small groups saved on this phone</h2>
+    <p>These open with no signal. Videos inside them wait until you’re back online.</p>
+    <div class="guides" id="guides"></div>
+  </section>
   <div class="card">
     <div class="row"><i class="dot"></i><div>Points, chat messages and RSVPs you entered on this phone are held on it and send by themselves when you’re back online.</div></div>
     <div class="row"><i class="dot"></i><div>Screens you already had open keep working with what they last loaded.</div></div>
+    <div class="row" id="save-tip"><i class="dot"></i><div>Save small-group guides from Season › Small groups while you have signal, and they open here when you don’t.</div></div>
   </div>
   <button type="button" onclick="location.reload()">Try again</button>
 </main>
+
+<div id="player" role="dialog" aria-modal="true" aria-label="Small group">
+  <div class="behind" id="p-behind"></div>
+  <div class="top">
+    <button class="close" type="button" aria-label="Close" id="p-close">×</button>
+    <div class="name" id="p-name"></div>
+    <div class="count" id="p-count"></div>
+  </div>
+  <div class="bars" id="p-bars"></div>
+  <div class="stage" id="p-stage"></div>
+  <div class="foot">
+    <button class="back" type="button" id="p-back">Back</button>
+    <button class="next" type="button" id="p-next">Next</button>
+  </div>
+</div>
+
+<script>
+/* Guides the app saved on this phone (lib/offline-guides.ts), straight from
+   IndexedDB — this page works with no app code and no network. */
+(function () {
+  var DB = 'squadrise-offline', STORE = 'guides';
+  var SPIN = ['#e0a23f', '#4f9fd6', '#78b579', '#968ae0', '#d97a9e', '#5fbfae', '#e07a5f', '#f0d75f'];
+
+  function readGuides(done) {
+    if (!('indexedDB' in window)) return done([]);
+    var req;
+    try { req = indexedDB.open(DB); } catch (e) { return done([]); }
+    /* Same as the app's first open: an empty store, so neither side breaks. */
+    req.onupgradeneeded = function () { req.result.createObjectStore(STORE); };
+    req.onerror = function () { done([]); };
+    req.onsuccess = function () {
+      var db = req.result;
+      try {
+        var all = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+        all.onsuccess = function () { done(all.result || []); };
+        all.onerror = function () { done([]); };
+      } catch (e) { done([]); }
+    };
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  readGuides(function (list) {
+    list = list.filter(function (g) { return g && g.screens && g.screens.length; })
+      .sort(function (a, b) { return (b.weekNumber || 0) - (a.weekNumber || 0) || String(a.title).localeCompare(String(b.title)); });
+    if (!list.length) return;
+    document.getElementById('saved').hidden = false;
+    document.getElementById('save-tip').hidden = true;
+    var box = document.getElementById('guides');
+    list.forEach(function (g) {
+      var row = el('div', 'guide');
+      var what = el('div', 'what');
+      what.appendChild(el('div', 'title', g.title));
+      var many = g.screens.length === 1 ? ' screen' : ' screens';
+      what.appendChild(el('div', 'meta', [g.ministry, 'Week ' + g.weekNumber, g.screens.length + many + ' · about ' + (g.minutes || 1) + ' min'].filter(Boolean).join(' · ')));
+      var play = el('button', '', 'Play');
+      play.type = 'button';
+      play.setAttribute('aria-label', 'Play ' + g.title);
+      play.onclick = function () { open(g); };
+      row.appendChild(what);
+      row.appendChild(play);
+      box.appendChild(row);
+    });
+  });
+
+  /* ── the player ───────────────────────────────────────────────────── */
+  var P = document.getElementById('player');
+  var guide = null, at = 0, timer = null, lastFocus = null;
+
+  function picture(img, tile, fade) {
+    var n;
+    if (img && img.src) {
+      n = el('div', 'fill');
+      n.setAttribute('role', 'img');
+      n.setAttribute('aria-label', 'Picture');
+      n.style.backgroundImage = 'url("' + String(img.src).replace(/"/g, '%22') + '")';
+      n.style.backgroundPosition = (img.posX || 50) + '% ' + (img.posY || 50) + '%';
+      n.style.transform = 'scale(' + (img.scale || 100) / 100 + ')';
+    } else if (tile) {
+      n = el('div', 'tile', tile.label);
+      n.style.background = tile.color;
+    } else return null;
+    if (fade) n.style.opacity = (img.opacity || 40) / 100;
+    return n;
+  }
+
+  function interactive(sc, color) {
+    var wrap;
+    if (sc.type === 'poll' || sc.type === 'wyr') {
+      var opts = sc.options && sc.options.length ? sc.options : sc.type === 'wyr' ? ['This one', 'That one'] : [];
+      if (!opts.length) return null;
+      var votes = opts.map(function () { return 0; }), shown = false;
+      wrap = el('div', 'opts');
+      var btns = opts.map(function (o, k) {
+        var b = el('button', 'opt');
+        b.type = 'button';
+        var bar = el('span', 'bar'); bar.style.background = color; bar.style.opacity = '.3';
+        b.appendChild(bar); b.appendChild(el('span', 'lbl', o)); b.appendChild(el('span', 'pct'));
+        b.onclick = function () { votes[k]++; draw(); };
+        wrap.appendChild(b);
+        return b;
+      });
+      var reveal = el('button', 'reveal', 'Reveal results'); reveal.type = 'button';
+      var note = el('div', 'note');
+      reveal.onclick = function () { shown = true; draw(); };
+      wrap.appendChild(reveal); wrap.appendChild(note);
+      function draw() {
+        var total = votes.reduce(function (a, b) { return a + b; }, 0);
+        btns.forEach(function (b, k) {
+          var pct = total ? Math.round(votes[k] / total * 100) : 0;
+          b.style.borderColor = shown ? color : '#4a4d5c';
+          b.firstChild.style.width = shown ? pct + '%' : '0';
+          b.lastChild.textContent = shown ? pct + '%' : '';
+        });
+        reveal.hidden = shown;
+        note.textContent = shown ? total + (total === 1 ? ' vote' : ' votes') + ' from your circle' : 'Pass the phone — each tap is a vote, hidden until you reveal · ' + total + ' so far';
+      }
+      draw();
+      return wrap;
+    }
+    if ((sc.type === 'checklist' || sc.type === 'prayer') && sc.items && sc.items.length) {
+      wrap = el('div', 'opts');
+      var on = sc.items.map(function () { return false; });
+      var count = el('div', 'note');
+      sc.items.forEach(function (it, k) {
+        var b = el('button', 'opt'); b.type = 'button';
+        var tick = el('span', 'box');
+        b.appendChild(tick); b.appendChild(el('span', 'lbl', it));
+        b.setAttribute('aria-pressed', 'false');
+        b.onclick = function () {
+          on[k] = !on[k];
+          b.setAttribute('aria-pressed', String(on[k]));
+          tick.textContent = on[k] ? '✓' : '';
+          tick.style.background = on[k] ? color : 'transparent';
+          tick.style.borderColor = on[k] ? color : '#6b6f80';
+          b.style.borderColor = on[k] ? color : '#4a4d5c';
+          tally();
+        };
+        wrap.appendChild(b);
+      });
+      function tally() { count.textContent = on.filter(Boolean).length + ' of ' + on.length + (sc.type === 'prayer' ? ' prayed for' : ' done'); }
+      tally();
+      wrap.appendChild(count);
+      return wrap;
+    }
+    if (sc.type === 'spinner') {
+      var names = sc.items || [];
+      if (!names.length) return el('div', 'note', 'No names on this spinner yet.');
+      wrap = el('div', 'opts');
+      var pick = el('div', 'pick'); pick.style.color = color;
+      var spin = el('button', '', 'Spin'); spin.type = 'button';
+      spin.onclick = function () {
+        var n = new Uint32Array(1); crypto.getRandomValues(n);
+        pick.textContent = names[n[0] % names.length];
+        spin.textContent = 'Spin again';
+      };
+      wrap.appendChild(el('div', 'note', names.join(' · ')));
+      wrap.appendChild(spin); wrap.appendChild(pick);
+      return wrap;
+    }
+    if (sc.type === 'timer') {
+      var total = sc.timerSeconds || 120, left = total, startedAt = null;
+      wrap = el('div', 'opts');
+      var face = el('div', 'big');
+      var row = el('div', 'controls');
+      var go = el('button', '', 'Start'); go.type = 'button';
+      var reset = el('button', 'ghost', 'Reset'); reset.type = 'button';
+      function remaining() { return Math.max(0, left - (startedAt ? (Date.now() - startedAt) / 1000 : 0)); }
+      function paint() {
+        var r = remaining();
+        face.textContent = Math.floor(r / 60) + ':' + String(Math.ceil(r % 60) === 60 ? 0 : Math.ceil(r % 60)).padStart(2, '0');
+        go.textContent = startedAt ? 'Pause' : r < total ? 'Resume' : 'Start';
+      }
+      go.onclick = function () {
+        if (startedAt) { left = remaining(); startedAt = null; } else startedAt = Date.now();
+        paint();
+      };
+      reset.onclick = function () { left = total; startedAt = null; paint(); };
+      clearInterval(timer);
+      timer = setInterval(paint, 250);
+      row.appendChild(go); row.appendChild(reset);
+      wrap.appendChild(face); wrap.appendChild(row);
+      paint();
+      return wrap;
+    }
+    if (sc.type === 'video') return el('div', 'note', 'Videos need signal — this one plays when you’re back online.');
+    return null;
+  }
+
+  function show() {
+    clearInterval(timer);
+    var sc = guide.screens[at], look = sc.look || { label: 'Small group', color: '#968ae0', bg: '#17181f' };
+    P.style.background = look.bg;
+    document.getElementById('p-name').textContent = guide.title;
+    document.getElementById('p-count').textContent = (at + 1) + ' / ' + guide.screens.length;
+    var bars = document.getElementById('p-bars'); bars.textContent = '';
+    guide.screens.forEach(function (_, k) { var b = el('span'); if (k <= at) b.style.background = look.color; bars.appendChild(b); });
+    var behind = document.getElementById('p-behind'); behind.textContent = '';
+    if (sc.image && sc.image.layer === 'behind') { var bg = picture(sc.image, sc.tile, true); if (bg) behind.appendChild(bg); }
+    var st = document.getElementById('p-stage'); st.textContent = '';
+    var chip = el('div', 'chip'); chip.style.color = look.color; chip.style.borderColor = look.color;
+    chip.appendChild(el('i')); chip.appendChild(document.createTextNode(look.label));
+    st.appendChild(chip);
+    function framed() { var f = el('div', 'frame'), p = picture(sc.image, sc.tile, false); if (p) { f.appendChild(p); st.appendChild(f); } }
+    if (sc.image && sc.image.layer === 'above') framed();
+    st.appendChild(el('div', 'headline', sc.title));
+    if (sc.type === 'scripture') {
+      if (sc.body) st.appendChild(el('div', 'verse', '“' + sc.body + '”'));
+      if (sc.ref) { var r = el('div', 'ref', sc.ref); r.style.color = look.color; st.appendChild(r); }
+    } else if (sc.body) st.appendChild(el('div', 'body', sc.body));
+    var x = interactive(sc, look.color);
+    if (x) st.appendChild(x);
+    if (sc.image && sc.image.layer === 'below') framed();
+    st.scrollTop = 0;
+    document.getElementById('p-back').disabled = at === 0;
+    document.getElementById('p-next').textContent = at === guide.screens.length - 1 ? 'Finish' : 'Next';
+  }
+
+  function open(g) {
+    guide = g; at = 0; lastFocus = document.activeElement;
+    P.setAttribute('aria-label', g.title);
+    P.classList.add('on');
+    show();
+    document.getElementById('p-close').focus();
+  }
+  function close() {
+    clearInterval(timer);
+    P.classList.remove('on');
+    guide = null;
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  document.getElementById('p-close').onclick = close;
+  document.getElementById('p-back').onclick = function () { if (at > 0) { at--; show(); } };
+  document.getElementById('p-next').onclick = function () { if (at < guide.screens.length - 1) { at++; show(); } else close(); };
+  document.addEventListener('keydown', function (e) {
+    if (!guide) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowRight' && at < guide.screens.length - 1) { at++; show(); }
+    if (e.key === 'ArrowLeft' && at > 0) { at--; show(); }
+  });
+})();
+</script>
 </body>
 </html>
