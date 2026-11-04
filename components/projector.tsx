@@ -12,6 +12,7 @@ import { bracketChampion, bracketSeeds, buildBracket, nextBracketGame } from '@/
 import { bracketOf, clock, heatRows, liveEffects, soloSec } from '@/lib/game';
 import { gameGoals } from '@/lib/goals';
 import { fmt, standings } from '@/lib/scoring';
+import { scoringOn } from '@/lib/season';
 import { catOf, teamOf } from '@/lib/selectors';
 import { useApp } from '@/lib/store/provider';
 import { useNow } from '@/lib/use-now';
@@ -136,6 +137,21 @@ function Board() {
               </div>
             );
           })}
+        </div>
+      ) : !scoringOn(d.config) ? (
+        /* A season of regular programming: the room sees the night, not a board. */
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+          <div className="tabular text-[22px] font-semibold leading-none text-accent-300">{time}</div>
+          <div className="text-[56px] font-medium leading-[1.1] text-neutral-100">{d.config.ministryName}</div>
+          <div className="text-[22px] leading-[1.3] text-neutral-400">
+            Week {d.config.weekNumber}
+            {d.config.seasonName ? ' · ' + d.config.seasonName : ''}
+          </div>
+          {d.huddle.runSheet.length ? (
+            <div className="mt-2 rounded-full bg-surface px-7 py-3 text-[22px] font-medium leading-none text-neutral-200" style={{ boxShadow: 'inset 0 0 0 1px var(--color-neutral-800)' }}>
+              Now: {d.huddle.runSheet[Math.min(d.huddle.runIdx, d.huddle.runSheet.length - 1)].label}
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-[26px]">

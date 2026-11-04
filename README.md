@@ -42,7 +42,7 @@ Things worth trying first:
 | `/dashboard/games` → `/projector` | Start a heat on the phone and watch it on the room screen |
 | More → **Prep week**, **Night recap**, **Serving & swaps**, **Message parents**, **Door kiosk** | The week around the night. In demo mode, the “Preview as of” chips move the clock through the week |
 | `/f/demo-reid-family` | A parent’s private family link: tonight’s card, permission slips to sign, messages. No account |
-| `/console` (as a leader) | The desktop console: home, setup, the season interview, squads, draft & trades, scoring, live control (effects on the room screen), calendar, challenges, Bible & memory, small groups (with drafts from the week's lesson), awards, media, the recording overlay, people (access requests, roster, and a who-can-do-what table read off the real permission checks), notifications, the huddle sheet, reports and their delivery schedule, the walkthrough |
+| `/console` (as a leader) | The desktop console: home, setup, the season interview and a multi-year plan of seasons, squads, draft & trades, scoring, live control (effects on the room screen), calendar, challenges, Bible & memory, small groups (with drafts from the week's lesson), awards, media, the recording overlay, people (access requests, roster, and a who-can-do-what table read off the real permission checks), notifications, the huddle sheet, reports and their delivery schedule, the walkthrough |
 | `/planner` → the compass button | The leader tour: one card that walks a new leader through all thirteen desk screens |
 | `/planner` (as a leader) | The desk planner: tonight, prep and recap, people, the seven-year roadmap, the ministry year, season and night, coverage, the liturgical year, settings. ⌘K jumps anywhere |
 | `/planner/setup` | The plan’s guided setup: the seven-year range, groups, the night you meet and its breaks, church identity, lanes and goals |
@@ -314,6 +314,17 @@ Where the prototype left a call open, the build took the safer default:
   leader marks a payment at the door; it stays unconfirmed until a leader
   counts it, and a mistake comes off only before then. "Pay online" is
   drawn but not open — SquadRise takes no cards.
+- **A season can run with no points.** Answering "No points at all —
+  regular programming" in the season interview (or making live a Summer or
+  Fall/Winter season from the multi-year plan) turns the leaderboard off
+  when that season goes live: Home shows no standings, the centre tab is
+  the Bible instead of Score, the score pad, Submit Points, Races and the
+  recap card say there's nothing to score, the room screen shows the night
+  instead of a board, the parent board drops its rankings, and nobody is
+  pushed a lead change. Huddles, the run sheet, attendance and follow-up
+  work as usual. Points already on the board stay in the ledger. The
+  multi-year plan builds three seasons a year (Winter/Spring scored),
+  each year a draft until a leader confirms it.
 - **A captain's "text home" goes through a leader.** The design lets a
   captain text a missing student's household. Students never hold a
   family's number, so the captain's tap asks the ministry's leaders, who

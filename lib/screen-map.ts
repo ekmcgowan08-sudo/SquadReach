@@ -101,13 +101,13 @@ export const TABS = {
 } as const satisfies Record<string, TabSlot>;
 
 /** The bar this role gets, left to right. */
-export const tabBar = (p: Persona): TabSlot[] => [TABS.home, ROLE_TAB[p], canScore(p) ? TABS.score : TABS.bible, TABS.chat, TABS.more];
+export const tabBar = (p: Persona, scored = true): TabSlot[] => [TABS.home, ROLE_TAB[p], canScore(p) && scored ? TABS.score : TABS.bible, TABS.chat, TABS.more];
 
 /** What each slot is for, in the order the bar shows them. */
 export const TAB_NOTES = [
   'Standings, the approval queue, the week’s badges and what your role should do next',
   'The screen your role lives on — the console, the game timer, your squad, your family or the public board',
-  'Point entry and Live Now for anyone who scores; the Bible for everyone else',
+  'Point entry and Live Now for anyone who scores; the Bible for everyone else, and for everyone in a season with no leaderboard',
   'Threads by tier, with an unread count on the tab',
   'The index below, with search and a Recent row'
 ] as const;
@@ -136,6 +136,8 @@ export interface MoreRow {
   unless?: GateName;
   /** Only in the demo, or only on a real ministry. */
   mode?: 'demo' | 'live';
+  /** About the leaderboard: gone in a season of regular programming. */
+  points?: true;
 }
 
 export interface MoreGroup {
@@ -177,14 +179,14 @@ export const MORE_ROWS = {
   tour: { label: 'Tour the app', icon: 'ph ph-signpost', gate: 'any' },
   huddle: { label: 'Huddle & run sheet', icon: 'ph ph-users-four', href: '/dashboard/huddle', gate: 'huddle' },
   games: { label: 'Game timer', icon: 'ph ph-timer', href: '/dashboard/games', gate: 'event' },
-  submit: { label: 'Submit Points', icon: 'ph ph-paper-plane-tilt', href: '/dashboard/submit-points', gate: 'submit' },
+  submit: { label: 'Submit Points', icon: 'ph ph-paper-plane-tilt', href: '/dashboard/submit-points', gate: 'submit', points: true },
   media: { label: 'Media & Film', icon: 'ph ph-camera', href: '/dashboard/media', gate: 'any' },
   rules: { label: 'Game Rules', icon: 'ph ph-clipboard-text', href: '/dashboard/game-rules', gate: 'any' },
 
-  recap: { label: 'Weekly Recap Card', icon: 'ph ph-share-network', href: '/dashboard/recap', gate: 'recap' },
+  recap: { label: 'Weekly Recap Card', icon: 'ph ph-share-network', href: '/dashboard/recap', gate: 'recap', points: true },
   attendance: { label: 'Attendance Map', icon: 'ph ph-grid-nine', href: '/dashboard/attendance', gate: 'attendance' },
   board: { label: 'Parent Board Link', icon: 'ph ph-link', href: '/dashboard/parent-link', gate: 'board' },
-  races: { label: 'Races', icon: 'ph ph-target', href: '/dashboard/races', gate: 'member' },
+  races: { label: 'Races', icon: 'ph ph-target', href: '/dashboard/races', gate: 'member', points: true },
   calendar: { label: 'Calendar', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar', gate: 'any' },
   library: { label: 'Library', icon: 'ph ph-magnifying-glass', href: '/dashboard/library', gate: 'library' },
   season: { label: 'Season & Small Groups', icon: 'ph ph-list-checks', href: '/dashboard/season-plan', gate: 'any' },
@@ -213,9 +215,10 @@ export const MORE_GROUPS: readonly MoreGroup[] = [
 const groupOf = (id: MoreRowId) => MORE_GROUPS.find((g) => g.rows.includes(id))!;
 
 /** Does this role see the row on More? Group gate, row gate, and mode. */
-export function moreRowShows(id: MoreRowId, p: Persona, demo = true): boolean {
+export function moreRowShows(id: MoreRowId, p: Persona, demo = true, scored = true): boolean {
   const r: MoreRow = MORE_ROWS[id];
   if (r.mode && r.mode !== (demo ? 'demo' : 'live')) return false;
+  if (r.points && !scored) return false;
   if (!GATES[groupOf(id).gate](p) || !GATES[r.gate](p)) return false;
   return !(r.unless && GATES[r.unless](p));
 }

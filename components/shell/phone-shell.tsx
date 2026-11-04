@@ -13,6 +13,7 @@ import { useKeepSavedGuides } from '@/lib/offline-guides';
 import { chatThreadsFor } from '@/lib/selectors';
 import { useApp, useAppApi, useApprovedRoles } from '@/lib/store/provider';
 import { PERSONAS, type Persona } from '@/lib/types/domain';
+import { scoringOn } from '@/lib/season';
 
 /* ── The bottom tab bar ──────────────────────────────────────────────────
    Four slots plus Score. The second one depends on your role — it is the
@@ -40,7 +41,8 @@ function TabBar() {
   const bible = tab(TABS.bible);
   const chat = tab(TABS.chat);
   const more = tab(TABS.more);
-  const scorer = canScore(persona);
+  /* A season of regular programming has no point entry to put in the middle. */
+  const scorer = canScore(persona) && scoringOn(d.config);
 
   const plain = (t: TabDef, badge?: number) => {
     const on = t.match(pathname);

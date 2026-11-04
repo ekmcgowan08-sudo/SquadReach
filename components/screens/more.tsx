@@ -24,6 +24,7 @@ import { clearRecents, recentsOwner, recentsSnapshot, subscribeRecents } from '@
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { MORE_GROUPS, MORE_ROWS, moreRowShows, type MoreRow, type MoreRowId } from '@/lib/screen-map';
 import { personaDef } from '@/lib/types/domain';
+import { scoringOn } from '@/lib/season';
 
 const NO_RECENTS: string[] = [];
 
@@ -68,7 +69,7 @@ export function MoreScreen() {
   /* Which rows show is read off lib/screen-map.ts — the same table the
      Screen map prints and a test checks against every route's own gate. */
   const row = (id: MoreRowId, rest: { meta: string; label?: string; icon?: string; href?: string; onClick?: () => void }): Item | null => {
-    if (!moreRowShows(id, p, m.mode === 'demo')) return null;
+    if (!moreRowShows(id, p, m.mode === 'demo', scoringOn(d.config))) return null;
     const r: MoreRow = MORE_ROWS[id];
     return { label: rest.label ?? r.label, meta: rest.meta, icon: rest.icon ?? r.icon, href: rest.href ?? r.href, onClick: rest.onClick };
   };

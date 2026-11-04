@@ -232,6 +232,9 @@ export interface MinistryConfig {
   cycle: CycleConfig;
   /** The live season's name, from the season interview. */
   seasonName?: string;
+  /** False for a season of regular programming: no leaderboard, no point
+   *  entry — huddles, run of show and follow-up run as usual. Absent is on. */
+  scoring?: boolean;
   pointBase: number;
   weekGrowthPct: number;
   goalValue: number;

@@ -135,7 +135,8 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
   }
   const next = d.events.find((e) => eventVisible(e, p));
   if (next) list.push({ icon: 'ph ph-calendar-dots', label: 'Upcoming: ' + next.title, meta: next.date + ' · ' + next.meta, href: '/dashboard/events/' + next.id, trigger: 'event' });
-  list.push({ icon: 'ph ph-chart-line-up', label: 'Week ' + d.config.weekNumber + ' summary ready', meta: fmt(pointBase(d.config)) + ' pt base · standings updated', href: '/dashboard', trigger: 'weeklySummary' });
+  if (d.config.scoring !== false)
+    list.push({ icon: 'ph ph-chart-line-up', label: 'Week ' + d.config.weekNumber + ' summary ready', meta: fmt(pointBase(d.config)) + ' pt base · standings updated', href: '/dashboard', trigger: 'weeklySummary' });
   if (canHuddle(p)) {
     for (const it of d.huddle.runSheet.filter((x) => x.assignedTo && x.notifiedAt).slice(0, 4)) {
       const who = d.huddle.crew.find((c) => c.id === it.assignedTo);

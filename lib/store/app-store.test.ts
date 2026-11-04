@@ -187,3 +187,21 @@ describe('closing the night', () => {
     expect(sendNightReports(store.getState)).toBe(0);
   });
 });
+
+describe('a season with no points', () => {
+  it('takes no points by any road, and still records who came', () => {
+    const { backend } = flaky();
+    const d = demoMinistry();
+    d.config = { ...d.config, scoring: false, seasonName: 'Summer 2027' };
+    const store = createAppStore(backend, leader, d);
+    const before = store.getState().data.ledger.length;
+    expect(store.getState().award({ team: d.teams[0].id, cat: 'general', amount: 100, why: 'test' })).toBeNull();
+    expect(store.getState().toast?.msg).toBe('No points this season — Summer 2027 runs as regular programming.');
+    const team = d.teams[0].id;
+    store.getState().markAllPresent(team, true);
+    expect(store.getState().postAttendance(team)).toBe('posted');
+    expect(store.getState().data.ledger.length).toBe(before);
+    expect(store.getState().data.tonight.checkinPosted[team]).toMatchObject({ held: false });
+    expect(store.getState().toast?.msg).toMatch(/checked in\. No points this season — attendance is on the record\.$/);
+  });
+});

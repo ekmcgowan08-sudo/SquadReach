@@ -26,8 +26,17 @@ test('a push from the server shows as a notification that knows where it points'
     const deliver = (data: string) => cdp.send('ServiceWorker.deliverPushMessage', { origin: new URL(scope).origin, registrationId, data });
     const shown = () => page.evaluate(async () => (await (await navigator.serviceWorker.ready).getNotifications()).map((n) => [n.title, n.body, n.tag, (n.data as { url?: string })?.url]));
 
-    await deliver(JSON.stringify({ title: 'Swap request', body: 'Coach Chris can’t do games on Wed, Nov 4', url: '/dashboard/serving', tag: 'nightCycle:p1' }));
-    await expect.poll(shown).toEqual([['Swap request', 'Coach Chris can’t do games on Wed, Nov 4', 'nightCycle:p1', '/dashboard/serving']]);
+    /* A worker that's only just started can miss the first one; a push
+       with the same tag replaces rather than stacks, so sending it again
+       until it shows is safe. */
+    const first = JSON.stringify({ title: 'Swap request', body: 'Coach Chris can’t do games on Wed, Nov 4', url: '/dashboard/serving', tag: 'nightCycle:p1' });
+    await expect
+      .poll(async () => {
+        const now = await shown();
+        if (!now.length) await deliver(first);
+        return now;
+      })
+      .toEqual([['Swap request', 'Coach Chris can’t do games on Wed, Nov 4', 'nightCycle:p1', '/dashboard/serving']]);
 
     /* The same thing pushed again replaces it rather than stacking. */
     await deliver(JSON.stringify({ title: 'Swap request', body: 'Coach Chris can’t do games on Wed, Nov 11', url: '/dashboard/serving', tag: 'nightCycle:p1' }));

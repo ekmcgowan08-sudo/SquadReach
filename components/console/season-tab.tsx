@@ -9,8 +9,8 @@ import { PastSeasons } from '@/components/console/past-seasons';
 import { Btn, Icon } from '@/components/ui';
 import { isoDay, nowMs } from '@/lib/dates';
 import {
-  SEASON_GROUPS, SEASON_QUESTIONS, answerLabel, answerOf, nextSeasonName, seasonAnswered, seasonSettings, type SavedSeason, type SeasonAnswer,
-  type SeasonAnswers
+  SEASON_GROUPS, SEASON_QUESTIONS, answerLabel, answerOf, nextSeasonName, planStartFor, planYears, scoringOn, seasonAnswered, seasonSettings, withPlan, yearPlan,
+  type SavedSeason, type SeasonAnswer, type SeasonAnswers
 } from '@/lib/season';
 import { seasonResult, withResult } from '@/lib/season-results';
 import { uid } from '@/lib/store/app-store';
@@ -30,13 +30,16 @@ export function SeasonTab() {
     api().emit({ kind: 'doc', key: 'seasons', value: next });
   };
   const makeLive = (s: SavedSeason) => {
+    if (s.plan?.draft) return api().say('Confirm ' + s.plan.year + ' first — a year of the plan stays a draft until someone does.');
     const set = seasonSettings(s.answers, d.config, today);
     const current = d.config.seasonName;
-    const record = current && current !== s.name && !(d.config.seasonResults ?? []).some((r) => r.name === current);
+    /* A season with no leaderboard has no finish to record. */
+    const record = scoringOn(d.config) && current && current !== s.name && !(d.config.seasonResults ?? []).some((r) => r.name === current);
     if (!window.confirm('Make ' + s.name + ' the live season? Meeting nights become ' + set.meetingDates!.length + ' weeks from ' + set.meetingDates![0] + '. Points already on the board stay where they are.' + (record ? ' How ' + current + ' finished is recorded in Past seasons first.' : ''))) return;
     if (record) saveConfig((c) => ({ seasonResults: withResult(c.seasonResults, seasonResult(api().data, today)) }), 'Recorded how ' + current + ' finished');
     saveConfig(set, 'Made ' + s.name + ' the live season');
-    saveSeasons(d.seasons.map((x) => ({ ...x, active: x.id === s.id })));
+    /* The list as it stands now — a season saved a moment ago included. */
+    saveSeasons(api().data.seasons.map((x) => ({ ...x, active: x.id === s.id })));
     api().say(s.name + ' is live. ' + set.meetingDates!.length + ' nights are on the calendar.');
   };
 
@@ -44,7 +47,7 @@ export function SeasonTab() {
     const name = String(answerOf(answers, SEASON_QUESTIONS[0], today)).trim() || 'Season';
     const rec: SavedSeason = { id: draft.id, name, answers, active: false, savedAt: nowMs() };
     const exists = d.seasons.some((x) => x.id === rec.id);
-    const list = exists ? d.seasons.map((x) => (x.id === rec.id ? { ...rec, active: x.active } : x)) : [rec, ...d.seasons];
+    const list = exists ? d.seasons.map((x) => (x.id === rec.id ? { ...rec, active: x.active, ...(x.plan ? { plan: x.plan } : {}) } : x)) : [rec, ...d.seasons];
     saveSeasons(list);
     api().logActivity('Saved the season interview: ' + name);
     setDraft(null);
@@ -63,9 +66,9 @@ export function SeasonTab() {
           </Btn>
         }
       >
-        {!d.seasons.length ? <div className="text-[12px] text-neutral-500">No seasons saved yet.</div> : null}
+        {!d.seasons.some((s) => !s.plan) ? <div className="text-[12px] text-neutral-500">No seasons saved yet.</div> : null}
         <div className="flex flex-col gap-2">
-          {d.seasons.map((s) => (
+          {d.seasons.filter((s) => !s.plan).map((s) => (
             <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-800 px-3 py-[10px]">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-[13.5px] font-medium text-neutral-100">
@@ -109,8 +112,142 @@ export function SeasonTab() {
           ))}
         </div>
       </Section>
+      <YearPlan seasons={d.seasons} save={saveSeasons} makeLive={makeLive} review={(s) => setDraft({ id: s.id, answers: { ...s.answers }, step: 'review', returnToReview: true })} />
       <PastSeasons />
     </>
+  );
+}
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const day = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+/* Three seasons a year, one scored, across the horizon — each year a draft
+   until a leader confirms it. */
+function YearPlan({ seasons, save, makeLive, review }: { seasons: SavedSeason[]; save: (s: SavedSeason[]) => void; makeLive: (s: SavedSeason) => void; review: (s: SavedSeason) => void }) {
+  const api = useAppApi();
+  const today = isoDay(new Date());
+  const live = seasons.find((s) => s.active);
+  const lastNight = String(live?.answers.night ?? 'Wednesday');
+  const [years, setYears] = useState(7);
+  const [night, setNight] = useState(DAYS.includes(lastNight) ? lastNight : 'Wednesday');
+  const [start, setStart] = useState(() => planStartFor(today, DAYS.includes(lastNight) ? lastNight : 'Wednesday'));
+  const [open, setOpen] = useState<number | null>(null);
+  const rows = planYears(seasons);
+  const has = rows.length > 0;
+  const inPlan = seasons.filter((s) => s.plan);
+
+  const build = () => {
+    if (!start || isNaN(Date.parse(start))) return api().say('Pick the first Winter/Spring night.');
+    if (has && !window.confirm('Rebuild the plan? Its ' + inPlan.length + ' seasons are replaced. Seasons you saved from the questions, and the one running now, stay.')) return;
+    const plan = yearPlan(years, start, night, uid, nowMs());
+    save(withPlan(seasons, plan));
+    setOpen(1);
+    api().logActivity('Built a ' + years + '-year plan: three seasons a year, one scored');
+    api().say(years + (years === 1 ? ' year' : ' years') + ' built — ' + plan.length + ' seasons, ' + years + ' of them scored. Each year stays a draft until you confirm it.');
+  };
+  const clear = () => {
+    if (!window.confirm('Clear the plan? Its draft and confirmed seasons go. Seasons you saved from the questions, and the one running now, stay.')) return;
+    save(withPlan(seasons, []));
+    setOpen(null);
+    api().logActivity('Cleared the multi-year plan');
+    api().say('Plan cleared. Saved and running seasons were left alone.');
+  };
+  const confirmYear = (idx: number, year: number) => {
+    save(seasons.map((s) => (s.plan?.idx === idx ? { ...s, plan: { ...s.plan, draft: false } } : s)));
+    api().logActivity('Confirmed ' + year + ' of the plan');
+    api().say(year + ' confirmed. Those seasons are ready — make one live when its first night comes.');
+  };
+
+  return (
+    <Section
+      title="Build the whole horizon at once"
+      sub="Three seasons a year, one of them scored. Winter/Spring carries the points; Summer and Fall/Winter run as regular programming — huddles, run of show and follow-up, no leaderboard. Every year after the first is the same shape 52 weeks on, and each year stays a draft until you confirm it."
+    >
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="field w-[110px]">
+          <span className="sr-label">Years</span>
+          <input className="input" type="number" min={1} max={10} value={years} onChange={(e) => setYears(Math.max(1, Math.min(10, Number(e.target.value) || 1)))} />
+        </label>
+        <label className="field">
+          <span className="sr-label">First Winter/Spring night</span>
+          <input className="input" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="sr-label">Night you meet</span>
+          <select className="input" value={night} onChange={(e) => setNight(e.target.value)}>
+            {DAYS.map((x) => (
+              <option key={x} value={x}>
+                {x}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Btn className="px-4" onClick={build}>
+          {has ? 'Rebuild the plan' : 'Build ' + years + (years === 1 ? ' year' : ' years')}
+        </Btn>
+      </div>
+      <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">The first night snaps to the night you meet. Making a season live sets the calendar’s meeting nights and week numbers from it, and whether there’s a leaderboard at all.</div>
+      {has ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 text-[12px] font-medium text-neutral-200">
+              {inPlan.length} seasons · {inPlan.filter((s) => s.plan!.scored).length} scored · {rows[0].year}–{rows[rows.length - 1].year}
+            </div>
+            <Btn variant="ghost" className="px-3 text-[12px]" onClick={clear}>
+              Clear the plan
+            </Btn>
+          </div>
+          {rows.map((y, i) => {
+            const isOpen = open === y.idx;
+            return (
+              <div key={y.idx} className="rounded-md border border-neutral-800">
+                <div className="flex items-center gap-2 px-3 py-[6px]">
+                  <button onClick={() => setOpen(isOpen ? null : y.idx)} aria-expanded={isOpen} className="flex min-h-11 flex-1 items-center gap-2 text-left">
+                    <Icon name={isOpen ? 'ph ph-caret-up' : 'ph ph-caret-down'} className="text-[12px] text-neutral-500" />
+                    <span className="text-[13px] font-medium text-neutral-100">
+                      Year {i + 1} · {y.year}
+                    </span>
+                  </button>
+                  <span className="rounded-full border px-2 py-[3px] text-[10.5px] font-medium" style={{ borderColor: y.drafts ? 'var(--color-neutral-800)' : 'var(--color-accent-600)', color: y.drafts ? 'var(--color-neutral-400)' : 'var(--color-accent-200)' }}>
+                    {y.drafts ? y.drafts + (y.drafts === 1 ? ' draft' : ' drafts') : 'Confirmed'}
+                  </span>
+                  {y.drafts ? (
+                    <Btn variant="secondary" className="px-3 text-[12px]" onClick={() => confirmYear(y.idx, y.year)}>
+                      Confirm {y.year}
+                    </Btn>
+                  ) : null}
+                </div>
+                {isOpen ? (
+                  <div className="flex flex-col border-t border-divider">
+                    {y.rows.map((s) => (
+                      <div key={s.id} className="flex flex-wrap items-center gap-2 px-3 py-[8px]">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12.5px] font-medium text-neutral-100">{s.name}</div>
+                          <div className="mt-[2px] text-[11px] text-neutral-500">
+                            {String(s.answers.weeks)} weeks · starts {day(String(s.answers.start))} · {s.active ? 'Running now' : s.plan!.draft ? 'Draft' : 'Ready'}
+                          </div>
+                        </div>
+                        <span className="rounded-full border px-2 py-[3px] text-[10.5px] font-medium" style={{ borderColor: s.plan!.scored ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', color: s.plan!.scored ? 'var(--color-accent-200)' : 'var(--color-neutral-500)' }}>
+                          {s.plan!.scored ? 'Scored' : 'No scoring'}
+                        </span>
+                        <Btn variant="ghost" className="px-3 text-[12px]" onClick={() => review(s)}>
+                          Review the answers
+                        </Btn>
+                        {!s.active && !s.plan!.draft ? (
+                          <Btn variant="ghost" className="px-3 text-[12px]" onClick={() => makeLive(s)}>
+                            Make live
+                          </Btn>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </Section>
   );
 }
 

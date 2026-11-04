@@ -14,6 +14,7 @@ import { catOf, teamOf } from '@/lib/selectors';
 import { postCoachCheckin } from '@/lib/store/actions';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
+import { scoringOn } from '@/lib/season';
 
 export function CoachViewScreen() {
   const d = useApp((s) => s.data);
@@ -40,6 +41,7 @@ export function CoachViewScreen() {
   const base = api().base();
   const live = autoApproves(m.persona);
   const payCats = d.cats.filter((c) => c.id === 'general' || d.config.checkinAutoCats[c.id]);
+  const scored = scoringOn(d.config);
   const mySubmitted = d.ledger.filter((e) => e.status === 'pending' && e.by.startsWith(m.displayName)).slice(0, 6);
 
   const openCheckin = (name: string) => {
@@ -115,7 +117,7 @@ export function CoachViewScreen() {
         </div>
       ) : null}
 
-      {!tipSeen ? (
+      {!tipSeen && scored ? (
         <div className="flex items-start gap-[10px] rounded-lg border border-accent-700 px-[14px] py-[13px]" style={{ background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)' }}>
           <Icon name="ph ph-lightbulb" className="mt-[1px] flex-none text-[16px] text-accent-300" />
           <div className="min-w-0 flex-1">
@@ -134,71 +136,73 @@ export function CoachViewScreen() {
         <div className="h-[38px] w-[10px] flex-none rounded-[3px]" style={{ background: team.color }} />
         <div className="min-w-0 flex-1">
           <div className="text-[16px] font-medium leading-[1.2] text-neutral-100">{team.name}</div>
-          <div className="mt-1 text-[11px] leading-[1.3] text-neutral-500">{row ? (row.rank === 1 ? 'Leading the league' : '#' + row.rank + ' · ' + fmt(row.behind) + ' back') : ''}</div>
+          <div className="mt-1 text-[11px] leading-[1.3] text-neutral-500">{!scored ? 'No points this season · regular programming' : row ? (row.rank === 1 ? 'Leading the league' : '#' + row.rank + ' · ' + fmt(row.behind) + ' back') : ''}</div>
         </div>
-        <div className="tabular flex-none text-[20px] font-semibold leading-none text-neutral-100">{fmt(row?.total ?? 0)}</div>
+        {scored ? <div className="tabular flex-none text-[20px] font-semibold leading-none text-neutral-100">{fmt(row?.total ?? 0)}</div> : null}
       </div>
 
-      <div className="sr-card flex flex-col gap-[10px] px-[14px] py-[13px]">
-        <div className="text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Award points</div>
-        <div className="flex flex-wrap gap-[6px]">
-          {d.cats.map((c) => {
-            const on = cat === c.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => setCat(c.id)}
-                aria-pressed={on}
-                className="flex min-h-11 items-center gap-[6px] rounded-full border px-[11px] text-[11.5px] font-medium leading-none"
-                style={{ borderColor: on ? c.color : 'var(--color-neutral-800)', background: on ? 'color-mix(in srgb, ' + c.color + ' 16%, transparent)' : 'transparent', color: on ? 'var(--color-neutral-100)' : 'var(--color-neutral-400)' }}
-              >
-                <Icon name={c.icon} className="text-[13px]" style={{ color: on ? c.color : 'var(--color-neutral-600)' }} />
-                {c.label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex gap-[7px]">
-          {[
-            { m: 0.5, label: 'Half' },
-            { m: 1, label: 'Base' },
-            { m: 2, label: 'Double' }
-          ].map((x) => {
-            const on = mult === x.m;
-            return (
-              <button
-                key={x.m}
-                onClick={() => setMult(x.m)}
-                aria-pressed={on}
-                className="flex min-h-12 flex-1 flex-col items-center justify-center gap-[3px] rounded-md border"
-                style={{ borderColor: on ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', background: on ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent', color: on ? 'var(--color-accent-200)' : 'var(--color-neutral-400)' }}
-              >
-                <span className="text-[11.5px] font-medium leading-none">{x.label}</span>
-                <span className="tabular text-[13px] font-semibold leading-none">{fmt(Math.round(base * x.m))}</span>
-              </button>
-            );
-          })}
-        </div>
-        <Btn className="min-h-12 justify-center" onClick={submitPoints}>
-          {live ? 'Post to the board' : 'Send for approval'}
-        </Btn>
-        <div className="text-[10.5px] leading-[1.4] text-neutral-500">
-          {live ? 'You approve your own entries — this posts live.' : 'The youth pastor sees it in the approval queue before it hits the board.'}
-        </div>
-        {mySubmitted.length && !live ? (
-          <div className="flex flex-col gap-[5px] border-t border-divider pt-[9px]">
-            {mySubmitted.map((x) => (
-              <div key={x.id} className="flex items-center gap-2">
-                <Icon name="ph ph-clock-countdown" className="flex-none text-[12px] text-neutral-500" />
-                <span className="flex-1 text-[11.5px] leading-none text-neutral-400">
-                  +{fmt(x.amount)} {catOf(d, x.cat).label}
-                </span>
-                <span className="text-[10px] leading-none text-neutral-500">{ago(x.at)}</span>
-              </div>
-            ))}
+      {scored ? (
+        <div className="sr-card flex flex-col gap-[10px] px-[14px] py-[13px]">
+          <div className="text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Award points</div>
+          <div className="flex flex-wrap gap-[6px]">
+            {d.cats.map((c) => {
+              const on = cat === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setCat(c.id)}
+                  aria-pressed={on}
+                  className="flex min-h-11 items-center gap-[6px] rounded-full border px-[11px] text-[11.5px] font-medium leading-none"
+                  style={{ borderColor: on ? c.color : 'var(--color-neutral-800)', background: on ? 'color-mix(in srgb, ' + c.color + ' 16%, transparent)' : 'transparent', color: on ? 'var(--color-neutral-100)' : 'var(--color-neutral-400)' }}
+                >
+                  <Icon name={c.icon} className="text-[13px]" style={{ color: on ? c.color : 'var(--color-neutral-600)' }} />
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
-        ) : null}
-      </div>
+          <div className="flex gap-[7px]">
+            {[
+              { m: 0.5, label: 'Half' },
+              { m: 1, label: 'Base' },
+              { m: 2, label: 'Double' }
+            ].map((x) => {
+              const on = mult === x.m;
+              return (
+                <button
+                  key={x.m}
+                  onClick={() => setMult(x.m)}
+                  aria-pressed={on}
+                  className="flex min-h-12 flex-1 flex-col items-center justify-center gap-[3px] rounded-md border"
+                  style={{ borderColor: on ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', background: on ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent', color: on ? 'var(--color-accent-200)' : 'var(--color-neutral-400)' }}
+                >
+                  <span className="text-[11.5px] font-medium leading-none">{x.label}</span>
+                  <span className="tabular text-[13px] font-semibold leading-none">{fmt(Math.round(base * x.m))}</span>
+                </button>
+              );
+            })}
+          </div>
+          <Btn className="min-h-12 justify-center" onClick={submitPoints}>
+            {live ? 'Post to the board' : 'Send for approval'}
+          </Btn>
+          <div className="text-[10.5px] leading-[1.4] text-neutral-500">
+            {live ? 'You approve your own entries — this posts live.' : 'The youth pastor sees it in the approval queue before it hits the board.'}
+          </div>
+          {mySubmitted.length && !live ? (
+            <div className="flex flex-col gap-[5px] border-t border-divider pt-[9px]">
+              {mySubmitted.map((x) => (
+                <div key={x.id} className="flex items-center gap-2">
+                  <Icon name="ph ph-clock-countdown" className="flex-none text-[12px] text-neutral-500" />
+                  <span className="flex-1 text-[11.5px] leading-none text-neutral-400">
+                    +{fmt(x.amount)} {catOf(d, x.cat).label}
+                  </span>
+                  <span className="text-[10px] leading-none text-neutral-500">{ago(x.at)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex items-baseline gap-2">
         <div className="flex-1 text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">My roster</div>
@@ -206,7 +210,7 @@ export function CoachViewScreen() {
           {here} of {roster.length} here tonight
         </div>
       </div>
-      <div className="-mt-[6px] text-[11px] leading-[1.5] text-neutral-500 text-pretty">Tap a name to run check-in questions. Points post the moment you finish.</div>
+      <div className="-mt-[6px] text-[11px] leading-[1.5] text-neutral-500 text-pretty">{scored ? 'Tap a name to run check-in questions. Points post the moment you finish.' : 'Tap a name to run check-in questions. No points this season — it’s the record of who came.'}</div>
       <div className="flex gap-[6px]">
         <Btn variant="secondary" className="flex-1 justify-center" onClick={() => api().markAllPresent(teamId, true)}>
           <Icon name="ph ph-check-square-offset" className="text-[14px]" />
@@ -217,8 +221,14 @@ export function CoachViewScreen() {
         </Btn>
       </div>
       <div className="-mt-1 text-[10.5px] leading-[1.45] text-neutral-500 text-pretty">
-        {payCats.map((c) => c.label).join(' + ')} · {CHECKIN_PRESENT_PTS} pts each · {fmt(here * payCats.length * CHECKIN_PRESENT_PTS)} pts total. Posting also files tonight’s attendance — no second screen.
-        {!live ? ' It goes to the youth pastor to approve.' : ''}
+        {scored ? (
+          <>
+            {payCats.map((c) => c.label).join(' + ')} · {CHECKIN_PRESENT_PTS} pts each · {fmt(here * payCats.length * CHECKIN_PRESENT_PTS)} pts total. Posting also files tonight’s attendance — no second screen.
+            {!live ? ' It goes to the youth pastor to approve.' : ''}
+          </>
+        ) : (
+          'Posting files tonight’s attendance. No points this season.'
+        )}
       </div>
       {!addOpen ? (
         <Btn variant="secondary" className="justify-center" onClick={() => setAddOpen(true)}>

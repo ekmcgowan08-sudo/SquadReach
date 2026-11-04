@@ -722,3 +722,55 @@ test('the field map takes a square brush and text labels, and players see it', a
   await ready(page);
   await expect(page.getByRole('img', { name: 'Field map' })).toBeVisible();
 });
+
+test('the whole horizon: a plan of seasons, a year confirmed, and a season with no points runs without a board', async ({ page, context, baseURL }) => {
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/console?tab=season');
+  await ready(page);
+  const plan = page.locator('section', { has: page.getByRole('heading', { name: 'Build the whole horizon at once' }) });
+  await plan.getByLabel('Years').fill('2');
+  await plan.getByLabel('First Winter/Spring night').fill('2027-01-04');
+  await plan.getByRole('button', { name: 'Build 2 years' }).click();
+  await expect(page.getByText('2 years built — 6 seasons, 2 of them scored. Each year stays a draft until you confirm it.')).toBeVisible();
+  await expect(plan.getByText('6 seasons · 2 scored · 2027–2028')).toBeVisible();
+  await expect(plan.getByText('Summer 2027')).toBeVisible();
+  await expect(plan.getByText(/8 weeks · starts Jun 9, 2027 · Draft/)).toBeVisible();
+  await expect(plan.getByRole('button', { name: 'Make live' })).toHaveCount(0);
+
+  await plan.getByRole('button', { name: 'Confirm 2027' }).click();
+  await expect(page.getByText('2027 confirmed. Those seasons are ready — make one live when its first night comes.')).toBeVisible();
+  const summer = plan.locator('div.flex-wrap', { hasText: 'Summer 2027' });
+  await expect(summer.getByText('No scoring')).toBeVisible();
+  await summer.getByRole('button', { name: 'Make live' }).click();
+  await expect(page.getByText('Summer 2027 is live.', { exact: false })).toBeVisible();
+
+  /* On the phone: no leaderboard, no point entry. */
+  await as(context, 'coach', baseURL!);
+  await page.goto('/dashboard');
+  await ready(page);
+  await expect(page.getByRole('note').filter({ hasText: 'Summer 2027 is regular programming' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Score/ })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Bible' })).toBeVisible();
+  await page.goto('/dashboard/score');
+  await ready(page);
+  await expect(page.getByRole('status').filter({ hasText: 'No leaderboard this season' })).toBeVisible();
+  await page.goto('/dashboard/more');
+  await ready(page);
+  await expect(page.getByRole('link', { name: /^Races/ })).toHaveCount(0);
+  /* Attendance is still the record of who came — it just pays nothing. */
+  await page.goto('/dashboard/coach-view');
+  await ready(page);
+  await expect(page.getByText('No points this season · regular programming')).toBeVisible();
+  await expect(page.getByText('Award points')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Everyone’s here' }).click();
+  await page.getByRole('button', { name: 'Post attendance' }).click();
+  await expect(page.getByText(/checked in\. No points this season — attendance is on the record\./)).toBeVisible();
+
+  /* Clearing the plan leaves the season that's running. */
+  await as(context, 'leader', baseURL!);
+  await page.goto('/console?tab=season');
+  await ready(page);
+  await plan.getByRole('button', { name: 'Clear the plan' }).click();
+  await expect(page.getByText('Plan cleared. Saved and running seasons were left alone.')).toBeVisible();
+  await expect(page.getByText('Summer 2027').first()).toBeVisible();
+});

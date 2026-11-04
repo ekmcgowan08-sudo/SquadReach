@@ -155,6 +155,14 @@ let toastT: ReturnType<typeof setTimeout> | null = null;
 let pushT: ReturnType<typeof setTimeout> | null = null;
 let heldSinceMemo: number | null = null;
 
+/** A season of regular programming takes no points — said once, here, for
+ *  every way points come in (the pad, the timer, check-in, submissions). */
+function noPoints(s: Pick<AppState, 'data' | 'say'>): boolean {
+  if (s.data.config.scoring !== false) return false;
+  s.say('No points this season — ' + (s.data.config.seasonName || 'it') + ' runs as regular programming.');
+  return true;
+}
+
 export function createAppStore(backend: Backend, membership: Membership, initial: MinistryData) {
   let docRetry: ReturnType<typeof setTimeout> | null = null;
   const store = createStore<AppState>()(
@@ -167,6 +175,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
       /** After an approved change moves the board: snapshot + lead-change push. */
       const afterBoardMoved = (leaderBefore: string | null) => {
         const d = get().data;
+        if (d.config.scoring === false) return;
         const rows = standings(d.teams, d.cats, d.ledger);
         const now = rows[0];
         if (now && leaderBefore && now.id !== leaderBefore) {
@@ -417,6 +426,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
             s.say('Your role reads the board. Scoring belongs to coaches, the scorekeeper and leaders.');
             return null;
           }
+          if (noPoints(s)) return null;
           const entry = makeEntry(input);
           if (s.offline()) {
             hold([{ kind: 'entry', id: entry.id, at: entry.at, entry }]);
@@ -434,6 +444,7 @@ export function createAppStore(backend: Backend, membership: Membership, initial
             s.say('Your role reads the board. Scoring belongs to coaches, the scorekeeper and leaders.');
             return null;
           }
+          if (noPoints(s)) return null;
           const batch = uid();
           const base = Date.now();
           const entries = rows.map((r, i) => ({ ...makeEntry({ ...r, batch: r.batch ?? batch }), at: base + i }));
@@ -768,6 +779,15 @@ export function createAppStore(backend: Backend, membership: Membership, initial
             return null;
           }
           const count = new Set(rows.map((r) => r.student)).size;
+          /* No points this season: who came is already on the record. */
+          if (d.config.scoring === false) {
+            set((st) => {
+              st.data.tonight.checkinPosted[team] = { count, held: false };
+            });
+            save();
+            s.say(count + ' checked in. No points this season — attendance is on the record.');
+            return 'posted';
+          }
           const sum = rows.reduce((n, r) => n + r.amount, 0);
           const flag = s.awardMany(rows.map((r) => ({ team, cat: r.cat, amount: r.amount, student: r.student, why: r.student + ' · checked in', by: s.membership.displayName + ' · check-in' })));
           if (!flag) return null;

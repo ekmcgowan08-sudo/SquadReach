@@ -17,6 +17,7 @@ import { autoApproves, canApprove, canControlEvent, canHuddle } from '@/lib/perm
 import { deltaLabel, fmt, pointBase, studentRanks, studentTotal } from '@/lib/scoring';
 import { catOf, computeBadges, computeNotifications, eventLabel, myBible, myTeamId, sheetMinutes, teamOf, teamRoster, upcomingEvents } from '@/lib/selectors';
 import { notifOn, usePrefs } from '@/lib/prefs';
+import { scoringOn } from '@/lib/season';
 import { useNow } from '@/lib/use-now';
 import { useApp, useAppApi } from '@/lib/store/provider';
 
@@ -49,6 +50,9 @@ export function HomeScreen() {
   const missing = roster.length - here;
   const firstRun = d.ledger.length === 0;
   const checkedIn = d.roster.filter((r) => d.tonight.presence[r.name]).length;
+  /* A season of regular programming: no leaderboard anywhere on Home. */
+  const scored = scoringOn(d.config);
+  const noPoints = { label: 'This season', value: 'No points', hint: 'regular programming' };
 
   return (
     <Screen label="Home">
@@ -99,17 +103,29 @@ export function HomeScreen() {
               if (wasHeld(rec)) return 'Attendance marked. The points are held on this phone until you have signal.';
               return autoApproves(p) ? 'Attendance posted. Points are on the board.' : 'Attendance posted. The points are waiting on the youth pastor to approve.';
             }
+            if (!scored) return here ? here + ' marked here.' : 'Nobody marked yet. Start with who you can see.';
             return here ? here + ' marked here — posting pays ' + fmt(here * 50) + ' pts.' : 'Nobody marked yet. Start with who you can see.';
           })()}
           stats={[
             { label: 'Here', value: here + ' / ' + roster.length, hint: missing ? missing + ' not marked' : 'everyone in' },
-            { label: 'Squad rank', value: '#' + (row?.rank ?? 1), hint: row ? deltaLabel(row) : '' }
+            scored ? { label: 'Squad rank', value: '#' + (row?.rank ?? 1), hint: row ? deltaLabel(row) : '' } : noPoints
           ]}
           action={d.tonight.checkinPosted[teamId] ? (wasHeld(d.tonight.checkinPosted[teamId]) ? 'Review what is held' : 'Open Coach view') : 'Mark who is here'}
           href="/dashboard/coach-view"
         />
       ) : null}
-      {p === 'scorekeeper' ? (
+      {p === 'scorekeeper' && !scored ? (
+        <RoleFocus
+          kicker={'Week ' + d.config.weekNumber}
+          title="No scoring this season"
+          accent="var(--color-accent-500)"
+          sub={(d.config.seasonName || 'This season') + ' runs as regular programming — no leaderboard. The game timer still runs the night.'}
+          stats={[noPoints, { label: 'Game', value: d.config.gameName || 'none set', hint: 'tonight' }]}
+          action="Open the game timer"
+          href="/dashboard/games"
+        />
+      ) : null}
+      {p === 'scorekeeper' && scored ? (
         <RoleFocus
           kicker={'Scoring · week ' + d.config.weekNumber}
           title="Score a squad"
@@ -152,7 +168,7 @@ export function HomeScreen() {
           accent={team.color}
           sub={missing ? missing + ' of your squad are not here yet.' : 'Your whole squad is here.'}
           stats={[
-            { label: 'Squad rank', value: '#' + (row?.rank ?? 1), hint: row ? deltaLabel(row) : '' },
+            scored ? { label: 'Squad rank', value: '#' + (row?.rank ?? 1), hint: row ? deltaLabel(row) : '' } : noPoints,
             { label: 'Not here yet', value: String(missing), hint: missing ? 'text them' : 'all in' }
           ]}
           action="Nudge your squad"
@@ -175,8 +191,8 @@ export function HomeScreen() {
             <div className="text-[12.5px] leading-[1.5] text-neutral-300">{tonightLine(d)}</div>
             <div className="mt-[2px] flex items-center gap-2">
               <div className="flex-1 rounded-md px-[11px] py-[9px]" style={{ background: 'rgba(0,0,0,.28)' }}>
-                <div className="text-[10px] uppercase leading-none tracking-[.08em] text-accent-300">Point base</div>
-                <div className="mt-1 text-[17px] font-semibold leading-[1.2] text-neutral-100">{fmt(base)} pts</div>
+                <div className="text-[10px] uppercase leading-none tracking-[.08em] text-accent-300">{scored ? 'Point base' : 'This season'}</div>
+                <div className="mt-1 text-[17px] font-semibold leading-[1.2] text-neutral-100">{scored ? fmt(base) + ' pts' : 'No points'}</div>
               </div>
               <div className="flex-1 rounded-md px-[11px] py-[9px]" style={{ background: 'rgba(0,0,0,.28)' }}>
                 <div className="text-[10px] uppercase leading-none tracking-[.08em] text-accent-300">Checked in</div>
@@ -192,8 +208,17 @@ export function HomeScreen() {
       {canApprove(p) ? <WaitingOnYou /> : null}
       <StaleHeldCard />
       <OutboxCard />
-      {prefs.homeSections.standings ? <StandingsCard /> : null}
-      {!firstRun && prefs.homeSections.feed ? <RecentChanges /> : null}
+      {!scored ? (
+        <div role="note" className="sr-card flex items-start gap-[11px] px-[15px] py-[13px]">
+          <Icon name="ph ph-calendar-blank" className="mt-[1px] flex-none text-[17px] text-accent-300" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-medium leading-[1.3] text-neutral-100">{(d.config.seasonName || 'This season') + ' is regular programming'}</div>
+            <div className="mt-[3px] text-[11.5px] leading-[1.45] text-neutral-500 text-pretty">No leaderboard and no point entry. Huddles, the run sheet, attendance and follow-up work as usual.{canApprove(p) ? ' A season with points is made live from Console › Season.' : ''}</div>
+          </div>
+        </div>
+      ) : null}
+      {scored && prefs.homeSections.standings ? <StandingsCard /> : null}
+      {scored && !firstRun && prefs.homeSections.feed ? <RecentChanges /> : null}
       {prefs.homeSections.badges ? <BadgesStrip /> : null}
 
       {/* quick links */}
@@ -205,7 +230,7 @@ export function HomeScreen() {
           canControlEvent(p) ? { label: 'Game timer', meta: d.config.gameName || 'no game set', icon: 'ph ph-timer', href: '/dashboard/games' } : null,
           { label: 'Calendar', meta: upcomingEvents(d, p)[0] ? 'Next: ' + eventLabel(upcomingEvents(d, p)[0]) : 'nothing scheduled', icon: 'ph ph-calendar-dots', href: '/dashboard/calendar' },
           { label: 'Prayer request', meta: 'Ask your leaders to pray', icon: 'ph ph-hands-praying', href: '/dashboard/follow-ups' },
-          { label: 'Join a challenge', meta: challengesIn(d.challenges, d.config.weekNumber).length ? challengesIn(d.challenges, d.config.weekNumber).length + ' running' : 'Nothing running yet', icon: 'ph ph-flag-checkered', href: '/dashboard/races' }
+          scored ? { label: 'Join a challenge', meta: challengesIn(d.challenges, d.config.weekNumber).length ? challengesIn(d.challenges, d.config.weekNumber).length + ' running' : 'Nothing running yet', icon: 'ph ph-flag-checkered', href: '/dashboard/races' } : null
         ]
           .filter(Boolean)
           .map((q) => (
@@ -285,6 +310,7 @@ function StudentCard() {
   const tr = rows.find((r) => r.id === tm.id);
   const b = d.studentBadges.find((x) => x.name === me.name);
   const myRank = ranked.find((r) => r.name === me.name)?.rank ?? ranked.length;
+  const scored = scoringOn(d.config);
   return (
     <div className="sr-card flex flex-col gap-3 px-[15px] py-[14px]">
       <div className="flex items-center gap-[11px]">
@@ -292,19 +318,19 @@ function StudentCard() {
         <div className="min-w-0 flex-1">
           <div className="text-[15px] font-medium leading-[1.2] text-neutral-100">{me.name}</div>
           <div className="mt-[3px] text-[11px] leading-[1.3] text-neutral-500">
-            {tm.name} is #{tr?.rank ?? '–'} · {fmt(tr?.total ?? 0)} pts
+            {scored ? tm.name + ' is #' + (tr?.rank ?? '–') + ' · ' + fmt(tr?.total ?? 0) + ' pts' : tm.name + ' · no points this season'}
           </div>
         </div>
       </div>
       <div className="flex gap-[9px]">
-        <Stat label="Your points" value={fmt(studentTotal(me.name, d.ledger, d.studentSeedPoints))} hint={'#' + myRank + ' of ' + d.roster.length + ' students'} />
+        {scored ? <Stat label="Your points" value={fmt(studentTotal(me.name, d.ledger, d.studentSeedPoints))} hint={'#' + myRank + ' of ' + d.roster.length + ' students'} /> : null}
         <div className="flex-1 rounded-md bg-neutral-900 px-[11px] py-[10px]">
           <div className="text-[9.5px] uppercase leading-none tracking-[.08em] text-neutral-500">Streaks</div>
           <div className="mt-[5px] text-[12px] font-medium leading-[1.4] text-neutral-200">Attendance {b ? b.attendStreak + ' weeks' : 'Not started'}</div>
           <div className="text-[12px] font-medium leading-[1.4] text-neutral-200">Bible {b ? Math.ceil(b.bibleStreak / 7) + ' weeks' : 'Not started'}</div>
         </div>
       </div>
-      {challengesIn(d.challenges, d.config.weekNumber).length ? (
+      {scored && challengesIn(d.challenges, d.config.weekNumber).length ? (
         <div className="flex flex-col gap-[7px] border-t border-divider pt-[11px]">
           <div className="text-[9.5px] font-semibold uppercase leading-none tracking-[.1em] text-neutral-500">This week</div>
           {challengesIn(d.challenges, d.config.weekNumber).slice(0, 3).map((c) => (

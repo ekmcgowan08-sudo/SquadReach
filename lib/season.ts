@@ -5,7 +5,8 @@
    answers nobody gave.
 
    Saving writes the settings the answers imply (dates, growth, the verse
-   board, the parent board, game weeks). Answers the app can't apply by
+   board, the parent board, game weeks, and whether there's a leaderboard
+   at all). Answers the app can't apply by
    itself say where they're set instead of pretending. Adding a question is
    one entry here. */
 import { isoDay, parseLocalISO, tonightDate, weekOf } from '@/lib/dates';
@@ -35,6 +36,9 @@ export interface SavedSeason {
   answers: SeasonAnswers;
   active: boolean;
   savedAt: number;
+  /** Built by the multi-year plan: which year of it, and whether that year
+   *  is still a draft nobody has confirmed. */
+  plan?: { idx: number; year: number; label: string; scored: boolean; draft: boolean };
 }
 
 export const SEASON_GROUPS = [
@@ -192,15 +196,18 @@ export function seasonSettings(a: SeasonAnswers, cfg: MinistryConfig, today: str
   const verses = String(get('verses'));
   const game = String(get('game'));
   const parents = String(get('parents')) === 'yes';
+  const scored = String(get('carry')) !== 'none';
   return {
     seasonName: String(get('name')).trim() || 'Season',
+    scoring: scored,
     seasonWeeks: weeks,
     meetingDates,
     weekNumber: weekOf(meetingDates, tonightDate(meetingDates, parseLocalISO(today) ?? new Date())),
     weekGrowthPct: Number(get('growth')) || 0,
     verseBoard: verses === 'off' ? 0 : cfg.verseBoard || 25,
     gameSetup: { ...cfg.gameSetup, gameWeeks: game === 'none' ? [] : game === 'every' ? null : cfg.gameSetup.gameWeeks },
-    parentShare: parents ? { ...cfg.parentShare, standings: true } : { standings: false, mvp: false, verse: false, photos: false, calendar: false }
+    /* No leaderboard means nothing to rank on the parent board either. */
+    parentShare: !scored ? { ...(parents ? cfg.parentShare : { verse: false, photos: false, calendar: false }), standings: false, mvp: false } : parents ? { ...cfg.parentShare, standings: true } : { standings: false, mvp: false, verse: false, photos: false, calendar: false }
   };
 }
 
@@ -209,3 +216,54 @@ export function nextSeasonName(name: string): string {
   const m = /(\d{4})/.exec(name);
   return m ? name.replace(m[1], String(Number(m[1]) + 1)) : name + ' (next)';
 }
+
+/* ── the whole horizon at once ───────────────────────────────────────
+   Three seasons a year, one of them scored: Winter/Spring carries the
+   points; Summer and Fall/Winter run as regular programming. Every year
+   after the first is the same shape 52 weeks on. Each is a real saved
+   season, with the answers the interview would have written, so making
+   one live works like any other — they just start as drafts until a
+   leader confirms that year. */
+export const PLAN_SHAPE = [
+  { label: 'Winter/Spring', offsetWeeks: 0, weeks: 12, scored: true },
+  { label: 'Summer', offsetWeeks: 22, weeks: 8, scored: false },
+  { label: 'Fall/Winter', offsetWeeks: 34, weeks: 12, scored: false }
+] as const;
+
+/** The first meeting night of next January — where a plan starts unless a leader says otherwise. */
+export const planStartFor = (today: string, night: string) => nextWeekday(String(Number(today.slice(0, 4)) + 1) + '-01-01', night);
+
+export function yearPlan(years: number, start: string, night: string, newId: () => string, now: number): SavedSeason[] {
+  const n = Math.max(1, Math.min(10, Math.round(years) || 7));
+  const first = parseLocalISO(nextWeekday(start, night))!;
+  const out: SavedSeason[] = [];
+  for (let y = 0; y < n; y++)
+    for (const sh of PLAN_SHAPE) {
+      const at = new Date(first.getFullYear(), first.getMonth(), first.getDate() + (y * 52 + sh.offsetWeeks) * 7);
+      const year = first.getFullYear() + y;
+      const name = sh.label + ' ' + year;
+      const answers: SeasonAnswers = {
+        name, start: isoDay(at), weeks: sh.weeks, night,
+        carry: sh.scored ? 'both' : 'none', growth: sh.scored ? 8 : 0, verses: sh.scored ? 'weekly' : 'optional'
+      };
+      out.push({ id: newId(), name, answers, active: false, savedAt: now, plan: { idx: y + 1, year, label: sh.label, scored: sh.scored, draft: true } });
+    }
+  return out;
+}
+
+/** The plan's seasons by year, in order. */
+export function planYears(seasons: SavedSeason[]) {
+  const by = new Map<number, SavedSeason[]>();
+  for (const s of seasons) if (s.plan) (by.get(s.plan.idx) ?? by.set(s.plan.idx, []).get(s.plan.idx)!).push(s);
+  return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([idx, rows]) => ({ idx, year: rows[0].plan!.year, rows, drafts: rows.filter((r) => r.plan!.draft).length }));
+}
+
+/** A new plan replaces the old one; seasons the interview saved, and the
+ *  one running now, stay where they are. */
+export const withPlan = (seasons: SavedSeason[], plan: SavedSeason[]) => [
+  ...seasons.filter((s) => !s.plan || s.active).map((s) => (s.plan && s.active ? { ...s, plan: undefined } : s)),
+  ...plan
+];
+
+/** Is there a leaderboard this season? */
+export const scoringOn = (cfg: Pick<MinistryConfig, 'scoring'>) => cfg.scoring !== false;
