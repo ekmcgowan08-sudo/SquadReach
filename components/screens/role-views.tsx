@@ -21,6 +21,7 @@ import { clock, familyHref } from '@/lib/cycle';
 import { nowMs } from '@/lib/dates';
 import { uid } from '@/lib/store/app-store';
 import type { AccessRequest, MinistryEvent, Nudge } from '@/lib/types/model';
+import { scoringOn } from '@/lib/season';
 
 const RSVP_FG: Record<string, string> = { going: '#8fd8b0', maybe: '#e3c98d', out: '#e0a3a3' };
 const RSVP_LABEL: Record<string, string> = { going: 'Going', maybe: 'Maybe', out: 'Can’t' };
@@ -100,12 +101,16 @@ export function TeamViewScreen({ teamId: forced }: { teamId?: string }) {
             <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">{t.name}</div>
             <div className="mt-1 text-[11px] leading-[1.3] text-neutral-500">{teamMetaLabel(d, viewId)}</div>
           </div>
-          <div className="flex-none text-right">
-            <div className="tabular text-[18px] font-semibold leading-none text-neutral-100">{fmt(row?.total ?? 0)}</div>
-            <div className="mt-[5px] text-[10.5px] leading-none" style={{ color: row?.rank === 1 ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
-              #{row?.rank ?? '–'} · {row ? deltaLabel(row) : ''}
+          {scoringOn(d.config) ? (
+            <div className="flex-none text-right">
+              <div className="tabular text-[18px] font-semibold leading-none text-neutral-100">{fmt(row?.total ?? 0)}</div>
+              <div className="mt-[5px] text-[10.5px] leading-none" style={{ color: row?.rank === 1 ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
+                #{row?.rank ?? '–'} · {row ? deltaLabel(row) : ''}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-none text-[10.5px] leading-none text-neutral-500">No points this season</div>
+          )}
         </div>
         {t.mascotName && t.mascotStory ? (
           <div className="mt-[11px] border-t border-divider pt-[10px]">
@@ -216,6 +221,7 @@ export function CaptainViewScreen() {
     .sort((a, b) => b.pts - a.pts)
     .slice(0, 5);
   const top = earners[0]?.pts ?? 0;
+  const scored = scoringOn(d.config);
 
   /* A nudge goes now or not at all — offline it simply cannot go, and says
      so rather than pretending to queue. It lands in the student's
@@ -267,11 +273,11 @@ export function CaptainViewScreen() {
         <div className="h-[38px] w-[10px] flex-none rounded-[3px]" style={{ background: t.color }} />
         <div className="min-w-0 flex-1">
           <div className="text-[16px] font-medium leading-[1.2] text-neutral-100">{t.name}</div>
-          <div className="mt-1 text-[11px] leading-[1.3]" style={{ color: row?.rank === 1 ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
-            #{row?.rank ?? '–'} · {row ? deltaLabel(row) : ''}
+          <div className="mt-1 text-[11px] leading-[1.3]" style={{ color: scored && row?.rank === 1 ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>
+            {scored ? '#' + (row?.rank ?? '–') + ' · ' + (row ? deltaLabel(row) : '') : 'No points this season · regular programming'}
           </div>
         </div>
-        <div className="tabular flex-none text-[20px] font-semibold leading-none text-neutral-100">{fmt(row?.total ?? 0)}</div>
+        {scored ? <div className="tabular flex-none text-[20px] font-semibold leading-none text-neutral-100">{fmt(row?.total ?? 0)}</div> : null}
       </div>
       <div className="sr-card flex flex-col gap-[10px] px-[14px] py-[13px]">
         <div className="flex items-baseline gap-2">
@@ -342,36 +348,38 @@ export function CaptainViewScreen() {
           </div>
         )}
       </div>
-      <div className="sr-card flex flex-col gap-[10px] px-[14px] py-[13px]">
-        <div className="flex items-baseline gap-2">
-          <div className="flex-1 text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Who is carrying the squad</div>
-          <div className="text-[11.5px] font-medium leading-none text-accent-200">this season</div>
-        </div>
-        {earners.length ? (
-          <>
-            <div className="flex flex-col gap-[7px]">
-              {earners.map((e, i) => (
-                <div key={e.name} className="flex min-h-11 items-center gap-[10px]">
-                  <div className="tabular w-5 flex-none text-[12px] font-semibold leading-none text-neutral-500">{i + 1}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[12.5px] font-medium leading-[1.2] text-neutral-200">{e.name}</div>
-                    <div className="mt-[6px] h-1 overflow-hidden rounded-sm bg-neutral-800">
-                      <div className="h-full" style={{ width: (top ? Math.max(4, Math.round((e.pts / top) * 100)) : 0) + '%', background: t.color }} />
+      {scored ? (
+        <div className="sr-card flex flex-col gap-[10px] px-[14px] py-[13px]">
+          <div className="flex items-baseline gap-2">
+            <div className="flex-1 text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Who is carrying the squad</div>
+            <div className="text-[11.5px] font-medium leading-none text-accent-200">this season</div>
+          </div>
+          {earners.length ? (
+            <>
+              <div className="flex flex-col gap-[7px]">
+                {earners.map((e, i) => (
+                  <div key={e.name} className="flex min-h-11 items-center gap-[10px]">
+                    <div className="tabular w-5 flex-none text-[12px] font-semibold leading-none text-neutral-500">{i + 1}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[12.5px] font-medium leading-[1.2] text-neutral-200">{e.name}</div>
+                      <div className="mt-[6px] h-1 overflow-hidden rounded-sm bg-neutral-800">
+                        <div className="h-full" style={{ width: (top ? Math.max(4, Math.round((e.pts / top) * 100)) : 0) + '%', background: t.color }} />
+                      </div>
                     </div>
+                    <div className="tabular flex-none text-[13px] font-semibold leading-none text-neutral-100">{fmt(e.pts)}</div>
                   </div>
-                  <div className="tabular flex-none text-[13px] font-semibold leading-none text-neutral-100">{fmt(e.pts)}</div>
-                </div>
-              ))}
-            </div>
-            <div className="text-[10.5px] leading-[1.5] text-neutral-500 text-pretty">
-              {earners[0].name.split(' ')[0]} is putting the most on the board. Worth a word tonight — and worth asking who they could bring next week.
-            </div>
-          </>
-        ) : (
-          <div className="text-[11.5px] leading-[1.5] text-neutral-400 text-pretty">Nobody on your squad has earned points yet. Once check-in starts, the names show up here.</div>
-        )}
-      </div>
-      {pushes.length ? (
+                ))}
+              </div>
+              <div className="text-[10.5px] leading-[1.5] text-neutral-500 text-pretty">
+                {earners[0].name.split(' ')[0]} is putting the most on the board. Worth a word tonight — and worth asking who they could bring next week.
+              </div>
+            </>
+          ) : (
+            <div className="text-[11.5px] leading-[1.5] text-neutral-400 text-pretty">Nobody on your squad has earned points yet. Once check-in starts, the names show up here.</div>
+          )}
+        </div>
+      ) : null}
+      {scored && pushes.length ? (
         <>
           <div className="text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Squad pushes</div>
           <div className="flex flex-col gap-[7px]">
@@ -587,7 +595,7 @@ export function ParentViewScreen() {
           <div className="min-w-0">
             <div className="text-[17px] font-medium leading-[1.2] text-neutral-100">{kid.name}</div>
             <div className="mt-1 text-[11px] leading-[1.3] text-neutral-500">
-              grade {kid.grade} · {t.name} · squad #{row?.rank ?? '–'} · {fmt(row?.total ?? 0)} squad pts
+              grade {kid.grade} · {t.name}{scoringOn(d.config) ? ' · squad #' + (row?.rank ?? '–') + ' · ' + fmt(row?.total ?? 0) + ' squad pts' : ''}
             </div>
           </div>
           <div className="flex-none rounded-full border px-[10px] py-[7px] text-[10.5px] font-medium leading-none" style={{ borderColor: here ? 'var(--color-accent-600)' : 'var(--color-neutral-700)', color: here ? 'var(--color-accent-200)' : 'var(--color-neutral-200)' }}>

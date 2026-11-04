@@ -765,6 +765,11 @@ test('the whole horizon: a plan of seasons, a year confirmed, and a season with 
   await page.getByRole('button', { name: 'Everyone’s here' }).click();
   await page.getByRole('button', { name: 'Post attendance' }).click();
   await expect(page.getByText(/checked in\. No points this season — attendance is on the record\./)).toBeVisible();
+  await as(context, 'captain', baseURL!);
+  await page.goto('/dashboard/captain-view');
+  await ready(page);
+  await expect(page.getByText('No points this season · regular programming')).toBeVisible();
+  await expect(page.getByText('Who is carrying the squad')).toHaveCount(0);
 
   /* Clearing the plan leaves the season that's running. */
   await as(context, 'leader', baseURL!);
