@@ -27,6 +27,18 @@ export function ReportBuilderSection() {
     api().emit({ kind: 'doc', key: 'customReports', value: list });
   };
 
+  /* A copy to change, with the original — and anything scheduled from it — left as it was. */
+  const duplicate = (c: CustomReport) => {
+    const names = new Set(d.customReports.map((x) => x.name));
+    let name = c.name + ' (copy)';
+    for (let n = 2; names.has(name); n++) name = c.name + ' (copy ' + n + ')';
+    const copy: CustomReport = { ...c, id: uid(), name, at: nowMs() };
+    saveAll([copy, ...d.customReports]);
+    api().logActivity('Copied the report ' + c.name);
+    api().say('Copied — change the copy, keep the original.');
+    setR({ ...copy });
+  };
+
   if (r) return <Builder report={r} setReport={setR} onSave={(rep) => {
     const exists = d.customReports.some((x) => x.id === rep.id);
     saveAll(exists ? d.customReports.map((x) => (x.id === rep.id ? rep : x)) : [rep, ...d.customReports]);
@@ -51,13 +63,19 @@ export function ReportBuilderSection() {
       {d.customReports.length ? (
         <div className="flex flex-col gap-2">
           {d.customReports.map((c) => (
-            <button key={c.id} onClick={() => setR({ ...c })} className="flex min-h-11 items-center gap-3 rounded-md border border-neutral-800 px-3 py-2 text-left sr-hover">
-              <Icon name="ph ph-table" className="text-[16px] text-accent-300" />
-              <span className="flex-1 text-[13px] font-medium text-neutral-100">{c.name}</span>
-              <span className="text-[11px] text-neutral-500">
-                {sourceOf(c.source).label} · {runReport(d, c).rows.length} rows
-              </span>
-            </button>
+            <div key={c.id} className="flex items-center gap-1 rounded-md border border-neutral-800">
+              <button onClick={() => setR({ ...c })} aria-label={'Edit ' + c.name} className="flex min-h-11 flex-1 items-center gap-3 px-3 py-2 text-left sr-hover">
+                <Icon name="ph ph-table" className="text-[16px] text-accent-300" />
+                <span className="flex-1 text-[13px] font-medium text-neutral-100">{c.name}</span>
+                <span className="text-[11px] text-neutral-500">
+                  {sourceOf(c.source).label} · {runReport(d, c).rows.length} rows
+                </span>
+              </button>
+              <button onClick={() => duplicate(c)} aria-label={'Duplicate ' + c.name} className="flex min-h-11 flex-none items-center gap-[6px] px-3 text-[12px] font-medium text-neutral-400 hover:text-neutral-200">
+                <Icon name="ph ph-copy" className="text-[13px]" />
+                Duplicate
+              </button>
+            </div>
           ))}
         </div>
       ) : null}

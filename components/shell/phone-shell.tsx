@@ -309,9 +309,84 @@ export function Ready({ children }: { children: ReactNode }) {
    Full-bleed on a phone. On a wider screen the app sits in a phone-width
    column, because it is the phone shape of the same data — the console at
    /console is the desktop shape. */
+/* ── Pull to refresh, on Home ────────────────────────────────────────────
+   Pull down from the top past the line and let go: the ministry is read
+   again. Only from the very top, so it never fights a normal scroll. */
+const PULL_AT = 56;
+
+function usePullToRefresh(scroller: React.RefObject<HTMLDivElement | null>, on: boolean) {
+  const api = useAppApi();
+  const [dist, setDist] = useState(0);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !on) return;
+    let startY: number | null = null;
+    let last = 0;
+    const start = (e: TouchEvent) => {
+      startY = el.scrollTop <= 0 && !busy ? e.touches[0].clientY : null;
+    };
+    const move = (e: TouchEvent) => {
+      if (startY == null) return;
+      const d = Math.max(0, Math.min(90, (e.touches[0].clientY - startY) * 0.5));
+      if (d > 0 && el.scrollTop > 0) {
+        startY = null;
+        return;
+      }
+      if (Math.abs(d - last) > 2) setDist((last = d));
+    };
+    const end = () => {
+      if (startY == null) return;
+      startY = null;
+      if (last >= PULL_AT) {
+        setBusy(true);
+        setDist(46);
+        void api()
+          .reload()
+          .finally(() => {
+            setBusy(false);
+            setDist((last = 0));
+          });
+      } else setDist((last = 0));
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: true });
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
+    return () => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove', move);
+      el.removeEventListener('touchend', end);
+      el.removeEventListener('touchcancel', end);
+    };
+  }, [scroller, on, busy, api]);
+  return { dist, busy };
+}
+
+function PullIndicator({ dist, busy }: { dist: number; busy: boolean }) {
+  if (!dist && !busy) return null;
+  const ready = dist >= PULL_AT;
+  return (
+    <div className="flex flex-none items-center justify-center overflow-hidden" style={{ height: dist, transition: busy || !dist ? 'height .15s ease' : undefined }} aria-hidden={!busy}>
+      {busy ? (
+        <span role="status" className="flex items-center gap-2 text-[11.5px] text-neutral-400">
+          <i className="ph ph-circle-notch animate-spin text-[16px] text-accent-300" aria-hidden="true" />
+          Refreshing…
+        </span>
+      ) : (
+        <span className="flex items-center gap-2 text-[11.5px] text-neutral-500">
+          <i className="ph ph-arrow-down text-[16px] text-accent-300 transition-transform" style={{ transform: ready ? 'rotate(180deg)' : undefined }} aria-hidden="true" />
+          {ready ? 'Let go to refresh' : 'Pull to refresh'}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function PhoneShell({ children }: { children: ReactNode }) {
   const scroller = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const pull = usePullToRefresh(scroller, pathname === '/dashboard');
   const who = useApp((s) => recentsOwner(s.membership));
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
@@ -329,6 +404,7 @@ export function PhoneShell({ children }: { children: ReactNode }) {
         <SheetAutopublish />
         <KeepGuidesSaved />
         <div ref={scroller} className="flex flex-1 flex-col overflow-y-auto overscroll-contain" style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)' }}>
+          <PullIndicator {...pull} />
           <OfflineBanner />
           <Ready>{children}</Ready>
         </div>

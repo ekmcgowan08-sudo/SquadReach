@@ -92,6 +92,9 @@ export interface AppState {
 
   /* lifecycle */
   hydrate(data: MinistryData): void;
+  /** Read the ministry again (Home's pull to refresh). Never over changes
+   *  this phone hasn't saved yet. */
+  reload(): Promise<boolean>;
   setMembership(m: Membership): void;
   setNetOnline(on: boolean): void;
   restoreHeld(): Promise<void>;
@@ -301,6 +304,27 @@ export function createAppStore(backend: Backend, membership: Membership, initial
           }
         },
 
+        async reload() {
+          const s = get();
+          if (s.offline()) {
+            s.say('No signal — Home shows what it last loaded.');
+            return false;
+          }
+          if (s.unsavedDocs.length || s.unsavedConfig) {
+            s.say('Some changes on this phone haven’t saved yet. They go first — pull again in a moment.');
+            return false;
+          }
+          try {
+            const data = await s.backend.load();
+            get().hydrate(data);
+            await get().restoreHeld();
+            get().say('Home refreshed.');
+            return true;
+          } catch {
+            get().say('Couldn’t reach your ministry — try again in a moment.');
+            return false;
+          }
+        },
         async restoreHeld() {
           const raw = await readHeld();
           const { fresh, stale } = classifyRestored(raw);

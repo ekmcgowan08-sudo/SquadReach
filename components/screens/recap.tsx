@@ -6,8 +6,11 @@ import { useEffect, useRef } from 'react';
 import { useStandings } from '@/components/dashboard/standings-list';
 import { Btn, Icon, Screen, ScreenHeader } from '@/components/ui';
 import { verseForWeek } from '@/lib/bible';
+import { delBlob, putBlob } from '@/lib/media-store';
 import { fmt } from '@/lib/scoring';
+import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
+import type { MediaItem } from '@/lib/types/model';
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -149,7 +152,8 @@ export function RecapScreen() {
     };
   }, [rows, d.config.ministryName, d.config.gameName, d.config.seasonWeeks, d.roster.length, wk, verse?.ref, verseText]);
 
-  const blob = () => new Promise<Blob | null>((resolve) => ref.current?.toBlob(resolve, 'image/png') ?? resolve(null));
+  /* toBlob answers later, through its callback — never by what it returns. */
+  const blob = () => new Promise<Blob | null>((resolve) => (ref.current ? ref.current.toBlob(resolve, 'image/png') : resolve(null)));
 
   const save = async () => {
     const b = await blob();
@@ -162,6 +166,41 @@ export function RecapScreen() {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     api().say('Recap card saved as a PNG.');
+  };
+
+  /* Into the week's album, where everyone in the ministry sees it under
+     Media. One card a week: posting again replaces it. */
+  const albumLabel = 'Week ' + wk + ' recap card';
+  const posted = d.media.find((x) => x.week === wk && x.label === albumLabel);
+  const post = async () => {
+    if (api().offline() && api().backend.mode === 'supabase') return api().say('No signal — post it when you reconnect.');
+    if (posted && !window.confirm('Replace the recap card already in the Week ' + wk + ' album with this one?')) return;
+    const b = await blob();
+    if (!b) return;
+    const id = uid();
+    const key = 'media:' + id;
+    await putBlob(key, b);
+    const item: MediaItem = { id, week: wk, kind: 'photo', label: albumLabel, localKey: key, path: null, by: api().membership.displayName, at: Date.now() };
+    if (posted) {
+      api().mutate((x) => void (x.media = x.media.filter((y) => y.id !== posted.id)));
+      api().emit({ kind: 'mediaRemove', id: posted.id, path: posted.path ?? null });
+      if (posted.localKey) void delBlob(posted.localKey).catch(() => undefined);
+    }
+    api().mutate((x) => void x.media.push(item));
+    if (api().backend.mode === 'supabase') {
+      const path = api().membership.orgId + '/' + wk + '/' + id;
+      try {
+        await api().backend.sync({ kind: 'media', item: { ...item, path }, file: b });
+        api().mutate((x) => {
+          const r = x.media.find((y) => y.id === id);
+          if (r) r.path = path;
+        });
+      } catch {
+        return api().say('Saved on this phone — the upload needs signal to reach everyone.');
+      }
+    }
+    api().logActivity((posted ? 'Replaced' : 'Posted') + ' the Week ' + wk + ' recap card in the album');
+    api().say((posted ? 'Replaced in' : 'Posted to') + ' the Week ' + wk + ' album — everyone sees it under Media.');
   };
 
   /* The phone's own share sheet: Instagram, Messages, the church's group chat. */
@@ -195,6 +234,10 @@ export function RecapScreen() {
           Share
         </Btn>
       </div>
+      <Btn variant="secondary" className="min-h-[46px] justify-center" onClick={() => void post()}>
+        <Icon name={posted ? 'ph ph-arrows-clockwise' : 'ph ph-images'} className="mr-[6px] text-[14px]" />
+        {posted ? 'Replace the card in the Week ' + wk + ' album' : 'Post to the Week ' + wk + ' album'}
+      </Btn>
       <div className="flex flex-col gap-2 rounded-md bg-neutral-900 px-3 py-[11px]" style={{ boxShadow: 'inset 0 0 0 1px var(--color-neutral-800)' }}>
         <div className="text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Suggested caption</div>
         <div className="text-[11.5px] leading-[1.6] text-neutral-300 text-pretty">{caption}</div>

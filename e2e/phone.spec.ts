@@ -350,3 +350,40 @@ test('a guide saved on this phone plays from the offline page, with no app at al
   await page.goto('/offline.html');
   await expect(page.getByRole('region', { name: 'Small groups saved on this phone' })).toBeHidden();
 });
+
+test('pulling Home down from the top reads the ministry again', async ({ page }) => {
+  await page.goto('/dashboard');
+  await ready(page);
+  /* Someone else's change, as the demo keeps it. */
+  await page.evaluate(() => {
+    const raw = localStorage.getItem('squadrise_demo_v1');
+    const d = raw ? JSON.parse(raw) : null;
+    if (!d) throw new Error('no demo snapshot yet');
+    d.config.ministryName = 'Grace Students Live';
+    localStorage.setItem('squadrise_demo_v1', JSON.stringify(d));
+  });
+  const x = (page.viewportSize()?.width ?? 400) / 2;
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', y: number) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  await touch('touchStart', 200);
+  for (let y = 210; y <= 400; y += 20) await touch('touchMove', y);
+  await expect(page.getByText('Let go to refresh')).toBeVisible();
+  await touch('touchEnd', 400);
+  await expect(page.getByText('Home refreshed.')).toBeVisible();
+  await expect(page.getByText('Grace Students Live').first()).toBeVisible();
+});
+
+test('the recap card posts into the week’s album, and a second post replaces it', async ({ page }) => {
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/dashboard/recap');
+  await ready(page);
+  const [png] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Save PNG' }).click()]);
+  expect(png.suggestedFilename()).toMatch(/^squadrise-week\d+-recap\.png$/);
+  await page.getByRole('button', { name: /^Post to the Week \d+ album$/ }).click();
+  await expect(page.getByText(/^Posted to the Week \d+ album — everyone sees it under Media\.$/)).toBeVisible();
+  await page.getByRole('button', { name: /^Replace the card in the Week \d+ album$/ }).click();
+  await expect(page.getByText(/^Replaced in the Week \d+ album/)).toBeVisible();
+  const cards = await page.evaluate(() => (JSON.parse(localStorage.getItem('squadrise_demo_v1') ?? '{}').media ?? []).filter((m: { label: string }) => / recap card$/.test(m.label)).length);
+  expect(cards).toBeLessThanOrEqual(1);
+});

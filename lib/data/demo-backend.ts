@@ -84,6 +84,8 @@ export function readDemo(): MinistryData {
 export const demoBackend: Backend = {
   mode: 'demo',
   async load() {
+    /* A save still waiting goes first, so a reload reads it back. */
+    flush();
     return readDemo();
   },
   saveSnapshot(d) {

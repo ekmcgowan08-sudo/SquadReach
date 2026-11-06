@@ -205,3 +205,19 @@ describe('a season with no points', () => {
     expect(store.getState().toast?.msg).toMatch(/checked in\. No points this season — attendance is on the record\.$/);
   });
 });
+
+describe('pulling Home to refresh', () => {
+  it('reads the ministry again — but never over changes this phone hasn’t saved', async () => {
+    const { backend } = flaky();
+    const fresh = demoMinistry();
+    fresh.config = { ...fresh.config, ministryName: 'Grace Students (renamed)' };
+    const store = createAppStore({ ...backend, load: async () => fresh }, leader, demoMinistry());
+    store.setState({ unsavedConfig: true });
+    expect(await store.getState().reload()).toBe(false);
+    expect(store.getState().data.config.ministryName).toBe('Grace Community Students');
+    store.setState({ unsavedConfig: false });
+    expect(await store.getState().reload()).toBe(true);
+    expect(store.getState().data.config.ministryName).toBe('Grace Students (renamed)');
+    expect(store.getState().toast?.msg).toBe('Home refreshed.');
+  });
+});

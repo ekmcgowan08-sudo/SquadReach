@@ -779,3 +779,16 @@ test('the whole horizon: a plan of seasons, a year confirmed, and a season with 
   await expect(page.getByText('Plan cleared. Saved and running seasons were left alone.')).toBeVisible();
   await expect(page.getByText('Summer 2027').first()).toBeVisible();
 });
+
+test('a saved report can be copied, leaving the original as it was', async ({ page }) => {
+  await page.goto('/console?tab=reports');
+  await ready(page);
+  await page.getByRole('button', { name: 'Who is slipping away' }).click();
+  await page.getByRole('button', { name: 'Save report' }).click();
+  await page.getByRole('button', { name: 'Duplicate Who is slipping away' }).click();
+  await expect(page.getByText('Copied — change the copy, keep the original.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Edit report' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save report' }).click();
+  await expect(page.getByRole('button', { name: 'Edit Who is slipping away (copy)' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Who is slipping away', exact: true })).toBeVisible();
+});
