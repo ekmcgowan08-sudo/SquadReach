@@ -387,3 +387,34 @@ test('the recap card posts into the week’s album, and a second post replaces i
   const cards = await page.evaluate(() => (JSON.parse(localStorage.getItem('squadrise_demo_v1') ?? '{}').media ?? []).filter((m: { label: string }) => / recap card$/.test(m.label)).length);
   expect(cards).toBeLessThanOrEqual(1);
 });
+
+test('a prayer request is read only by the leader who has it', async ({ page, context, baseURL }) => {
+  await as(context, 'leader', baseURL!);
+  await page.goto('/dashboard/follow-ups');
+  await ready(page);
+  const card = (who: string) => page.locator('.sr-card').filter({ has: page.getByText(who, { exact: true }) }).first();
+  /* Pastor Mike has Isaac's; nobody has the anonymous one yet. */
+  await expect(card('Isaac Smith')).toContainText('Yours');
+  await expect(card('Isaac Smith')).toContainText('My grandma has surgery Thursday morning');
+  await expect(card('Anonymous')).toContainText('Nobody has it yet');
+  await expect(card('Anonymous')).not.toContainText('Things at home got loud');
+  await card('Anonymous').getByRole('button', { name: 'Take it to read' }).click();
+  await expect(page.getByText('It’s yours. Only you read it until it’s on the wall.')).toBeVisible();
+  await expect(card('Anonymous')).toContainText('Things at home got loud');
+
+  /* Handed on, it's sealed to him. */
+  await card('Isaac Smith').getByRole('button', { name: 'Hand it to another leader' }).click();
+  await page.getByRole('group', { name: /Hand Isaac Smith’s request to/ }).getByRole('button', { name: 'Renee Boyd' }).click();
+  await expect(page.getByText('Handed to Renee Boyd. Only they read it now.')).toBeVisible();
+  await expect(card('Isaac Smith')).toContainText('Only Renee Boyd reads this one.');
+  await expect(card('Isaac Smith')).not.toContainText('My grandma');
+  await expect(card('Isaac Smith').getByRole('button', { name: /Take it/ })).toHaveCount(0);
+
+  /* The owner, who now has it, reads it. */
+  await as(context, 'owner', baseURL!);
+  await page.goto('/dashboard/follow-ups');
+  await ready(page);
+  await expect(card('Isaac Smith')).toContainText('My grandma has surgery Thursday morning');
+  await expect(card('Anonymous')).toContainText('Only Pastor Mike reads this one.');
+  await expect(card('Anonymous').getByRole('button', { name: 'Take it over from Pastor Mike' })).toBeVisible();
+});

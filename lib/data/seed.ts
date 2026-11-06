@@ -415,7 +415,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
       { id: 'w3', who: 'Wyatt Price', meta: 'Last week · Red', body: 'Asked my dad to come to Wednesday night. He said maybe.', praying: 44, prayed: false, answered: true, at: now - 8 * DAY }
     ],
     prayerQueue: [
-      { id: 'q1', who: 'Isaac Smith', meta: 'submitted 2h ago · Red', body: 'My grandma has surgery Thursday morning. She raised me. I do not really want it read out loud, just prayed for.', at: now - 120 * MIN },
+      { id: 'q1', who: 'Isaac Smith', meta: 'submitted 2h ago · Red', body: 'My grandma has surgery Thursday morning. She raised me. I do not really want it read out loud, just prayed for.', at: now - 120 * MIN, owner: 'Pastor Mike' },
       { id: 'q2', who: 'Anonymous', meta: 'submitted 40m ago · 9th grade', body: 'Things at home got loud again this week. I am okay at school, it is just after.', at: now - 40 * MIN }
     ],
     careReminders: [

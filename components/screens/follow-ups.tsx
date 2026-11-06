@@ -8,6 +8,7 @@ import { Sheet } from '@/components/sheet';
 import { Btn, Icon, Screen, ScreenHeader, initialsOf } from '@/components/ui';
 import { nowMs } from '@/lib/dates';
 import { canReviewPrayer, canSeeCare } from '@/lib/permissions';
+import { prayerLeaders, prayerMine, prayerReadable, prayerTakeable } from '@/lib/prayer';
 import { careNotes, myTeamId, openFollowups, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
@@ -55,6 +56,35 @@ function PrayerWall() {
   const [anon, setAnon] = useState(false);
   const reviewer = canReviewPrayer(m.persona);
   const ready = draft.trim().length >= 12;
+  const offline = useApp((s) => !s.netOnline || s.offlineSim);
+  const [handFor, setHandFor] = useState<string | null>(null);
+  const mineToPost = d.prayerQueue.filter((q) => prayerMine(q, m));
+
+  /* Take one to read it, or hand yours to another leader. Only its leader
+     reads it, so taking it is a deliberate act the audit log keeps. */
+  const take = async (q: PrayerQueued, to: { id: string; name: string } | null) => {
+    setHandFor(null);
+    const b = api().backend;
+    if (b.takePrayer) {
+      if (offline) return api().say('No signal — taking a request needs a connection.');
+      try {
+        const r = await b.takePrayer(q.id, to?.id ?? null);
+        api().mutate((x) => {
+          const it = x.prayerQueue.find((y) => y.id === q.id);
+          if (it) Object.assign(it, { owner: r.owner, ownerId: to?.id ?? m.membershipId, mine: r.mine, sealed: r.body == null, body: r.body ?? '' });
+        });
+      } catch (e) {
+        return api().say(/already with/.test((e as Error).message) ? 'Another leader has it already — only they, or an owner, can hand it on.' : 'Couldn’t take it — try again with a signal.');
+      }
+    } else {
+      api().mutate((x) => {
+        const it = x.prayerQueue.find((y) => y.id === q.id);
+        if (it) it.owner = to?.name ?? m.displayName;
+      });
+      api().logActivity(to ? 'Handed a prayer request from ' + q.who + ' to ' + to.name : 'Took a prayer request from ' + q.who + ' to read');
+    }
+    api().say(to ? 'Handed to ' + to.name + '. Only they read it now.' : 'It’s yours. Only you read it until it’s on the wall.');
+  };
 
   const submit = () => {
     const body = draft.trim();
@@ -160,30 +190,72 @@ function PrayerWall() {
       {reviewer && d.prayerQueue.length ? (
         <div className="flex flex-col gap-[8.4px]">
           <div className="text-[10px] font-semibold uppercase leading-none tracking-[.12em] text-neutral-500">Waiting for review · {d.prayerQueue.length}</div>
-          {d.prayerQueue.length > 1 ? (
+          <div className="text-[11px] leading-[1.5] text-neutral-500 text-pretty">Each request is read by the one leader who has it. Take one to read it; the others see that it’s waiting, and who has it.</div>
+          {mineToPost.length > 1 ? (
             <div className="flex gap-2">
-              <Btn variant="secondary" className="px-3" onClick={() => post(d.prayerQueue.map((q) => q.id))}>
-                Post all to wall
+              <Btn variant="secondary" className="px-3" onClick={() => post(mineToPost.map((q) => q.id))}>
+                Post all {mineToPost.length} of yours to the wall
               </Btn>
             </div>
           ) : null}
-          {d.prayerQueue.map((q) => (
-            <div key={q.id} className="sr-card animate-[sr-rise_.25s_ease_both] px-[15px] py-[16.8px]">
-              <div className="flex items-center gap-2">
-                <span className="text-[12px] font-medium leading-none text-neutral-300">{q.who}</span>
-                <span className="text-[11px] leading-none text-neutral-500">{q.meta}</span>
+          {d.prayerQueue.map((q) => {
+            const mine = prayerMine(q, m);
+            const readable = prayerReadable(q, m);
+            const others = prayerLeaders(d, m).filter((l) => l.name !== m.displayName && l.id !== m.membershipId && l.name !== q.owner);
+            return (
+              <div key={q.id} className="sr-card animate-[sr-rise_.25s_ease_both] px-[15px] py-[16.8px]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-medium leading-none text-neutral-300">{q.who}</span>
+                  <span className="text-[11px] leading-none text-neutral-500">{q.meta}</span>
+                  <span className="ml-auto rounded-full border px-2 py-[3px] text-[10px] font-medium leading-none" style={{ borderColor: mine ? 'var(--color-accent-600)' : 'var(--color-neutral-800)', color: mine ? 'var(--color-accent-200)' : 'var(--color-neutral-500)' }}>
+                    {mine ? 'Yours' : q.owner ? 'With ' + q.owner : 'Nobody has it yet'}
+                  </span>
+                </div>
+                {readable ? (
+                  <div className="mt-[11.2px] text-[14px] leading-[1.6] text-neutral-200 text-pretty">{q.body}</div>
+                ) : (
+                  <div className="mt-[11.2px] flex items-center gap-2 text-[12px] leading-[1.5] text-neutral-500">
+                    <Icon name="ph ph-lock-simple" className="flex-none text-[14px]" />
+                    {q.owner ? 'Only ' + q.owner + ' reads this one.' : 'Take it to read it. Once you have it, only you do.'}
+                  </div>
+                )}
+                {mine ? (
+                  <>
+                    <div className="mt-[16.8px] flex gap-[8.4px]">
+                      <Btn variant="ghost" className="flex-1 justify-center" onClick={() => hold(q)}>
+                        Hold &amp; talk first
+                      </Btn>
+                      <Btn className="flex-1 justify-center" onClick={() => post([q.id])}>
+                        Post to wall
+                      </Btn>
+                    </div>
+                    {others.length ? (
+                      handFor === q.id ? (
+                        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={'Hand ' + q.who + '’s request to'}>
+                          {others.map((l) => (
+                            <Btn key={l.id} variant="secondary" className="px-3 text-[12px]" onClick={() => void take(q, l)}>
+                              {l.name}
+                            </Btn>
+                          ))}
+                          <Btn variant="ghost" className="px-3 text-[12px]" onClick={() => setHandFor(null)}>
+                            Keep it
+                          </Btn>
+                        </div>
+                      ) : (
+                        <button onClick={() => setHandFor(q.id)} className="mt-1 min-h-11 text-[12px] font-medium text-accent-300">
+                          Hand it to another leader
+                        </button>
+                      )
+                    ) : null}
+                  </>
+                ) : prayerTakeable(q, m) ? (
+                  <Btn variant="secondary" className="mt-[14px] w-full justify-center" onClick={() => void take(q, null)}>
+                    {q.owner ? 'Take it over from ' + q.owner : 'Take it to read'}
+                  </Btn>
+                ) : null}
               </div>
-              <div className="mt-[11.2px] text-[14px] leading-[1.6] text-neutral-200 text-pretty">{q.body}</div>
-              <div className="mt-[16.8px] flex gap-[8.4px]">
-                <Btn variant="ghost" className="flex-1 justify-center" onClick={() => hold(q)}>
-                  Hold &amp; talk first
-                </Btn>
-                <Btn className="flex-1 justify-center" onClick={() => post([q.id])}>
-                  Post to wall
-                </Btn>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : null}
 

@@ -452,7 +452,8 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         db.from('categories').select('*').eq('org_id', org).eq('archived', false).order('sort'),
         db.from('students').select('*').eq('org_id', org).order('name'),
         db.from('score_entries').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(5000),
-        db.from('prayer_requests').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(200),
+        /* What a request says comes from prayer_bodies(): only its leader, its sender, or the wall read it. */
+        db.from('prayer_requests').select('id, who, meta, status, praying, answered, created_at, assigned_to, assigned_name').eq('org_id', org).order('created_at', { ascending: false }).limit(200),
         db.from('care_notes').select('*').eq('org_id', org).eq('done', false).order('created_at', { ascending: false }),
         db.from('events').select('*').eq('org_id', org).order('created_at'),
         db.from('challenges').select('*').eq('org_id', org).order('created_at'),
@@ -489,7 +490,8 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
         id: r.id, who: r.who, team: r.team_id, day: r.day, ref: r.ref, mode: r.mode, at: new Date(r.created_at).getTime()
       }));
 
-      const prayerRows = must(prayers) as { id: string; who: string; meta: string; body: string; status: string; praying: number; answered: boolean; created_at: string }[];
+      const prayerRows = must(prayers) as { id: string; who: string; meta: string; status: string; praying: number; answered: boolean; created_at: string; assigned_to: string | null; assigned_name: string | null }[];
+      const bodies = new Map(((await db.rpc('prayer_bodies', { p_org: org })).data as { id: string; body: string; mine: boolean }[] | null ?? []).map((b) => [b.id, b]));
       let mine = new Set<string>();
       if (membership.membershipId) {
         const p = await db.from('prayer_praying').select('request_id').eq('membership_id', membership.membershipId);
@@ -497,10 +499,13 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       }
       d.prayers = prayerRows
         .filter((p) => p.status === 'wall')
-        .map((p) => ({ id: p.id, who: p.who, meta: p.meta, body: p.body, praying: p.praying, prayed: mine.has(p.id), answered: p.answered, at: new Date(p.created_at).getTime() }));
+        .map((p) => ({ id: p.id, who: p.who, meta: p.meta, body: bodies.get(p.id)?.body ?? '', praying: p.praying, prayed: mine.has(p.id), answered: p.answered, at: new Date(p.created_at).getTime() }));
       d.prayerQueue = prayerRows
         .filter((p) => p.status === 'queued')
-        .map((p) => ({ id: p.id, who: p.who, meta: p.meta, body: p.body, at: new Date(p.created_at).getTime() }));
+        .map((p) => {
+          const b = bodies.get(p.id);
+          return { id: p.id, who: p.who, meta: p.meta, body: b?.body ?? '', at: new Date(p.created_at).getTime(), owner: p.assigned_name, ownerId: p.assigned_to, mine: !!b?.mine, sealed: !b };
+        });
 
       d.careReminders = ((care.data ?? []) as { id: string; name: string; meta: string; flagged_by: string; kind: 'followup' | 'note'; body: string; created_at: string }[]).map((c) => ({
         id: c.id,
@@ -803,6 +808,13 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       const run = queue.then(() => apply(e));
       queue = run.catch(() => undefined);
       return run;
+    },
+
+    async takePrayer(id: string, to: string | null) {
+      const r = await db.rpc('prayer_take', { p_request: id, p_to: to });
+      if (r.error) throw new Error(r.error.message);
+      const b = ((await db.rpc('prayer_bodies', { p_org: org })).data as { id: string; body: string; mine: boolean }[] | null ?? []).find((x) => x.id === id);
+      return { owner: String(r.data ?? ''), body: b?.body ?? null, mine: !!b?.mine };
     },
 
     /* Several pushes from one tap (a sheet with three owners) are one ask. */

@@ -96,6 +96,7 @@ To reset the demo, use More → **Reset the demo** (back to week 9), or clear th
    | `20261027150000_trips_and_forms.sql` | A slip's kind and trip; trip events and their cost; `rsvp_trip_gate` (no "going" to a trip with a blocking form unsigned); `camp_payments` and `camp_payment_confirm`; `family_view` shows each form's kind |
    | `20261028100000_push.sql` | `push_subscriptions` (one phone, one account: `push_subscribe`, `push_prefs`); `push_outbox`, which only the server reads, filled by triggers on access requests, event proposals, prayer requests, swaps, door flags, chat flags, run-sheet owners and bench asks; `nudges` from a captain or an adult, one of each kind per student a night |
    | `20261028110000_event_nudge.sql` | `event_nudge`: a leader nudges an event's no-replies once a day for the whole ministry (`events.nudged_at`), queuing a push to everyone the event is for who hasn't answered |
+   | `20261106100000_prayer_owner.sql` | A prayer request's leader (`assigned_to`); the text readable only through `prayer_bodies()` (its leader, its sender, or the wall); `prayer_take` to take one or hand it on; only its leader posts or holds it |
    | `20261101090000_access_withdraw.sql` | Someone who asked to join can withdraw the request while it's pending (`access_withdraw`); a decided one stays, and the leaders' push goes with a withdrawn one |
 
 4. In **Authentication → URL Configuration**:
@@ -314,6 +315,13 @@ Where the prototype left a call open, the build took the safer default:
   leader marks a payment at the door; it stays unconfirmed until a leader
   counts it, and a mistake comes off only before then. "Pay online" is
   drawn but not open — SquadRise takes no cards.
+- **A prayer request is read by the leader who has it.** As the handoff
+  asks: a queued request waits until a leader takes it, and from then only
+  that leader reads it, posts it or holds it. Every other leader sees who
+  sent it and who has it; only the leader who has it, or an owner taking it
+  over, hands it on, and the audit log keeps who took it. The database
+  enforces it — the text isn't readable from the table at all, only through
+  `prayer_bodies()` for its leader, its sender, or the wall.
 - **A season can run with no points.** Answering "No points at all —
   regular programming" in the season interview (or making live a Summer or
   Fall/Winter season from the multi-year plan) turns the leaderboard off
@@ -466,12 +474,6 @@ Where the prototype left a call open, the build took the safer default:
   church, so it's left as a decision. Importing and check-ins work today.
 - **Casting from the demo.** The demo's room lives on one device, so it
   has no cast link; open the room screen in another window instead.
-- **Who may read a prayer request.** The handoff asks that a request be
-  readable only by the leader it's assigned to. Today every leader can
-  read a queued request, because leaders review the queue before anything
-  goes on the wall; coaches and students see that a request exists and
-  who has it, never what it says. Assigning each request to one leader
-  means also deciding who reviews it, so it's left as a decision.
 - **A typed join code for ministry time.** The design shows a code such
   as GRACE 4821 beside the room QR. Students are already signed in to
   their ministry, so the room screen says "scan this, or open the app and

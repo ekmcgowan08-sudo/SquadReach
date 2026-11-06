@@ -124,6 +124,9 @@ export interface Backend {
   /** Supabase: after the writes made so far, ask the server to send the
    *  pushes they queued (the database decided what and to whom). */
   pushNow?(): void;
+  /** Supabase: take a prayer request (or hand it to another leader by
+   *  membership id) and read back what it says, if it's now yours. */
+  takePrayer?(id: string, to: string | null): Promise<{ owner: string; body: string | null; mine: boolean }>;
 }
 
 export interface LiveChannel {

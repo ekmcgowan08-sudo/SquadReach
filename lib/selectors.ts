@@ -109,7 +109,10 @@ export function computeNotifications(d: MinistryData, m: Membership, on: Record<
     for (const e of d.events.filter((x) => x.status === 'proposed')) {
       list.push({ icon: 'ph ph-calendar-plus', label: 'New event proposal: ' + e.title, meta: e.by ?? e.date, href: '/dashboard/calendar', trigger: 'event' });
     }
-    if (d.prayerQueue.length) list.push({ icon: 'ph ph-hands-praying', label: d.prayerQueue.length + (d.prayerQueue.length === 1 ? ' prayer request' : ' prayer requests') + ' to review', meta: 'Nothing is public until you post it', href: '/dashboard/follow-ups', trigger: 'prayer' });
+    if (d.prayerQueue.length) {
+      const untaken = d.prayerQueue.filter((q) => !q.owner).length;
+      list.push({ icon: 'ph ph-hands-praying', label: d.prayerQueue.length + (d.prayerQueue.length === 1 ? ' prayer request' : ' prayer requests') + ' to review', meta: untaken ? untaken + ' nobody has taken yet — take one to read it' : 'Nothing is public until it’s posted', href: '/dashboard/follow-ups', trigger: 'prayer' });
+    }
     for (const c of corrections(d))
       list.push({ icon: 'ph ph-arrow-counter-clockwise', label: 'Correction: ' + c.line, meta: 'Sent after the night’s report went out', href: '/dashboard/audit', trigger: 'weeklySummary' });
     for (const f of openChatFlags(d))

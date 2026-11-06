@@ -71,13 +71,15 @@ insert into serve_swaps (org_id, from_name, meeting_date, role) values (:'org', 
 insert into events (org_id, title, status, proposed_by) values (:'org', 'Bowling night', 'proposed', 'Coach Chris · coach');
 reset role;
 select pg_temp.check((select body from push_outbox where dedupe like 'swap:%') = 'Coach Chris can’t do games on Wed, Nov 4', 'a swap request tells the leaders who and when');
-select pg_temp.check((select to_users = array['00000000-0000-0000-0000-000000000001']::uuid[] from push_outbox where dedupe like 'swap:%'), 'and only the leaders');
+select pg_temp.check((select '00000000-0000-0000-0000-000000000001'::uuid = any(to_users) and not '00000000-0000-0000-0000-000000000002'::uuid = any(to_users)
+                        and (select bool_and(m.role in ('leader', 'owner')) from memberships m where m.org_id = :'org' and m.user_id = any(to_users))
+                        from push_outbox where dedupe like 'swap:%'), 'and only the leaders');
 select pg_temp.check((select body from push_outbox where dedupe like 'event:%') = 'Bowling night · Coach Chris', 'an event proposal reaches the leaders to approve');
 
 select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
 insert into prayer_requests (org_id, who, body) values (:'org', 'Ellison Reid', 'Please pray for my grandma this week');
 reset role;
-select pg_temp.check((select title || ' / ' || body from push_outbox where dedupe like 'prayer:%') = 'New prayer request / Nothing is public until you post it.', 'a prayer request pushes without its words or its name');
+select pg_temp.check((select title || ' / ' || body from push_outbox where dedupe like 'prayer:%') = 'New prayer request / Take it to read it — nothing is public until it’s posted.', 'a prayer request pushes without its words or its name');
 
 -- The huddle: told once per publish, asked once per post.
 select pg_temp.as_user('00000000-0000-0000-0000-000000000002');
@@ -111,7 +113,8 @@ insert into nudges (org_id, meeting_date, student, kind) values (:'org', '2026-1
 reset role;
 select pg_temp.check((select to_users from push_outbox where dedupe like 'nudge:%') = array['00000000-0000-0000-0000-000000000004']::uuid[], 'the nudge pushes the student');
 select pg_temp.check((select body from push_outbox where dedupe like 'nudge:%') = 'Luke checked — are you coming tonight?', 'saying who checked');
-select pg_temp.check((select title || ' / ' || array_to_string(to_users, ',') from push_outbox where dedupe like 'home:%') = 'Text Ellison Reid’s household? / 00000000-0000-0000-0000-000000000001', 'asking for a text home goes to a leader, who has the number');
+select pg_temp.check((select title from push_outbox where dedupe like 'home:%') = 'Text Ellison Reid’s household?', 'asking for a text home goes to a leader, who has the number');
+select pg_temp.check((select '00000000-0000-0000-0000-000000000001'::uuid = any(to_users) and not '00000000-0000-0000-0000-000000000006'::uuid = any(to_users) from push_outbox where dedupe like 'home:%'), 'and not to the captain who asked');
 select pg_temp.check((select url from push_outbox where dedupe like 'home:%') = '/dashboard/parents?family=Ellison%20Reid', 'and opens that family''s card');
 
 select pg_temp.as_user('00000000-0000-0000-0000-000000000004');

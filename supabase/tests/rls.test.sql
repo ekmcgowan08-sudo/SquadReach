@@ -178,6 +178,7 @@ end $$;
 reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
 select pg_temp.check((select count(*) from prayer_requests) = 1, 'a leader reads the queue');
+select public.prayer_take(:'prayer');
 update prayer_requests set status = 'wall' where id = :'prayer';
 reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000006');

@@ -106,8 +106,17 @@ export interface PrayerQueued {
   id: string;
   who: string;
   meta: string;
+  /** Empty when this person may not read it (sealed). */
   body: string;
   at: number;
+  /** The leader it's assigned to — the only one who reads it. Null until
+   *  a leader takes it. */
+  owner?: string | null;
+  ownerId?: string | null;
+  /** Supabase: the database said it's yours to decide. */
+  mine?: boolean;
+  /** Supabase: the database didn't give this person what it says. */
+  sealed?: boolean;
 }
 
 export interface CareReminder {
