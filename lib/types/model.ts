@@ -344,6 +344,8 @@ export interface GameSetup {
   format?: Partial<GameFormat>;
   /** Who reads the rules on Game rules. Absent or null: everyone. */
   rulesAudience?: AudienceId[] | null;
+  /** The calendar event this game was put on, and for which night. */
+  calendarEvent?: { id: string; iso: string } | null;
 }
 
 /** A game kept to run again: its name and its whole setup. */

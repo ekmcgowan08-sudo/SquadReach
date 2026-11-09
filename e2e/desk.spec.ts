@@ -601,6 +601,43 @@ test('past seasons: record how this season finished, and it shows in Reports', a
   await expect(view.getByRole('cell', { name: 'Fall 2026' })).toBeVisible();
 });
 
+test('the dynasty setting decides the next season: a new draft puts everyone back in the pool, captains too', async ({ page }) => {
+  const asked: string[] = [];
+  page.on('dialog', (dl) => {
+    asked.push(dl.message());
+    void dl.accept();
+  });
+  await page.goto('/console?tab=draft');
+  await ready(page);
+  const dynasty = page.getByRole('checkbox', { name: /Dynasty — rosters carry over each season/ });
+  await expect(dynasty).not.toBeChecked();
+  await expect(page.getByText('6 in the pool.', { exact: false })).toBeVisible();
+  await dynasty.check();
+  await expect(page.getByText('When the next season goes live, every squad keeps its students. Rivalries carry over.')).toBeVisible();
+  await dynasty.uncheck();
+  await expect(page.getByText('When the next season goes live, everyone goes back in the pool for a new draft.')).toBeVisible();
+
+  /* The live season now says so, and a season started from it carries it on. */
+  await page.goto('/console?tab=season');
+  await ready(page);
+  const fall = page.locator('div.flex-wrap', { hasText: 'Fall 2026' }).filter({ has: page.getByText('Live', { exact: true }) });
+  await fall.getByRole('button', { name: 'Start next season from this' }).click();
+  await expect(page.getByText('Every student goes back into the draft pool for draft night, captains too.')).toBeVisible();
+  await expect(page.getByText('Draft night — captains pick')).toBeVisible();
+  await page.getByRole('button', { name: 'Save and make it live' }).click();
+  await expect(page.getByText(/is live\. .* Everyone’s in the draft pool for draft night\./)).toBeVisible();
+  expect(asked.at(-1)).toContain('Every student goes back into the draft pool for draft night, captains too.');
+
+  await page.goto('/console?tab=draft');
+  await ready(page);
+  await expect(page.getByText('Isaac Lindsey')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Place Isaac Lindsey' })).toBeVisible();
+  await expect(page.getByText(/^\d{2,} in the pool\./)).toBeVisible();
+  await page.goto('/console?tab=people');
+  await ready(page);
+  await expect(page.getByRole('checkbox', { name: 'Isaac Lindsey is a captain' })).not.toBeChecked();
+});
+
 test('game setup: the format in a line, a saved place, who reads the rules, and a game kept to run again', async ({ page, context, baseURL }) => {
   await page.goto('/console?tab=scoring');
   await ready(page);
@@ -622,6 +659,31 @@ test('game setup: the format in a line, a saved place, who reads the rules, and 
   await ready(page);
   await expect(page.getByText(/3 rounds × 5 min/)).toBeVisible();
   await expect(page.getByText(/sharing the full rules with/)).toBeVisible();
+});
+
+test('game setup puts the game on the calendar for its next night, and again updates that one entry', async ({ page, context, baseURL }) => {
+  await page.goto('/console?tab=scoring');
+  await ready(page);
+  const night = shortDay(demoNight());
+  /* The demo's week 9 is already on the calendar: the game goes on that entry. */
+  await expect(page.getByText('Week 9 is on the calendar already — this puts Pipeline relay on it, with when and where, for everyone.')).toBeVisible();
+  await page.getByRole('button', { name: 'Save & add to calendar' }).click();
+  await expect(page.getByText('Week 9 · Pipeline relay is on the calendar for everyone, ' + night + '.')).toBeVisible();
+  await expect(page.getByText('Added to calendar ✓ · ' + night + ' at 6:45pm')).toBeVisible();
+
+  /* Moved outside: the same entry changes, no second one appears. */
+  await page.getByLabel('Offsite address (overrides the home venue)').fill('Riverside Park');
+  await page.getByLabel('Offsite address (overrides the home venue)').press('Enter');
+  await page.getByRole('button', { name: 'Update it on the calendar' }).click();
+  await expect(page.getByText('The calendar has the changes.')).toBeVisible();
+
+  await as(context, 'parent', baseURL!);
+  await page.goto('/dashboard/calendar');
+  await ready(page);
+  await expect(page.getByText('Pipeline relay')).toHaveCount(1);
+  const entry = page.getByRole('link', { name: /^Week 9 · Pipeline relay Wed 6:45pm · Riverside Park/ });
+  await expect(entry).toBeVisible();
+  await expect(entry).toContainText('42 going');
 });
 
 test('a category with its own starting base scores at its own number', async ({ page }) => {

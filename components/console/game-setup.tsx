@@ -6,11 +6,13 @@
 import { useState } from 'react';
 import { AUDIENCE_LABELS } from '@/components/screens/calendar';
 import { Btn, Icon, cx } from '@/components/ui';
+import { isoDay } from '@/lib/dates';
 import { ENDS, SCORING, SEGMENTS, formatOf, formatSummary, type GameFormat } from '@/lib/game-format';
+import { gameNightEvent, nextGameNight, nightEntry } from '@/lib/game-night';
 import { ALL_AUDIENCES } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
-import type { GameSetup, MinistryConfig } from '@/lib/types/model';
+import type { GameSetup, MinistryConfig, MinistryEvent } from '@/lib/types/model';
 import { useSaveConfig } from '@/components/console/kit';
 
 export const DEFAULT_SPACES = ['Gym Court', 'Outdoor field', 'Parking lot', 'Fellowship hall', 'Classroom', 'Offsite'];
@@ -177,13 +179,15 @@ export function GameTemplates() {
   const list = c.gameTemplates ?? [];
   const keep = () => {
     const name = c.gameName || 'Game';
-    save((cc) => ({ gameTemplates: [{ id: uid(), name, setup: JSON.parse(JSON.stringify(cc.gameSetup)) as GameSetup }, ...(cc.gameTemplates ?? []).filter((t) => t.name !== name)] }), 'Saved the game ' + name + ' to run again');
+    /* A kept game is its rules and shape — not this season's calendar entry. */
+    const setup = JSON.parse(JSON.stringify({ ...c.gameSetup, calendarEvent: undefined })) as GameSetup;
+    save((cc) => ({ gameTemplates: [{ id: uid(), name, setup }, ...(cc.gameTemplates ?? []).filter((t) => t.name !== name)] }), 'Saved the game ' + name + ' to run again');
     api().say(name + ' is saved — load it for any later game.');
   };
   const load = (id: string) => {
     const t = list.find((x) => x.id === id);
     if (!t || !window.confirm('Load “' + t.name + '”? This game’s rules, format, places and map are replaced; its weeks stay as they are.')) return;
-    save((cc): Partial<MinistryConfig> => ({ gameName: t.name, gameSetup: { ...(JSON.parse(JSON.stringify(t.setup)) as GameSetup), gameWeeks: cc.gameSetup.gameWeeks } }), 'Loaded the game ' + t.name);
+    save((cc): Partial<MinistryConfig> => ({ gameName: t.name, gameSetup: { ...(JSON.parse(JSON.stringify(t.setup)) as GameSetup), gameWeeks: cc.gameSetup.gameWeeks, calendarEvent: cc.gameSetup.calendarEvent ?? null } }), 'Loaded the game ' + t.name);
   };
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -204,6 +208,56 @@ export function GameTemplates() {
           </select>
         </label>
       ) : null}
+    </div>
+  );
+}
+
+/** Put the game on the calendar for its next night, for everyone: when from
+ *  the run sheet, where from the game. If the week is already on the
+ *  calendar the game goes on that entry, RSVPs and all; again, it updates
+ *  the same entry rather than adding another. */
+export function GameOnCalendar() {
+  const d = useApp((s) => s.data);
+  const m = useApp((s) => s.membership);
+  const api = useAppApi();
+  const save = useSaveConfig();
+  const c = d.config;
+  const night = nextGameNight(c, isoDay(new Date()));
+  const placed = c.gameSetup.calendarEvent;
+  const recorded = placed && night && placed.iso === night.iso ? d.events.find((e) => e.id === placed.id) : undefined;
+  const existing = recorded ? undefined : night ? nightEntry(d.events, night) : undefined;
+  const current = recorded ?? existing;
+  const label = night ? new Date(night.iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+  const put = () => {
+    if (!night) return;
+    const id = current?.id ?? uid();
+    const made = gameNightEvent(c, d.huddle.runSheet, night, id, m.displayName + ' · ' + m.persona);
+    const e: MinistryEvent = { ...current, ...made, color: current?.color ?? made.color, by: current?.by ?? made.by };
+    api().mutate((x) => {
+      const i = x.events.findIndex((y) => y.id === id);
+      if (i >= 0) x.events[i] = e;
+      else x.events.push(e);
+    });
+    api().emit({ kind: 'event', event: e });
+    save((cc) => ({ gameSetup: { ...cc.gameSetup, calendarEvent: { id, iso: night.iso } } }), (recorded ? 'Updated ' : 'Added ') + '“' + e.title + '” on ' + e.date + (recorded ? ' on the calendar' : ' to the calendar'));
+    api().say(recorded ? 'The calendar has the changes.' : e.title + ' is on the calendar for everyone, ' + label + '.');
+  };
+  const game = c.gameName.trim() || 'the game';
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Btn variant="secondary" className="px-4" disabled={!night} onClick={put}>
+        <Icon name="ph ph-calendar-plus" className="mr-[6px] text-[14px]" />
+        {recorded ? 'Update it on the calendar' : 'Save & add to calendar'}
+      </Btn>
+      <span className="text-[12px] text-neutral-500" role="status">
+        {!night
+          ? 'No game nights left this season.'
+          : recorded
+            ? 'Added to calendar ✓ · ' + label + (recorded.time ? ' at ' + recorded.time : '')
+            : existing
+              ? 'Week ' + night.week + ' is on the calendar already — this puts ' + game + ' on it, with when and where, for everyone.'
+              : 'Puts ' + game + ' on ' + label + ' for everyone, with when and where.'}
+      </span>
     </div>
   );
 }

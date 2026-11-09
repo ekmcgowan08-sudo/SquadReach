@@ -333,6 +333,20 @@ Where the prototype left a call open, the build took the safer default:
   run sheet, to keep or hand to another ministry. Import reads such a file
   back in beside what's there (night outlines stay out: they're dated to
   the other ministry's nights).
+- **Squads follow the season builder into a new season.** "How do students
+  end up on a squad?" is acted on when a season goes live: kept (dynasty —
+  rivalries carry over), back in the draft pool for draft night (captains
+  too), dealt at random balanced by grade, or left as they are for the
+  pastor to rebalance. The confirm says which before anything moves, and
+  making the live season live again moves nobody. Draft & trades has the
+  dynasty switch; it writes the live season's answer, so a season started
+  from it carries it on, and it's what a season left at the default uses.
+- **A game goes on the calendar on its night's own entry.** Game setup's
+  "Save & add to calendar" puts the game on the next night it runs, for
+  everyone (the rules audience only decides who reads the rules), at doors
+  from the run sheet and where the game is. If that week is already on the
+  calendar the game goes on that entry, RSVPs kept, rather than beside it;
+  pressing it again updates the same entry.
 - **A season can run with no points.** Answering "No points at all —
   regular programming" in the season interview (or making live a Summer or
   Fall/Winter season from the multi-year plan) turns the leaderboard off

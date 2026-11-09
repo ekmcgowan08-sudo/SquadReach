@@ -8,6 +8,7 @@ import { Section, useSaveConfig } from '@/components/console/kit';
 import { PastSeasons } from '@/components/console/past-seasons';
 import { Btn, Icon } from '@/components/ui';
 import { isoDay, nowMs } from '@/lib/dates';
+import { CARRY_LINE, DRAFT_DEFAULTS, carrySquads, draftOrder, squadCarry } from '@/lib/draft';
 import {
   SEASON_GROUPS, SEASON_QUESTIONS, answerLabel, answerOf, nextSeasonName, planStartFor, planYears, scoringOn, seasonAnswered, seasonSettings, withPlan, yearPlan,
   type SavedSeason, type SeasonAnswer, type SeasonAnswers
@@ -35,12 +36,28 @@ export function SeasonTab() {
     const current = d.config.seasonName;
     /* A season with no leaderboard has no finish to record. */
     const record = scoringOn(d.config) && current && current !== s.name && !(d.config.seasonResults ?? []).some((r) => r.name === current);
-    if (!window.confirm('Make ' + s.name + ' the live season? Meeting nights become ' + set.meetingDates!.length + ' weeks from ' + set.meetingDates![0] + '. Points already on the board stay where they are.' + (record ? ' How ' + current + ' finished is recorded in Past seasons first.' : ''))) return;
+    /* Squads only change for a new season — making the live one live again is a no-op. */
+    const fresh = !s.active;
+    const how = squadCarry(seasonAnswered(s.answers, 'assign') ? String(s.answers.assign) : undefined, d.config.draft?.dynasty);
+    if (!window.confirm('Make ' + s.name + ' the live season? Meeting nights become ' + set.meetingDates!.length + ' weeks from ' + set.meetingDates![0] + '. Points already on the board stay where they are.' + (fresh ? ' ' + CARRY_LINE[how] : '') + (record ? ' How ' + current + ' finished is recorded in Past seasons first.' : ''))) return;
     if (record) saveConfig((c) => ({ seasonResults: withResult(c.seasonResults, seasonResult(api().data, today)) }), 'Recorded how ' + current + ' finished');
     saveConfig(set, 'Made ' + s.name + ' the live season');
+    if (fresh) {
+      const teamIds = api().data.teams.map((t) => t.id);
+      const moved = carrySquads(api().data.roster, teamIds, how);
+      api().mutate((x) => {
+        for (const m of moved) {
+          const r = x.roster.find((y) => y.id === m.id);
+          if (r) Object.assign(r, { team: m.team, captain: m.captain });
+        }
+      });
+      for (const m of moved) api().emit({ kind: 'student', student: m });
+      saveConfig((c) => ({ draft: { ...DRAFT_DEFAULTS(teamIds), ...c.draft, order: draftOrder(c.draft, teamIds), live: null, dynasty: how === 'keep' ? true : how === 'draft' ? false : c.draft?.dynasty } }));
+      if (moved.length) api().logActivity(how === 'draft' ? 'Put all ' + moved.length + ' students back in the draft pool for ' + s.name : 'Dealt ' + moved.length + ' students onto squads for ' + s.name + ', balanced by grade');
+    }
     /* The list as it stands now — a season saved a moment ago included. */
     saveSeasons(api().data.seasons.map((x) => ({ ...x, active: x.id === s.id })));
-    api().say(s.name + ' is live. ' + set.meetingDates!.length + ' nights are on the calendar.');
+    api().say(s.name + ' is live. ' + set.meetingDates!.length + ' nights are on the calendar.' + (fresh && how === 'draft' ? ' Everyone’s in the draft pool for draft night.' : ''));
   };
 
   if (draft) return <Interview draft={draft} setDraft={setDraft} onSave={(answers, live) => {
@@ -308,7 +325,7 @@ function Interview({ draft, setDraft, onSave }: { draft: Draft; setDraft: (d: Dr
         {rail}
         <div className="rounded-md bg-neutral-900 px-3 py-[10px] text-[12px] leading-[1.6] text-neutral-300 text-pretty">
           <span className="text-neutral-500">Making it live sets: </span>
-          {implied.meetingDates!.length} meeting nights from {answerLabel(SEASON_QUESTIONS.find((q) => q.id === 'start')!, implied.meetingDates![0])} · {implied.weekGrowthPct}% growth a week · verse board {implied.verseBoard ? 'on' : 'off'} · parent board {implied.parentShare!.standings ? 'on' : 'off'} · {implied.gameSetup!.gameWeeks === null ? 'a game every week' : implied.gameSetup!.gameWeeks.length ? 'games on chosen weeks' : 'no games'}.
+          {implied.meetingDates!.length} meeting nights from {answerLabel(SEASON_QUESTIONS.find((q) => q.id === 'start')!, implied.meetingDates![0])} · {implied.weekGrowthPct}% growth a week · verse board {implied.verseBoard ? 'on' : 'off'} · parent board {implied.parentShare!.standings ? 'on' : 'off'} · {implied.gameSetup!.gameWeeks === null ? 'a game every week' : implied.gameSetup!.gameWeeks.length ? 'games on chosen weeks' : 'no games'}. {CARRY_LINE[squadCarry(seasonAnswered(draft.answers, 'assign') ? String(draft.answers.assign) : undefined, cfg.draft?.dynasty)]}
         </div>
         {SEASON_GROUPS.map((g) => (
           <div key={g.id} className="flex flex-col">

@@ -103,12 +103,12 @@ export const SEASON_QUESTIONS: SeasonQuestion[] = [
   {
     id: 'assign', group: 'squads', kind: 'choice', q: 'How do students end up on a squad?',
     options: [
-      { value: 'draft', label: 'Draft night — captains pick' },
+      { value: 'draft', label: 'Draft night — captains pick', note: 'Everyone goes back in the pool; Draft & trades runs it live.' },
       { value: 'pastor', label: 'I assign them', note: 'You balance grade and gender by hand.' },
-      { value: 'random', label: 'Random, balanced by grade' },
-      { value: 'keep', label: 'They keep last season’s squad', note: 'Rivalries carry over.' }
+      { value: 'random', label: 'Random, balanced by grade', note: 'Dealt out when the season goes live.' },
+      { value: 'keep', label: 'They keep last season’s squad', note: 'Dynasty mode. Rivalries carry over.' }
     ],
-    fallback: 'pastor', setIn: { label: 'Squads', href: '/console?tab=teams' }
+    fallback: 'pastor', setIn: { label: 'Draft & trades', href: '/console?tab=draft' }
   },
   {
     id: 'game', group: 'rhythm', kind: 'choice', q: 'Do you play a game every week?',

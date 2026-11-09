@@ -5,7 +5,8 @@
    Outside a draft, anyone in the pool can be placed directly. Trades move
    a student between squads, with an optional swap back, and every one is
    kept in the history. Points a student already earned stay with the
-   squad they earned them for. */
+   squad they earned them for. Dynasty decides the next season: squads
+   carry over, or everyone goes back in the pool for a new draft. */
 import { useState } from 'react';
 import { Section, useSaveConfig } from '@/components/console/kit';
 import { Btn, Icon, cx } from '@/components/ui';
@@ -34,6 +35,16 @@ export function DraftTab() {
   const [nu, setNu] = useState({ name: '', grade: '' });
   const [trade, setTrade] = useState<{ from: string; player: string; to: string; back: string }>({ from: teamIds[0] ?? '', player: '', to: teamIds[1] ?? '', back: '' });
 
+  const live = d.seasons.find((x) => x.active);
+  const setDynasty = (on: boolean) => {
+    setDraft({ dynasty: on }, on ? 'Dynasty on: squads carry over into next season' : 'A new draft every season');
+    /* The live season's answer goes with it, so a season started from this one carries it on. */
+    if (live) {
+      const next = api().data.seasons.map((x) => (x.id === live.id ? { ...x, answers: { ...x.answers, assign: on ? 'keep' : 'draft' } } : x));
+      api().mutate((x) => void (x.seasons = next));
+      api().emit({ kind: 'doc', key: 'seasons', value: next });
+    }
+  };
   const setDraft = (patch: Partial<DraftSettings>, note?: string) => saveConfig((c) => ({ draft: { ...DRAFT_DEFAULTS(teamIds), ...c.draft, order: draftOrder(c.draft, teamIds), ...patch } }), note);
   const place = (s: Student, to: string, note: string) => {
     const next = { ...s, team: to };
@@ -129,6 +140,15 @@ export function DraftTab() {
                 </div>
               </div>
             </div>
+            <label className="flex max-w-[480px] cursor-pointer items-start gap-3 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-[10px]">
+              <input type="checkbox" checked={!!draft.dynasty} onChange={(e) => setDynasty(e.target.checked)} className="mt-[2px] h-5 w-5 flex-none accent-[var(--color-accent)]" />
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-neutral-100">Dynasty — rosters carry over each season</span>
+                <span className="mt-[2px] block text-[12px] leading-[1.45] text-neutral-500">
+                  {draft.dynasty ? 'When the next season goes live, every squad keeps its students. Rivalries carry over.' : 'When the next season goes live, everyone goes back in the pool for a new draft.'}
+                </span>
+              </span>
+            </label>
             <div>
               <div className="sr-label mb-2">Pick order</div>
               <div className="flex max-w-[420px] flex-col gap-2">

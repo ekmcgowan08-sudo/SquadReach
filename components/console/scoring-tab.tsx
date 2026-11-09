@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Field, Section, useSaveConfig } from '@/components/console/kit';
-import { GameFormatEditor, GamePlaces, GameTemplates, RulesAudience, RulesDraft } from '@/components/console/game-setup';
+import { GameFormatEditor, GameOnCalendar, GamePlaces, GameTemplates, RulesAudience, RulesDraft } from '@/components/console/game-setup';
 import { Bracket } from '@/components/game/bracket';
 import { Btn, Icon } from '@/components/ui';
 import { CHECKIN_PRESENT_PTS, fmt, pointBase } from '@/lib/scoring';
@@ -157,6 +157,7 @@ export function ScoringTab() {
         <FieldMap />
         <RulesAudience />
         <GameTemplates />
+        <GameOnCalendar />
         <div className="text-[11.5px] text-neutral-500">
           Penalty and bonus buttons are in{' '}
           <Link href="/console?tab=live" className="text-accent-300 underline underline-offset-2">
