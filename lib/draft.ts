@@ -9,10 +9,22 @@ export interface DraftSettings {
   rounds: number;
   /** Squad ids, first pick first. */
   order: string[];
-  /** While a draft is running: how many picks have been made. */
-  live: { pick: number; startedAt: number } | null;
+  /** After the student rounds, how many times each squad picks a coach. */
+  coachRounds?: number;
+  /** While a draft is running: how many picks have been made, and the coach
+   *  rounds it runs (none when no coach was waiting for a squad at the start). */
+  live: { pick: number; startedAt: number; coachRounds?: number } | null;
+  /** The latest draft's picks, in order — kept after it ends for the recap. */
+  picks?: DraftPick[];
   /** Dynasty: squads carry over into the next season instead of a new draft. */
   dynasty?: boolean;
+}
+
+export interface DraftPick {
+  kind: 'student' | 'coach';
+  round: number;
+  team: string;
+  name: string;
 }
 
 export interface TradeRecord {
@@ -22,7 +34,7 @@ export interface TradeRecord {
   moves: { student: string; from: string | null; to: string }[];
 }
 
-export const DRAFT_DEFAULTS = (teams: string[]): DraftSettings => ({ style: 'snake', rounds: 3, order: teams, live: null });
+export const DRAFT_DEFAULTS = (teams: string[]): DraftSettings => ({ style: 'snake', rounds: 3, coachRounds: 1, order: teams, live: null });
 
 /** How students land on squads when a new season goes live — the season
  *  builder's "How do students end up on a squad?". */
@@ -73,14 +85,54 @@ export function draftSequence(s: Pick<DraftSettings, 'style' | 'rounds' | 'order
   return out;
 }
 
-/** Who is on the clock, or null once every pick is made. */
-export function onTheClock(s: DraftSettings): { team: string; round: number; pickInRound: number; overall: number } | null {
-  if (!s.live || !s.order.length) return null;
-  const seq = draftSequence(s);
-  const p = s.live.pick;
-  if (p >= seq.length) return null;
-  return { team: seq[p], round: Math.floor(p / s.order.length) + 1, pickInRound: (p % s.order.length) + 1, overall: p + 1 };
+export interface DraftSlot {
+  team: string;
+  kind: DraftPick['kind'];
+  round: number;
 }
+
+/** Every pick of a draft: the student rounds, then the coach rounds, each
+ *  snaking (or not) on its own. */
+export function draftSlots(s: Pick<DraftSettings, 'style' | 'rounds' | 'order'>, coachRounds = 0): DraftSlot[] {
+  const phase = (kind: DraftSlot['kind'], rounds: number) => draftSequence({ style: s.style, rounds, order: s.order }).map((team, i) => ({ team, kind, round: Math.floor(i / s.order.length) + 1 }));
+  return [...phase('student', s.rounds), ...phase('coach', coachRounds)];
+}
+
+/** Who is on the clock, or null once every pick is made. */
+export function onTheClock(s: DraftSettings): { team: string; kind: DraftSlot['kind']; round: number; rounds: number; pickInRound: number; overall: number; total: number } | null {
+  if (!s.live || !s.order.length) return null;
+  const coachRounds = s.live.coachRounds ?? 0;
+  const slots = draftSlots(s, coachRounds);
+  const p = s.live.pick;
+  if (p >= slots.length) return null;
+  const slot = slots[p];
+  const first = slots.findIndex((x) => x.kind === slot.kind);
+  return { team: slot.team, kind: slot.kind, round: slot.round, rounds: slot.kind === 'student' ? s.rounds : coachRounds, pickInRound: ((p - first) % s.order.length) + 1, overall: p + 1, total: slots.length };
+}
+
+/** The pick after this one: past the rest of the student rounds once the
+ *  pool is empty, and null once the draft is over. */
+export function afterPick(s: DraftSettings, left: { students: number; coaches: number }): number | null {
+  if (!s.live) return null;
+  const slots = draftSlots(s, s.live.coachRounds ?? 0);
+  let next = s.live.pick + 1;
+  if (next < slots.length && slots[next].kind === 'student' && left.students <= 0) next = slots.findIndex((x) => x.kind === 'coach');
+  if (next < 0 || next >= slots.length) return null;
+  if (slots[next].kind === 'coach' && left.coaches <= 0) return null;
+  return next;
+}
+
+/** How the draft went, squad by squad. */
+export function draftRecap(picks: DraftPick[], teams: string[]): { team: string; students: string[]; coaches: string[] }[] {
+  return teams.map((team) => ({
+    team,
+    students: picks.filter((p) => p.team === team && p.kind === 'student').map((p) => p.name),
+    coaches: picks.filter((p) => p.team === team && p.kind === 'coach').map((p) => p.name)
+  }));
+}
+
+/** Coaches serving with no squad yet: who the coach rounds pick from. */
+export const coachPool = <T extends { team: string | null; job: string }>(crew: T[]): T[] => crew.filter((c) => !c.team && /\bcoach\b/i.test(c.job));
 
 /** The draft order with squads added since it was set, and removed ones dropped. */
 export function draftOrder(s: DraftSettings | undefined, teams: string[]): string[] {

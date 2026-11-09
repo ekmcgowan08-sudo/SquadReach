@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carrySquads, draftOrder, draftSequence, onTheClock, squadCarry } from '@/lib/draft';
+import { afterPick, carrySquads, coachPool, draftOrder, draftRecap, draftSequence, draftSlots, onTheClock, squadCarry } from '@/lib/draft';
 import type { Student } from '@/lib/types/model';
 
 describe('draft', () => {
@@ -9,7 +9,7 @@ describe('draft', () => {
   });
   it('says who is on the clock, and nobody once the picks run out', () => {
     const s = { style: 'snake' as const, rounds: 2, order: ['y', 'r', 'b'], live: { pick: 4, startedAt: 0 } };
-    expect(onTheClock(s)).toEqual({ team: 'r', round: 2, pickInRound: 2, overall: 5 });
+    expect(onTheClock(s)).toEqual({ team: 'r', kind: 'student', round: 2, rounds: 2, pickInRound: 2, overall: 5, total: 6 });
     expect(onTheClock({ ...s, live: { pick: 6, startedAt: 0 } })).toBeNull();
     expect(onTheClock({ ...s, live: null })).toBeNull();
   });
@@ -50,5 +50,27 @@ describe('draft', () => {
     }
     expect(after.every((s) => s.team)).toBe(true);
     expect(carrySquads(roster, [], 'random', rand)).toEqual([]);
+  });
+
+  it('coach rounds follow the student rounds, each snaking on its own', () => {
+    const base = { style: 'snake' as const, rounds: 2, order: ['y', 'r', 'b'] };
+    expect(draftSlots(base, 1).map((x) => x.kind[0] + x.round + x.team)).toEqual(['s1y', 's1r', 's1b', 's2b', 's2r', 's2y', 'c1y', 'c1r', 'c1b']);
+    const s = { ...base, live: { pick: 7, startedAt: 0, coachRounds: 1 } };
+    expect(onTheClock(s)).toEqual({ team: 'r', kind: 'coach', round: 1, rounds: 1, pickInRound: 2, overall: 8, total: 9 });
+  });
+  it('skips the rest of the student rounds once the pool is empty, and ends when the coaches run out', () => {
+    const s = { style: 'snake' as const, rounds: 3, order: ['y', 'r'], live: { pick: 1, startedAt: 0, coachRounds: 1 } };
+    expect(afterPick(s, { students: 3, coaches: 2 })).toBe(2);
+    expect(afterPick(s, { students: 0, coaches: 2 })).toBe(6);
+    expect(afterPick(s, { students: 0, coaches: 0 })).toBeNull();
+    expect(afterPick({ ...s, live: { pick: 6, startedAt: 0, coachRounds: 1 } }, { students: 0, coaches: 1 })).toBe(7);
+    expect(afterPick({ ...s, live: { pick: 7, startedAt: 0, coachRounds: 1 } }, { students: 0, coaches: 5 })).toBeNull();
+    expect(afterPick({ ...s, live: { pick: 5, startedAt: 0 } }, { students: 4, coaches: 4 })).toBeNull();
+  });
+  it('recaps the draft by squad, and pools only coaches with no squad', () => {
+    const picks = [{ kind: 'student' as const, round: 1, team: 'y', name: 'Ann' }, { kind: 'student' as const, round: 1, team: 'r', name: 'Bo' }, { kind: 'coach' as const, round: 1, team: 'y', name: 'Cy' }];
+    expect(draftRecap(picks, ['y', 'r'])).toEqual([{ team: 'y', students: ['Ann'], coaches: ['Cy'] }, { team: 'r', students: ['Bo'], coaches: [] }]);
+    const crew = [{ team: null, job: 'Coach', name: 'a' }, { team: 'y', job: 'Coach · Yellow', name: 'b' }, { team: null, job: 'Scorekeeper', name: 'c' }, { team: null, job: 'Head coach', name: 'd' }];
+    expect(coachPool(crew).map((c) => c.name)).toEqual(['a', 'd']);
   });
 });

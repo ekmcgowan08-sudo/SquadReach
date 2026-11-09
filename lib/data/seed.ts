@@ -240,7 +240,9 @@ function seedHuddle(now: number): HuddleState {
       { id: 'c8', name: 'Sam Okafor', job: 'Scorekeeper', post: 'Main gym · clock + board', team: null, sendHome: 'Gym doors' },
       { id: 'c9', name: 'Ava Lin', job: 'Media', post: 'Gym floor · film + photos', team: null, sendHome: 'Gym doors' },
       { id: 'c10', name: 'Beth Naylor', job: 'Small group leader', post: 'Room 3 · with Dana', team: 'yellow', sendHome: 'West doors' },
-      { id: 'c11', name: 'Jordan Pike', job: 'Greeter', post: 'North door', team: null, sendHome: 'North door' }
+      { id: 'c11', name: 'Jordan Pike', job: 'Greeter', post: 'North door', team: null, sendHome: 'North door' },
+      /* New this fall and not on a squad yet: the draft's coach round picks her. */
+      { id: 'c12', name: 'Aliyah Grant', job: 'Coach', post: 'New this fall · floats until she has a squad', team: null, sendHome: 'Lobby' }
     ],
     crewState: { c1: 'here', c2: 'here', c3: 'late', c4: 'here', c5: 'out', c6: 'here', c7: 'here', c8: 'here', c9: 'here', c10: 'here' },
     crewAdded: [],

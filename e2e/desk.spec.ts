@@ -310,6 +310,40 @@ test('draft day puts one squad on the clock at a time, and a trade is kept in th
   await expect(page.getByText('Marcus Webb to Red')).toBeVisible();
 });
 
+test('after the student rounds the squads draft coaches, and the recap shows who went where', async ({ page }) => {
+  await page.goto('/console?tab=draft');
+  await ready(page);
+  await expect(page.getByRole('group', { name: 'Place coach Aliyah Grant' })).toBeVisible();
+  await page.getByRole('button', { name: 'One round fewer' }).click();
+  await page.getByRole('button', { name: 'One round fewer' }).click();
+  await expect(page.getByText(/Then 1 coach round for 1 coach\./)).toBeVisible();
+  await page.getByRole('button', { name: 'Start the draft' }).click();
+  await expect(page.getByText(/^Students · round 1 of 1 · pick 1/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Draft coach Aliyah Grant on Yellow' })).toBeDisabled();
+
+  const picks: [string, string][] = [['Marcus Webb', 'Yellow'], ['Chloe Sanborn', 'Red'], ['Devon Ruiz', 'Blue'], ['Priya Nair', 'Green']];
+  for (const [who, squad] of picks) {
+    await expect(page.getByText('On the clock: ' + squad)).toBeVisible();
+    await page.getByRole('button', { name: 'Draft ' + who + ' on ' + squad }).click();
+  }
+  await expect(page.getByText('Priya Nair to Green. On to the coaches.')).toBeVisible();
+  await expect(page.getByText('On the clock: Yellow')).toBeVisible();
+  await expect(page.getByText(/^Coaches · round 1 of 1 · pick 1 · 5 of 8 overall · 1 coach left/)).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Picks so far' }).getByRole('listitem')).toHaveCount(4);
+  await expect(page.getByRole('button', { name: 'Draft Owen Kessler on Yellow' })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Draft coach Aliyah Grant on Yellow' }).click();
+  await expect(page.getByText('Aliyah Grant to Yellow. That’s the draft.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start the draft' })).toBeVisible();
+  const yellow = page.getByRole('group', { name: 'Drafted by Yellow' });
+  await expect(yellow).toContainText('Students: Marcus Webb');
+  await expect(yellow).toContainText('Coaches: Aliyah Grant');
+  await expect(page.getByRole('group', { name: 'Drafted by Red' })).toContainText('Coaches: —');
+  await expect(page.getByText('Every coach has a squad.')).toBeVisible();
+  /* Two students the single round didn't reach are still waiting. */
+  await expect(page.getByText('2 in the pool.', { exact: false })).toBeVisible();
+});
+
 test('the recording overlay settings move the scoreboard on the preview and stick', async ({ page }) => {
   await page.goto('/console?tab=overlay');
   await ready(page);

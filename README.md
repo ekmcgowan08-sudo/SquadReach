@@ -341,6 +341,11 @@ Where the prototype left a call open, the build took the safer default:
   making the live season live again moves nobody. Draft & trades has the
   dynasty switch; it writes the live season's answer, so a season started
   from it carries it on, and it's what a season left at the default uses.
+  After the student rounds the draft runs coach rounds, picking from the
+  coaches on the serving crew with no squad yet; the crew row takes the
+  squad, and with a live ministry so does that coach's membership. The
+  draft's picks are kept for a recap by squad until the next draft starts
+  or a new season goes live.
 - **A game goes on the calendar on its night's own entry.** Game setup's
   "Save & add to calendar" puts the game on the next night it runs, for
   everyone (the rules audience only decides who reads the rules), at doors

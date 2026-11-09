@@ -52,7 +52,7 @@ export function SeasonTab() {
         }
       });
       for (const m of moved) api().emit({ kind: 'student', student: m });
-      saveConfig((c) => ({ draft: { ...DRAFT_DEFAULTS(teamIds), ...c.draft, order: draftOrder(c.draft, teamIds), live: null, dynasty: how === 'keep' ? true : how === 'draft' ? false : c.draft?.dynasty } }));
+      saveConfig((c) => ({ draft: { ...DRAFT_DEFAULTS(teamIds), ...c.draft, order: draftOrder(c.draft, teamIds), live: null, picks: [], dynasty: how === 'keep' ? true : how === 'draft' ? false : c.draft?.dynasty } }));
       if (moved.length) api().logActivity(how === 'draft' ? 'Put all ' + moved.length + ' students back in the draft pool for ' + s.name : 'Dealt ' + moved.length + ' students onto squads for ' + s.name + ', balanced by grade');
     }
     /* The list as it stands now — a season saved a moment ago included. */
