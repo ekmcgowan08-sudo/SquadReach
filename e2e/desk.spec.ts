@@ -859,3 +859,33 @@ test('a named album and its note show on the phone’s Media screen', async ({ p
   await expect(page.getByText('Get the handoffs at the pipe.')).toBeVisible();
   await expect(page.getByText('Week 8 · Capture Cup finals')).toBeVisible();
 });
+
+test('a lesson can be talked through, and it’s written down to fix before Claude reads it', async ({ page }) => {
+  /* The browser's recognizer, played by a stand-in that hears two phrases. */
+  await page.addInitScript(() => {
+    class FakeRec {
+      lang = '';
+      interimResults = false;
+      continuous = false;
+      onresult: ((e: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      start() {
+        setTimeout(() => this.onresult?.({ results: [[{ transcript: 'We are reading Ephesians two' }], [{ transcript: 'grace is a gift you do not earn' }]] }), 50);
+      }
+      stop() {
+        setTimeout(() => this.onend?.(), 10);
+      }
+    }
+    Object.assign(window, { SpeechRecognition: FakeRec, webkitSpeechRecognition: FakeRec });
+  });
+  await page.goto('/console?tab=groups');
+  await ready(page);
+  const builder = page.locator('section', { has: page.getByRole('heading', { name: 'Build from this week’s lesson' }) });
+  await builder.getByRole('button', { name: 'Say it' }).click();
+  await builder.getByRole('button', { name: 'Start talking' }).click();
+  await expect(builder.getByLabel('Lesson')).toHaveValue('We are reading Ephesians two grace is a gift you do not earn');
+  await builder.getByRole('button', { name: 'Stop' }).click();
+  await expect(builder.getByText('13 words so far. Fix anything below.')).toBeVisible();
+  await expect(builder.getByRole('button', { name: 'Keep talking' })).toBeVisible();
+});

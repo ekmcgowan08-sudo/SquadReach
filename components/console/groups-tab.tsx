@@ -2,7 +2,7 @@
 /* CONSOLE · SMALL GROUPS — every guide coaches and captains play after
    the game: build one from this week's lesson with Claude, start from a
    template, or copy last week's; pick the week and the squads it's for. */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Section, useSaveConfig } from '@/components/console/kit';
 import { GroupForm, SG_TYPES, saveGroups, sgMinutes } from '@/components/screens/season';
 import { Btn, Icon, cx } from '@/components/ui';
@@ -11,10 +11,12 @@ import type { Draft } from '@/lib/small-group-ai';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { SmallGroup } from '@/lib/types/model';
+import { heardText, newSpeechRec, type SpeechRec } from '@/lib/speech';
 
 const MODES = [
   { id: 'text', label: 'Paste text', icon: 'ph ph-text-align-left', hint: 'Finished manuscript, half an outline, or three bullets — whatever stage it’s at.' },
   { id: 'file', label: 'File', icon: 'ph ph-file-text', hint: 'A text or Markdown file of your notes.' },
+  { id: 'speak', label: 'Say it', icon: 'ph ph-microphone', hint: 'Talk it through the way you would to a leader. It’s written down as you go, and you can fix it before Claude reads it.' },
   { id: 'passage', label: 'Passage only', icon: 'ph ph-book-open', hint: 'Just the passage you’re teaching, like Ephesians 2:1–10.' },
   { id: 'topic', label: 'Topic only', icon: 'ph ph-lightbulb', hint: 'A topic or a question, like “What do I do with doubt?”' }
 ] as const;
@@ -33,6 +35,26 @@ function Builder({ onEdit }: { onEdit: (g: SmallGroup) => void }) {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [withChallenges, setWithChallenges] = useState(true);
+  /* Talking it through: the browser writes it down, added after what's
+     already in the box. Nothing is recorded. */
+  const [listening, setListening] = useState(false);
+  const rec = useRef<SpeechRec | null>(null);
+  useEffect(() => () => rec.current?.stop(), []);
+  const dictate = () => {
+    if (listening) return rec.current?.stop();
+    const r = newSpeechRec('en-US');
+    if (!r) return setError('This browser can’t write down speech — paste or upload the lesson instead.');
+    const before = lesson.trim();
+    r.onresult = (e) => setLesson((before ? before + ' ' : '') + heardText(e.results));
+    r.onerror = (e) => {
+      if (e.error === 'not-allowed') setError('The microphone is blocked for this site — allow it, or paste the lesson instead.');
+    };
+    r.onend = () => setListening(false);
+    rec.current = r;
+    setError('');
+    setListening(true);
+    r.start();
+  };
 
   const generate = async () => {
     if (lesson.trim().length < 3) return setError('Add the lesson, a passage or a topic first.');
@@ -42,7 +64,7 @@ function Builder({ onEdit }: { onEdit: (g: SmallGroup) => void }) {
       const r = await fetch('/api/small-groups/draft', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mode: mode === 'file' ? 'text' : mode, lesson, minutes, room, week, ministry: d.config.ministryName, tradition: d.plan.settings.tradition, teams: d.teams.map((t) => ({ id: t.id, name: t.name })) })
+        body: JSON.stringify({ mode: mode === 'file' || mode === 'speak' ? 'text' : mode, lesson, minutes, room, week, ministry: d.config.ministryName, tradition: d.plan.settings.tradition, teams: d.teams.map((t) => ({ id: t.id, name: t.name })) })
       });
       const j = (await r.json()) as Draft & { error?: string };
       if (!r.ok || j.error) setError(j.error ?? 'Something went wrong.');
@@ -98,6 +120,22 @@ function Builder({ onEdit }: { onEdit: (g: SmallGroup) => void }) {
                 }}
               />
             </label>
+          ) : null}
+          {mode === 'speak' ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={dictate}
+                aria-pressed={listening}
+                className={cx('flex min-h-11 items-center gap-2 rounded-md border px-4 text-[13px] font-medium', listening ? 'border-accent-500 text-accent-100' : 'border-neutral-700 text-neutral-200')}
+                style={listening ? { background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)' } : undefined}
+              >
+                <Icon name={listening ? 'ph-fill ph-stop-circle' : 'ph ph-microphone'} className="text-[15px]" />
+                {listening ? 'Stop' : lesson.trim() ? 'Keep talking' : 'Start talking'}
+              </button>
+              <span className="text-[12px] text-neutral-500" aria-live="polite">
+                {listening ? 'Listening — it’s written below as you go.' : lesson.trim() ? lesson.trim().split(/\s+/).length + ' words so far. Fix anything below.' : 'Your browser writes it down; nothing is recorded.'}
+              </span>
+            </div>
           ) : null}
           {mode === 'passage' || mode === 'topic' ? (
             <input aria-label={mode === 'passage' ? 'Passage' : 'Topic'} className="input" value={lesson} onChange={(e) => setLesson(e.target.value)} placeholder={mode === 'passage' ? 'Ephesians 2:1–10' : 'What do I do with doubt?'} />

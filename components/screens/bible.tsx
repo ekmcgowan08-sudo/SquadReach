@@ -15,6 +15,7 @@ import { myBible, myTeamId, practiceName, teamOf } from '@/lib/selectors';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import type { PracticeRow } from '@/lib/types/model';
+import { heardText, newSpeechRec, type SpeechRec } from '@/lib/speech';
 
 type Mode = DrillId;
 
@@ -31,16 +32,6 @@ const pill = (on: boolean): CSSProperties => ({
   color: on ? 'var(--color-accent-100)' : 'var(--color-neutral-400)'
 });
 
-interface SpeechRec {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((e: { error: string }) => void) | null;
-  start(): void;
-  stop(): void;
-}
 
 export function BibleScreen() {
   const d = useApp((s) => s.data);
@@ -105,21 +96,14 @@ export function BibleScreen() {
       recRef.current?.stop();
       return;
     }
-    const W = window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
-    const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-    if (!Ctor) {
+    const rec = newSpeechRec(lang === 'es' ? 'es-ES' : 'en-US');
+    if (!rec) {
       setSayState('unsupported');
       return;
     }
-    const rec = new Ctor();
-    rec.lang = lang === 'es' ? 'es-ES' : 'en-US';
-    rec.interimResults = true;
-    rec.continuous = true;
     let last = '';
     rec.onresult = (e) => {
-      last = Array.from(e.results)
-        .map((r) => r[0].transcript)
-        .join(' ');
+      last = heardText(e.results);
       setHeard(last);
     };
     rec.onerror = (e) => {
