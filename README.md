@@ -322,6 +322,17 @@ Where the prototype left a call open, the build took the safer default:
   over, hands it on, and the audit log keeps who took it. The database
   enforces it — the text isn't readable from the table at all, only through
   `prayer_bodies()` for its leader, its sender, or the wall.
+- **Nights built ahead.** Console › Huddle saves tonight's run sheet to a
+  later night. With a live ministry it's written onto that night's own
+  record, so when the night comes it is the run sheet — owners cleared,
+  unpublished until a leader sends it. The demo stays in its week 9, so
+  there a saved night waits on the shelf with "Use for tonight".
+- **A template library with no people in it.** Console › Home lists what's
+  been saved to use again — games, small groups, night outlines, event
+  types, season builds — and exports just those, with nobody's name on a
+  run sheet, to keep or hand to another ministry. Import reads such a file
+  back in beside what's there (night outlines stay out: they're dated to
+  the other ministry's nights).
 - **A season can run with no points.** Answering "No points at all —
   regular programming" in the season interview (or making live a Summer or
   Fall/Winter season from the multi-year plan) turns the leaderboard off

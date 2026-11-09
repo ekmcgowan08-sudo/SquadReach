@@ -356,6 +356,15 @@ export interface RunSheetItem {
   notifiedAt: number | null;
 }
 
+/** A run sheet built ahead for a later night. With Supabase it lives on
+ *  that night's own record, so when the night comes it's the sheet. */
+export interface SavedNight {
+  date: string;
+  label: string;
+  items: RunSheetItem[];
+  savedAt: number;
+}
+
 export interface CrewMember {
   id: string;
   name: string;
@@ -835,6 +844,8 @@ export interface MinistryData {
   chatFlags: ChatFlag[];
   /** Tonight's nudges: the ones you sent, or got (leaders and coaches see all). */
   nudges: Nudge[];
+  /** Run sheets built ahead for the nights after tonight. */
+  savedNights: SavedNight[];
   rsvps: Record<string, Record<string, Rsvp>>;
   /** Supabase: head counts from rsvp_counts(), for roles that can't read names. */
   rsvpCounts?: Record<string, RsvpCount>;

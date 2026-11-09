@@ -19,7 +19,7 @@ import { chatStamp } from '@/lib/selectors';
 import type { ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, Category, ChatMessage, ChatThread, CheckinVia, LibraryFlag, LibraryFlagReason, PersonRow, LedgerEntry, Membership, MinistryConfig, MinistryData,
-  MinistryEvent, Nudge, PermissionSlip, Rsvp, RsvpCount, Student, Team
+  MinistryEvent, Nudge, PermissionSlip, Rsvp, RsvpCount, RunSheetItem, Student, Team
 } from '@/lib/types/model';
 
 interface EntryRow {
@@ -339,6 +339,13 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
           if (r.error) throw r.error;
           return;
         }
+        case 'savedNight': {
+          /* On that night's own record: when the night comes, it's the sheet — unpublished, so a leader sends it. */
+          const huddle = e.night ? { runSheet: e.night.items, sheetLabel: e.night.label, sheetSavedAt: e.night.savedAt, sheetDirty: true } : {};
+          const r = await db.from('nights').upsert({ org_id: org, meeting_date: e.date, huddle, updated_at: new Date().toISOString() });
+          if (r.error) throw r.error;
+          return;
+        }
         case 'eventNudge': {
           const r = await db.rpc('event_nudge', { p_event: e.id });
           if (r.error) throw r.error;
@@ -617,13 +624,18 @@ export function supabaseBackend(membership: Membership, db: SupabaseClient): Bac
       if (g && Object.keys(g).length) d.game = { ...d.game, ...g };
 
       /* RSVPs (yours, or everyone's for the volunteer set) and head counts. */
-      const [rs, counts, chat, chatFlags, nudges] = await Promise.all([
+      const [rs, counts, chat, chatFlags, nudges, sheetsAhead] = await Promise.all([
         db.from('rsvps').select('event_id, name, status, guests').eq('org_id', org),
         db.rpc('rsvp_counts', { p_org: org }),
         db.from('chat_messages').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(400),
         db.from('chat_flags').select('*').eq('org_id', org).order('created_at', { ascending: false }).limit(100),
-        db.from('nudges').select('id, meeting_date, student, kind, by_name, created_at').eq('org_id', org).eq('meeting_date', tonight)
+        db.from('nudges').select('id, meeting_date, student, kind, by_name, created_at').eq('org_id', org).eq('meeting_date', tonight),
+        tonight ? db.from('nights').select('meeting_date, huddle').eq('org_id', org).gt('meeting_date', tonight).order('meeting_date') : Promise.resolve({ data: [] })
       ]);
+      /* Sheets already built for the nights after tonight. */
+      d.savedNights = ((sheetsAhead.data ?? []) as { meeting_date: string; huddle: { runSheet?: RunSheetItem[]; sheetLabel?: string; sheetSavedAt?: number } | null }[])
+        .filter((n) => Array.isArray(n.huddle?.runSheet) && n.huddle!.runSheet!.length)
+        .map((n) => ({ date: n.meeting_date, label: n.huddle!.sheetLabel || n.meeting_date, items: n.huddle!.runSheet!, savedAt: n.huddle!.sheetSavedAt ?? 0 }));
       /* Tonight's nudges: yours, about you, or (adults) everyone's. */
       d.nudges = ((nudges.data ?? []) as { id: string; meeting_date: string; student: string; kind: Nudge['kind']; by_name: string; created_at: string }[]).map((n) => ({
         id: n.id, date: n.meeting_date, student: n.student, kind: n.kind, by: n.by_name, at: new Date(n.created_at).getTime()

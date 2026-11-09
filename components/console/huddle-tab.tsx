@@ -6,12 +6,12 @@ import { useState } from 'react';
 import { Section } from '@/components/console/kit';
 import { useHuddleSave } from '@/components/screens/huddle';
 import { Btn, Icon } from '@/components/ui';
-import { nowMs } from '@/lib/dates';
+import { isoDay, nowMs } from '@/lib/dates';
 import { uid } from '@/lib/store/app-store';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { RUN_TEMPLATES, runTemplate } from '@/lib/run-templates';
 import { scheduleSentence } from '@/lib/sheet-schedule';
-import type { CrewMember, HuddleState, RunSheetItem } from '@/lib/types/model';
+import type { CrewMember, HuddleState, RunSheetItem, SavedNight } from '@/lib/types/model';
 
 const cell = 'input !min-h-9 !py-0';
 
@@ -160,6 +160,8 @@ export function HuddleTab() {
           </Btn>
         </div>
       </Section>
+
+      <SavedNights />
 
       <Section
         title="Crew"
@@ -332,5 +334,113 @@ function SheetScheduler() {
       </div>
       <p className="text-[11.5px] text-neutral-500">{scheduleSentence(draft, night)}.</p>
     </div>
+  );
+}
+
+const nextDay = (iso: string) => (iso ? isoDay(new Date(new Date(iso + 'T00:00:00').getTime() + 36 * 3_600_000)) : undefined);
+const nightName = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+/* Nights already built: tonight's sheet saved to a later night. With a live
+   ministry it waits on that night's own record, so when the night comes
+   it's the run sheet — unpublished, for a leader to send. Lay out a whole
+   semester in one sitting. */
+function SavedNights() {
+  const d = useApp((s) => s.data);
+  const api = useAppApi();
+  const save = useHuddleSave();
+  const tonight = d.tonight.date;
+  const ahead = d.config.meetingDates.filter((x) => x > tonight).sort();
+  const [date, setDate] = useState('');
+  const [label, setLabel] = useState('');
+  const nextWeek = tonight ? isoDay(new Date(new Date(tonight + 'T00:00:00').getTime() + 7 * 86_400_000)) : '';
+  const pick = date && date > tonight ? date : ahead[0] ?? nextWeek;
+  const meets = d.config.meetingDates.includes(pick);
+  const shelf = [...d.savedNights].filter((n) => n.date > tonight).sort((a, b) => a.date.localeCompare(b.date));
+  const taken = shelf.find((n) => n.date === pick);
+  const week = (iso: string) => d.config.meetingDates.slice().sort().indexOf(iso) + 1;
+  const title = (iso: string) => (week(iso) ? 'Week ' + week(iso) + ' · ' : '') + nightName(iso);
+
+  const put = (night: SavedNight | null, date: string) => {
+    api().mutate((x) => void (x.savedNights = [...x.savedNights.filter((n) => n.date !== date), ...(night ? [night] : [])]));
+    api().emit({ kind: 'savedNight', date, night });
+  };
+  const saveTo = () => {
+    if (!pick) return api().say('Pick the night this sheet is for first.');
+    if (!d.huddle.runSheet.length) return api().say('Tonight’s sheet is empty — build it, then save it to a night.');
+    if (taken && !window.confirm('Replace the sheet already saved for ' + nightName(pick) + '?')) return;
+    const name = label.trim() || title(pick);
+    /* Owners are tonight's crew; that night picks its own. */
+    const items = d.huddle.runSheet.map((it) => ({ ...it, id: uid(), assignedTo: null, notifiedAt: null }));
+    put({ date: pick, label: name, items, savedAt: nowMs() }, pick);
+    setLabel('');
+    api().logActivity('Saved the run sheet to ' + nightName(pick) + ' — ' + name);
+    api().say('Saved to ' + nightName(pick) + '. When that night comes, it’s the run sheet.');
+  };
+  const takeForTonight = (n: SavedNight) => {
+    if (d.huddle.runSheet.length && !window.confirm('Replace tonight’s run sheet with “' + n.label + '”? Owners are cleared.')) return;
+    save((x) => {
+      x.runSheet = n.items.map((it) => ({ ...it, id: uid(), assignedTo: null, notifiedAt: null }));
+      x.runIdx = 0;
+      x.runDone = {};
+      x.sheetDirty = true;
+    });
+    api().logActivity('Used the sheet saved for ' + nightName(n.date) + ' tonight');
+    api().say('“' + n.label + '” is tonight’s sheet now. Publish it when it’s right.');
+  };
+
+  return (
+    <Section
+      title="Nights you’ve already built"
+      sub="Save tonight’s sheet to a later night and it waits there: when that night comes, it’s the run sheet, unpublished until you send it. Build a whole semester in one sitting."
+      right={<span className="text-[11.5px] font-medium text-accent-200">{shelf.length ? shelf.length + (shelf.length === 1 ? ' night' : ' nights') + ' ahead' : 'none yet'}</span>}
+    >
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="field">
+          <span className="sr-label">The night it’s for</span>
+          <input className="input" type="date" min={nextDay(tonight)} value={pick} onChange={(e) => setDate(e.target.value)} />
+        </label>
+        <label className="field min-w-[220px] flex-1">
+          <span className="sr-label">What to call it</span>
+          <input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={title(pick) || 'Week 4 · Nerf night'} />
+        </label>
+        <Btn className="px-4" onClick={saveTo}>
+          {!pick ? 'Save tonight’s sheet' : taken ? 'Replace ' + nightName(pick) + '’s sheet' : 'Save tonight’s sheet to ' + nightName(pick)}
+        </Btn>
+      </div>
+      {pick && !meets ? (
+        <div className="text-[11.5px] leading-[1.5] text-neutral-500 text-pretty">
+          {nightName(pick)} isn’t one of this season’s meeting nights. The sheet waits there until a season meets that night{ahead.length ? ' — the next one this season is ' + nightName(ahead[0]) : ''}.
+        </div>
+      ) : null}
+      {shelf.length ? (
+        <div className="flex flex-col gap-2">
+          {shelf.map((n) => (
+            <div key={n.date} className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-800 px-3 py-[8px]">
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-medium text-neutral-100">{n.label}</div>
+                <div className="mt-[2px] text-[11px] text-neutral-500">
+                  {nightName(n.date)} · {n.items.length} {n.items.length === 1 ? 'block' : 'blocks'}
+                  {n.items[0]?.time ? ' · starts ' + n.items[0].time : ''}
+                </div>
+              </div>
+              <Btn variant="ghost" className="px-3 text-[12px]" onClick={() => takeForTonight(n)}>
+                Use for tonight
+              </Btn>
+              <button
+                aria-label={'Delete the sheet saved for ' + nightName(n.date)}
+                onClick={() => {
+                  if (!window.confirm('Delete the sheet saved for ' + nightName(n.date) + '?')) return;
+                  put(null, n.date);
+                  api().logActivity('Deleted the sheet saved for ' + nightName(n.date));
+                }}
+                className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-500 hover:text-neutral-200"
+              >
+                <Icon name="ph ph-trash" className="text-[14px]" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </Section>
   );
 }

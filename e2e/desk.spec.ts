@@ -792,3 +792,50 @@ test('a saved report can be copied, leaving the original as it was', async ({ pa
   await expect(page.getByRole('button', { name: 'Edit Who is slipping away (copy)' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Edit Who is slipping away', exact: true })).toBeVisible();
 });
+
+test('a run sheet saved to a later night waits on the shelf, and can be tonight’s again', async ({ page }) => {
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/console?tab=huddle');
+  await ready(page);
+  const built = page.locator('section', { has: page.getByRole('heading', { name: 'Nights you’ve already built' }) });
+  await expect(built.getByText('none yet')).toBeVisible();
+  await built.getByLabel('What to call it').fill('Nerf night');
+  await built.getByRole('button', { name: /^Save tonight’s sheet to / }).click();
+  await expect(page.getByText(/^Saved to .+\. When that night comes, it’s the run sheet\.$/)).toBeVisible();
+  await expect(built.getByText('Nerf night')).toBeVisible();
+  await expect(built.getByText('1 night ahead')).toBeVisible();
+  await expect(built.getByRole('button', { name: /^Replace .+’s sheet$/ })).toBeVisible();
+
+  await built.getByRole('button', { name: 'Use for tonight' }).click();
+  await expect(page.getByText('“Nerf night” is tonight’s sheet now. Publish it when it’s right.')).toBeVisible();
+
+  await built.getByRole('button', { name: /^Delete the sheet saved for / }).click();
+  await expect(built.getByText('Nerf night')).toHaveCount(0);
+  await expect(built.getByText('none yet')).toBeVisible();
+});
+
+test('the template library exports the templates, with nobody’s name on a run sheet', async ({ page }) => {
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/console?tab=huddle');
+  await ready(page);
+  await page.locator('section', { has: page.getByRole('heading', { name: 'Nights you’ve already built' }) }).getByRole('button', { name: /^Save tonight’s sheet to / }).click();
+  await page.goto('/console');
+  await ready(page);
+  const lib = page.locator('section', { has: page.getByRole('heading', { name: 'Your template library' }) });
+  await expect(lib.getByRole('link', { name: /Night outlines\s*1 saved/ })).toBeVisible();
+  const [file] = await Promise.all([page.waitForEvent('download'), lib.getByRole('button', { name: 'Export the templates' }).click()]);
+  expect(file.suggestedFilename()).toMatch(/^squadrise-templates-\d{4}-\d{2}-\d{2}\.json$/);
+  const body = JSON.parse(await (await import('node:fs/promises')).readFile((await file.path())!, 'utf8'));
+  expect(body.kind).toBe('templates');
+  expect(body.folders.events.length).toBeGreaterThan(0);
+  expect(body.folders.nights).toHaveLength(1);
+  expect(body.folders.nights[0].items.every((it: { who: string; assignedTo: unknown }) => it.who === '' && it.assignedTo === null)).toBe(true);
+  expect(JSON.stringify(body)).not.toContain('Ellison Reid');
+  await expect(page.getByText(/^\d+ templates exported\.$/)).toBeVisible();
+
+  /* Read back in, as another ministry would: beside ours, nights left out. */
+  await lib.locator('input[type=file]').setInputFiles((await file.path())!);
+  await expect(page.getByText(/^Imported .*season build.*\. Night outlines stay out — they’re dated to another ministry’s nights\.$/)).toBeVisible();
+  await lib.locator('input[type=file]').setInputFiles({ name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from('{"hello": 1}') });
+  await expect(page.getByText('That file isn’t a SquadRise template export. Export one from Console › Home, then import it here.')).toBeVisible();
+});

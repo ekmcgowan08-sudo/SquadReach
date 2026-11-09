@@ -4,12 +4,15 @@
    one file with everything in it. */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Section } from '@/components/console/kit';
+import { Section, useSaveConfig } from '@/components/console/kit';
 import { startDeskTour } from '@/components/planner/desk-tour';
 import { Btn, Icon } from '@/components/ui';
-import { isoDay } from '@/lib/dates';
+import { isoDay, nowMs } from '@/lib/dates';
+import { uid } from '@/lib/store/app-store';
+import { importLine, readTemplates } from '@/lib/templates';
 import { useApp, useAppApi } from '@/lib/store/provider';
 import { personaDef } from '@/lib/types/domain';
+import { DEFAULT_EVENT_TYPES, type MinistryData } from '@/lib/types/model';
 
 /** Everything the console can see, as one JSON file to keep or hand on. */
 function exportEverything(data: unknown, ministry: string) {
@@ -24,12 +27,60 @@ function exportEverything(data: unknown, ministry: string) {
   URL.revokeObjectURL(url);
 }
 
+/* The template library: everything saved to use again, in five folders.
+   It carries no students and no families — run sheets go without who runs
+   each block — so it can go to the next youth pastor or another ministry. */
+function templateFolders(d: MinistryData) {
+  return [
+    { id: 'games', label: 'Games', icon: 'ph ph-game-controller', href: '/console?tab=scoring', items: d.config.gameTemplates ?? [] },
+    { id: 'smallgroups', label: 'Small group', icon: 'ph ph-chats-circle', href: '/console?tab=groups', items: d.config.sgTemplates ?? [] },
+    { id: 'nights', label: 'Night outlines', icon: 'ph ph-list-checks', href: '/console?tab=huddle', items: d.savedNights.map((n) => ({ ...n, items: n.items.map((it) => ({ ...it, who: '', assignedTo: null, notifiedAt: null })) })) },
+    { id: 'events', label: 'Event types', icon: 'ph ph-calendar-star', href: '/console?tab=calendar', items: d.config.eventTypes ?? DEFAULT_EVENT_TYPES },
+    { id: 'seasons', label: 'Season builds', icon: 'ph ph-flag-banner', href: '/console?tab=season', items: d.seasons.map((s) => ({ name: s.name, answers: s.answers, plan: s.plan ?? null })) }
+  ];
+}
+
+function exportTemplates(d: MinistryData): number {
+  const folders = templateFolders(d);
+  const total = folders.reduce((n, f) => n + f.items.length, 0);
+  if (!total) return 0;
+  const body = { app: 'SquadRise', kind: 'templates', ministry: d.config.ministryName, exportedAt: new Date().toISOString(), folders: Object.fromEntries(folders.map((f) => [f.id, f.items])) };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(body, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'squadrise-templates-' + isoDay(new Date()) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return total;
+}
+
 export function HomeTab() {
   const d = useApp((s) => s.data);
   const m = useApp((s) => s.membership);
   const api = useAppApi();
   const router = useRouter();
+  const saveConfig = useSaveConfig();
   const c = d.config;
+  /* Another ministry's templates, added beside ours. */
+  const importFile = async (file: File | undefined) => {
+    if (!file) return;
+    let raw: unknown = null;
+    try {
+      raw = JSON.parse(await file.text());
+    } catch {
+      /* not JSON — said below */
+    }
+    const got = readTemplates(raw, api().data.config, api().data.seasons, uid, nowMs());
+    if (!got) return api().say('That file isn’t a SquadRise template export. Export one from Console › Home, then import it here.');
+    const line = importLine(got.counts);
+    if (!line) return api().say(got.counts.nights ? 'Only night outlines in that file — those are dated to another ministry’s nights, so they stay out.' : 'Nothing in that file to bring in.');
+    saveConfig(got.config, 'Imported templates: ' + line);
+    api().mutate((x) => void (x.seasons = got.seasons));
+    api().emit({ kind: 'doc', key: 'seasons', value: got.seasons });
+    api().say('Imported ' + line + '.' + (got.counts.nights ? ' Night outlines stay out — they’re dated to another ministry’s nights.' : ''));
+  };
   const pendingPoints = d.ledger.filter((e) => e.status === 'pending').length;
   const access = d.accessRequests.filter((r) => r.status === 'pending').length;
   const swaps = d.serving.swaps.filter((s) => s.status === 'pending').length;
@@ -133,6 +184,43 @@ export function HomeTab() {
           </Btn>
         </Section>
       </div>
+
+      <Section
+        title="Your template library"
+        sub="Everything you’ve saved to use again, in one place. Export takes the templates as a file with no students or families in it — keep it, or hand it to another ministry."
+        right={<span className="text-[11.5px] font-medium text-accent-200">{templateFolders(d).reduce((n, f) => n + f.items.length, 0)} saved</span>}
+      >
+        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {templateFolders(d).map((f) => (
+            <Link key={f.id} href={f.href} className="flex min-h-11 flex-col gap-1 rounded-md border border-neutral-800 px-3 py-[10px] hover:border-accent-600">
+              <span className="flex items-center gap-2 text-[13px] font-medium text-neutral-100">
+                <Icon name={f.icon} className="text-[15px] text-accent-300" />
+                {f.label}
+              </span>
+              <span className="text-[11.5px] text-neutral-500">{f.items.length ? f.items.length + ' saved' : 'nothing yet'}</span>
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Btn
+            className="px-4"
+            onClick={() => {
+              const n = exportTemplates(api().data);
+              if (!n) return api().say('Nothing saved yet — save a game or a night first.');
+              api().logActivity('Exported the template library — ' + n + ' templates');
+              api().say(n + (n === 1 ? ' template' : ' templates') + ' exported.');
+            }}
+          >
+            <Icon name="ph ph-export" className="mr-[6px] text-[14px]" />
+            Export the templates
+          </Btn>
+          <label className="btn btn-ghost min-h-11 cursor-pointer px-4">
+            <Icon name="ph ph-download-simple" className="mr-[6px] text-[14px]" />
+            Import templates
+            <input type="file" accept="application/json,.json" className="sr-only" onChange={(e) => void importFile(e.target.files?.[0]).finally(() => (e.target.value = ''))} />
+          </label>
+        </div>
+      </Section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {quick.map((q) => (

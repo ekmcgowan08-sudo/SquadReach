@@ -10,7 +10,7 @@ import type { LiveAnswer, LiveRoom } from '@/lib/live';
 import type { Persona, ScoreEntryStatus } from '@/lib/types/domain';
 import type {
   AccessRequest, ActivityLine, CampPayment, CareReminder, Category, Challenge, ChatFlag, ChatMessage, CheckinVia, Family, HuddleState, LedgerEntry, MinistryConfig,
-  GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, Nudge, PracticeRow,
+  GameState, LibraryFlagReason, LibraryUnit, NightCycle, ParentMessage, PermissionSlip, PersonRow, MediaItem, MinistryData, MinistryEvent, Nudge, PracticeRow, SavedNight,
   PrayerQueued, Rsvp, RsvpCount, Student, SwapRequest, Team, VolunteerInvite
 } from '@/lib/types/model';
 
@@ -90,6 +90,8 @@ export type SyncEvent =
   /** A leader nudges an event's no-replies: once a day for the ministry
    *  (rejects with "already nudged" otherwise), pushed by the database. */
   | { kind: 'eventNudge'; id: string }
+  /** A sheet saved to a later night (null takes it off the shelf). */
+  | { kind: 'savedNight'; date: string; night: SavedNight | null }
   /** A student checks themselves in (RPC: only their own row, only tonight). */
   | { kind: 'selfCheckin'; date: string };
 
