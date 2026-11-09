@@ -198,6 +198,14 @@ export interface MediaSpot {
   weeks?: number[] | null;
 }
 
+/** A week's album, named, with a note for whoever's capturing it. */
+export interface MediaAlbum {
+  week: number;
+  title: string;
+  note: string;
+  color: string;
+}
+
 export interface AccessRequest {
   id: string;
   name: string;
@@ -268,6 +276,8 @@ export interface MinistryConfig {
   /** Spots to film or play on the night: mascot bits, commercials, hype
    *  videos. Weeks as for challenges: absent means every week. */
   mediaSpots?: MediaSpot[];
+  /** Weeks whose album a leader has named. Every week has an album anyway. */
+  mediaAlbums?: MediaAlbum[];
   /** A category's own starting base and weekly growth; an empty field
    *  follows the season number (pointBase). */
   catCfg?: Record<string, { base?: number | null; growth?: number | null }>;

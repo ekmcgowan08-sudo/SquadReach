@@ -45,20 +45,24 @@ export function MediaScreen() {
     const weeks = new Set<number>([wk]);
     for (const x of d.media) weeks.add(x.week);
     for (const c of d.clips) weeks.add(c.week);
+    const named = d.config.mediaAlbums ?? [];
+    for (const a of named) if (a.week <= wk) weeks.add(a.week);
     return [...weeks]
       .sort((a, b) => b - a)
       .map((w) => {
         const iso = d.config.meetingDates[w - 1];
         const date = iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        const name = named.find((a) => a.week === w);
         return {
           week: w,
-          title: 'Week ' + w + (w === wk ? ' · ' + (d.config.gameName || 'Game night') : runsGame(w) ? ' · ' + d.config.gameName : ''),
+          name,
+          title: name ? 'Week ' + w + ' · ' + name.title : 'Week ' + w + (w === wk ? ' · ' + (d.config.gameName || 'Game night') : runsGame(w) ? ' · ' + d.config.gameName : ''),
           meta: w === wk ? 'tonight' : date,
           clips: d.clips.filter((c) => c.week === w),
           items: d.media.filter((x) => x.week === w).sort((a, b) => b.at - a.at)
         };
       })
-      .filter((a) => a.week === wk || a.clips.length || a.items.length);
+      .filter((a) => a.week === wk || a.clips.length || a.items.length || a.name);
   })();
 
   return (
@@ -130,10 +134,12 @@ export function MediaScreen() {
       {albums.map((a) => (
         <div key={a.week}>
           <div className="mb-[9px] mt-1 flex items-center gap-2">
+            {a.name ? <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: a.name.color }} aria-hidden="true" /> : null}
             <div className="text-[14px] font-medium leading-none text-neutral-100">{a.title}</div>
             <div className="text-[11px] leading-none text-neutral-500">{a.meta}</div>
             <div className="ml-auto text-[11px] leading-none text-neutral-500">{a.clips.length + a.items.length} files</div>
           </div>
+          {a.name?.note ? <div className="-mt-[3px] mb-[9px] text-[11.5px] leading-[1.45] text-neutral-400 text-pretty">{a.name.note}</div> : null}
           <div className="grid grid-cols-3 gap-[7px]">
             {a.clips.map((c) => (
               <button key={c.id} onClick={() => setClip(c)} aria-label={'Play clip ' + c.line} className="flex aspect-square animate-[sr-rise_.25s_ease_both] flex-col items-center justify-center gap-[5px] overflow-hidden rounded-md bg-neutral-900" style={{ boxShadow: 'inset 0 0 0 1px var(--color-neutral-800)' }}>

@@ -839,3 +839,23 @@ test('the template library exports the templates, with nobody’s name on a run 
   await lib.locator('input[type=file]').setInputFiles({ name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from('{"hello": 1}') });
   await expect(page.getByText('That file isn’t a SquadRise template export. Export one from Console › Home, then import it here.')).toBeVisible();
 });
+
+test('a named album and its note show on the phone’s Media screen', async ({ page }) => {
+  await page.goto('/console?tab=media');
+  await ready(page);
+  const albums = page.locator('section', { has: page.getByRole('heading', { name: 'Albums' }) });
+  await expect(albums.getByRole('group', { name: 'Album: Capture Cup finals' })).toBeVisible();
+  await albums.getByRole('button', { name: 'Name an album' }).click();
+  await albums.getByRole('group', { name: 'Album: Photos' }).getByLabel('Title').fill('Pipeline relay night');
+  await albums.getByRole('group', { name: 'Album: Photos' }).getByLabel('Title').blur();
+  const named = albums.getByRole('group', { name: 'Album: Pipeline relay night' });
+  await named.getByLabel('Note for whoever’s capturing').fill('Get the handoffs at the pipe.');
+  await named.getByLabel('Note for whoever’s capturing').blur();
+  await expect(named.getByLabel('Note for whoever’s capturing')).toHaveValue('Get the handoffs at the pipe.');
+
+  await page.goto('/dashboard/media');
+  await ready(page);
+  await expect(page.getByText(/^Week \d+ · Pipeline relay night$/)).toBeVisible();
+  await expect(page.getByText('Get the handoffs at the pipe.')).toBeVisible();
+  await expect(page.getByText('Week 8 · Capture Cup finals')).toBeVisible();
+});

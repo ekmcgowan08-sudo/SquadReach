@@ -347,6 +347,7 @@ export function demoMinistry(now: number = Date.now()): MinistryData {
         { name: 'Fall 2025', ended: '2025-11-19', champion: 'Red', championPts: 10110, topScorer: 'Isaac Smith', topPts: 4820, students: 82 },
         { name: 'Fall 2024', ended: '2024-11-20', champion: 'Yellow', championPts: 9875, topScorer: 'Ellison Reid', topPts: 5110, students: 71 }
       ],
+      mediaAlbums: [{ week: 8, title: 'Capture Cup finals', note: 'Finals and the trophy handoff — get the whole squad in one shot.', color: '#5a9fd6' }],
       mediaSpots: [
         { id: 'sp1', kind: 'Mascot bit', title: 'Blaze intro dance', note: '30 seconds, opens the night', color: '#e0a23f' },
         { id: 'sp2', kind: 'Commercial', title: 'Fall retreat promo', note: 'Plays during halftime', color: '#5a9fd6', weeks: [6, 7, 8, 9] },

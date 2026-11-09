@@ -8,7 +8,7 @@ import { Blur, Field, Section, useSaveConfig } from '@/components/console/kit';
 import { Btn, Icon, Switch2, cx } from '@/components/ui';
 import { uid } from '@/lib/store/app-store';
 import { useApp } from '@/lib/store/provider';
-import { FILM_DEFAULTS, type MediaSpot } from '@/lib/types/model';
+import { FILM_DEFAULTS, type MediaAlbum, type MediaSpot } from '@/lib/types/model';
 
 const SPOT_COLORS = ['#e0a23f', '#5a9fd6', '#74b37a', '#968ae0', '#d9708c', '#4fb3a9'];
 
@@ -18,6 +18,15 @@ export function MediaTab() {
   const film = { ...FILM_DEFAULTS, ...c.filmUpload };
   const spots = c.mediaSpots ?? [];
   const weeks = Array.from({ length: c.seasonWeeks }, (_, i) => i + 1);
+  const albums = [...(c.mediaAlbums ?? [])].sort((a, b) => b.week - a.week);
+  const setAlbum = (week: number, a: MediaAlbum | null, note?: string) =>
+    save((cc) => ({ mediaAlbums: [...(cc.mediaAlbums ?? []).filter((x) => x.week !== week), ...(a ? [a] : [])].sort((x, y) => x.week - y.week) }), note);
+  const nameNext = () => {
+    const taken = new Set(albums.map((a) => a.week));
+    const w = [c.weekNumber, ...weeks.filter((x) => x > c.weekNumber), ...weeks].find((x) => !taken.has(x));
+    if (!w) return;
+    setAlbum(w, { week: w, title: 'Photos', note: '', color: SPOT_COLORS[albums.length % SPOT_COLORS.length] }, 'Named the week ' + w + ' album');
+  };
   const setSpot = (sp: MediaSpot, note?: string) => save((cc) => ({ mediaSpots: (cc.mediaSpots ?? []).some((x) => x.id === sp.id) ? (cc.mediaSpots ?? []).map((x) => (x.id === sp.id ? sp : x)) : [...(cc.mediaSpots ?? []), sp] }), note);
   const toggleWeek = (sp: MediaSpot, w: number) => {
     const on = new Set(sp.weeks ?? weeks);
@@ -37,6 +46,58 @@ export function MediaTab() {
           <Field label="Largest clip (MB)" type="number" value={film.maxMb} onSave={(v) => save({ filmUpload: { ...film, maxMb: Math.max(5, Math.min(500, Number(v) || FILM_DEFAULTS.maxMb)) } })} />
           <Field label="Keep for (days)" type="number" value={film.keepDays} onSave={(v) => save({ filmUpload: { ...film, keepDays: Math.max(1, Math.min(365, Number(v) || FILM_DEFAULTS.keepDays)) } })} hint="Then it leaves the album for good." />
         </div>
+      </Section>
+
+      <Section
+        title="Albums"
+        sub="Every week has an album already. Name one and leave a note for whoever’s capturing — “Capture Cup finals + awards” — and the phone’s Media screen shows both."
+        right={
+          <Btn className="px-4" onClick={nameNext} disabled={albums.length >= weeks.length}>
+            <Icon name="ph ph-plus" className="mr-[6px] text-[14px]" />
+            Name an album
+          </Btn>
+        }
+      >
+        {!albums.length ? <p className="text-[13px] text-neutral-500">No named albums yet — each week shows as “Week N”.</p> : null}
+        {albums.map((a) => (
+          <div key={a.week} className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-800 px-4 py-3" role="group" aria-label={'Album: ' + a.title}>
+            <button
+              aria-label={'Change the colour of ' + a.title}
+              title="Change colour"
+              onClick={() => setAlbum(a.week, { ...a, color: SPOT_COLORS[(SPOT_COLORS.indexOf(a.color) + 1) % SPOT_COLORS.length] })}
+              className="flex h-11 w-8 flex-none items-center justify-center"
+            >
+              <span className="h-5 w-5 rounded" style={{ background: a.color }} />
+            </button>
+            <label className="field w-[110px]">
+              <span className="sr-label">Week</span>
+              <select
+                className="input"
+                value={a.week}
+                onChange={(e) => {
+                  const w = Number(e.target.value);
+                  if (albums.some((x) => x.week === w)) return;
+                  save((cc) => ({ mediaAlbums: (cc.mediaAlbums ?? []).map((x) => (x.week === a.week ? { ...x, week: w } : x)) }));
+                }}
+              >
+                {weeks.map((w) => (
+                  <option key={w} value={w} disabled={w !== a.week && albums.some((x) => x.week === w)}>
+                    Week {w}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Blur label="Title" value={a.title} onSave={(v) => v && setAlbum(a.week, { ...a, title: v }, 'Renamed the week ' + a.week + ' album to ' + v)} className="min-w-[160px] flex-1" />
+            <Blur label="Note for whoever’s capturing" value={a.note} onSave={(v) => setAlbum(a.week, { ...a, note: v })} className="min-w-[200px] flex-1" />
+            <button
+              aria-label={'Take the name off ' + a.title}
+              onClick={() => setAlbum(a.week, null, 'Took the name off the week ' + a.week + ' album')}
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-md border border-neutral-800 text-neutral-500 hover:text-neutral-200"
+            >
+              <Icon name="ph ph-x" className="text-[15px]" />
+            </button>
+          </div>
+        ))}
       </Section>
 
       <Section
